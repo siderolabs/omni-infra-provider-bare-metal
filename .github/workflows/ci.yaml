@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-11-28T09:31:42Z by kres 232fe63.
+# Generated on 2024-12-03T00:08:31Z by kres 232fe63.
 
 name: default
 concurrency:
@@ -98,7 +98,7 @@ jobs:
       - name: image-provider
         run: |
           make image-provider
-      - name: push-provider
+      - name: push-omni-infra-provider-bare-metal
         if: github.event_name != 'pull_request'
         env:
           PLATFORM: linux/amd64,linux/arm64
@@ -118,14 +118,16 @@ jobs:
       - name: image-qemu-up
         run: |
           make image-qemu-up
-      - name: push-qemu-up
+      - name: push-omni-infra-provider-bare-metal-qemu-up
         if: github.event_name != 'pull_request'
         env:
-          PLATFORM: linux/amd64,linux/arm64
           PUSH: "true"
         run: |
           make image-qemu-up
       - name: run-integration-test
+        env:
+          OMNI_INTEGRATION_TEST_IMAGE: ghcr.io/utkuozdemir/omni-integration-test:latest
+          TEMP_REGISTRY: registry.dev.siderolabs.io
         run: |
           sudo -E make run-integration-test
       - name: Generate executable list
@@ -135,17 +137,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
-          path: |
+          path: |-
             _out
+            !_out/omni/
           retention-days: "5"
-      - name: save-talos-logs-artifacts
+      - name: save-logs-artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: talos-logs
+          name: logs
           path: |-
+            /tmp/omni.log
+            /tmp/provider.log
             ~/.talos/clusters/**/*.log
             !~/.talos/clusters/**/swtpm.log
+            !~/.talos/clusters/**/dhcpd.log
+            !~/.talos/clusters/**/lb.log
           retention-days: "5"
       - name: Generate Checksums
         if: startsWith(github.ref, 'refs/tags/')
