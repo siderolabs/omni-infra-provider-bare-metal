@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package baremetalproviderspecs;
+
+option go_package = "github.com/siderolabs/omni-infra-provider-bare-metal/api/specs";
+
+message PowerManagement {
+  message IPMI {
+    string address = 1;
+    uint32 port = 2;
+    string username = 3;
+    string password = 4;
+  }
+
+  message API {
+    string address = 1;
+  }
+
+  IPMI ipmi = 1;
+  API api = 2;
+}
+
+enum BootMode {
+  BOOT_MODE_UNKNOWN = 0;
+  BOOT_MODE_AGENT_PXE = 1;
+  BOOT_MODE_TALOS_PXE = 2;
+  BOOT_MODE_TALOS_DISK = 3;
+}
+
+enum PowerState {
+  POWER_STATE_UNKNOWN = 0;
+  POWER_STATE_OFF = 1;
+  POWER_STATE_ON = 2;
+}
+
+message MachineStatusSpec {
+  PowerManagement power_management = 1;
+
+  PowerState power_state = 2;
+
+  // LastBootMode is the last observed boot mode of the machine. It is updated by the PXE server each time it boots a server,
+  // and is also updated by the status of the agent connectivity.
+  BootMode boot_mode = 3;
+
+  // LastWipeId is the ID of the last wipe operation that was performed on the machine.
+  //
+  // It is used to track if the machine needs to be wiped for an allocation.
+  string last_wipe_id = 4;
+}
