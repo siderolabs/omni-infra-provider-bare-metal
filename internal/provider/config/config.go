@@ -9,25 +9,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
-	"text/template"
+	"net/url"
 
+	"github.com/siderolabs/talos/pkg/machinery/config/container"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/meta"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/runtime"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/siderolink"
 	"go.uber.org/zap"
 )
-
-const machineConfigTemplate = `apiVersion: v1alpha1
-kind: SideroLinkConfig
-apiUrl: {{ .APIURL }}
----
-apiVersion: v1alpha1
-kind: EventSinkConfig
-endpoint: "[fdae:41e4:649b:9303::1]:8090"
----
-apiVersion: v1alpha1
-kind: KmsgLogConfig
-name: omni-kmsg
-url: "tcp://[fdae:41e4:649b:9303::1]:8092"
-`
 
 // OmniClient is the interface to interact with Omni.
 type OmniClient interface {
@@ -37,7 +26,7 @@ type OmniClient interface {
 // Handler handles machine configuration requests.
 type Handler struct {
 	logger        *zap.Logger
-	machineConfig string
+	machineConfig []byte
 }
 
 // NewHandler creates a new Handler.
@@ -47,23 +36,13 @@ func NewHandler(ctx context.Context, omniClient OmniClient, logger *zap.Logger) 
 		return nil, fmt.Errorf("failed to get siderolink API URL: %w", err)
 	}
 
-	tmpl, err := template.New("machine-config").Parse(machineConfigTemplate)
+	machineConfig, err := buildPartialConfig(siderolinkAPIURL)
 	if err != nil {
-		return nil, err
-	}
-
-	var sb strings.Builder
-
-	if err = tmpl.Execute(&sb, struct {
-		APIURL string
-	}{
-		APIURL: siderolinkAPIURL,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to execute template: %w", err)
+		return nil, fmt.Errorf("failed to build machine config: %w", err)
 	}
 
 	return &Handler{
-		machineConfig: sb.String(),
+		machineConfig: machineConfig,
 		logger:        logger,
 	}, nil
 }
@@ -80,7 +59,40 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	if _, err := w.Write([]byte(s.machineConfig)); err != nil {
+	if _, err := w.Write(s.machineConfig); err != nil {
 		s.logger.Error("failed to write response", zap.Error(err))
 	}
+}
+
+func buildPartialConfig(siderolinkAPIURL string) ([]byte, error) {
+	apiURL, err := url.Parse(siderolinkAPIURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse API URL: %w", err)
+	}
+
+	siderolinkConfig := siderolink.NewConfigV1Alpha1()
+	siderolinkConfig.APIUrlConfig = meta.URL{
+		URL: apiURL,
+	}
+
+	eventSinkConfig := runtime.NewEventSinkV1Alpha1()
+	eventSinkConfig.Endpoint = "[fdae:41e4:649b:9303::1]:8090"
+
+	kmsgLogURL, err := url.Parse("tcp://[fdae:41e4:649b:9303::1]:8092")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse kmsg log URL: %w", err)
+	}
+
+	kmsgLogConfig := runtime.NewKmsgLogV1Alpha1()
+	kmsgLogConfig.MetaName = "omni-kmsg"
+	kmsgLogConfig.KmsgLogURL = meta.URL{
+		URL: kmsgLogURL,
+	}
+
+	configContainer, err := container.New(siderolinkConfig, eventSinkConfig, kmsgLogConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config container: %w", err)
+	}
+
+	return configContainer.Bytes()
 }

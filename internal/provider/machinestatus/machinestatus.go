@@ -18,31 +18,14 @@ import (
 
 var mu sync.Mutex
 
-// GetOrCreate gets or creates the baremetal.MachineStatus resource in the state.
-func GetOrCreate(ctx context.Context, st state.State, id resource.ID) (*baremetal.MachineStatus, bool, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	res, err := safe.StateGetByID[*baremetal.MachineStatus](ctx, st, id)
-	if err != nil {
-		if !state.IsNotFoundError(err) {
-			return nil, false, err
-		}
-
-		res = baremetal.NewMachineStatus(id)
-
-		if err = st.Create(ctx, res); err != nil {
-			return nil, true, err
-		}
-	}
-
-	return res, false, nil
-}
-
 // Modify modifies the baremetal.MachineStatus resource in the state.
 func Modify(ctx context.Context, st state.State, id resource.ID, updateFn func(status *baremetal.MachineStatus) error) (*baremetal.MachineStatus, error) {
 	mu.Lock()
 	defer mu.Unlock()
+
+	if updateFn == nil {
+		updateFn = func(*baremetal.MachineStatus) error { return nil }
+	}
 
 	_, err := safe.StateGetByID[*baremetal.MachineStatus](ctx, st, id)
 	if err != nil {

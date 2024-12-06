@@ -36,8 +36,8 @@ const (
 	ipmiUsername = "talos-agent"
 )
 
-// AgentController is the interface for interacting with the Talos agent over the reverse GRPC tunnel.
-type AgentController interface {
+// AgentService is the interface for interacting with the Talos agent over the reverse GRPC tunnel.
+type AgentService interface {
 	GetPowerManagement(ctx context.Context, id string) (*agentpb.GetPowerManagementResponse, error)
 	SetPowerManagement(ctx context.Context, id string, req *agentpb.SetPowerManagementRequest) error
 	WipeDisks(ctx context.Context, id string) error
@@ -52,9 +52,9 @@ type APIPowerManager interface {
 type InfraMachineController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
 // NewInfraMachineController initializes InfraMachineController.
-func NewInfraMachineController(agentController AgentController, apiPowerManager APIPowerManager, state state.State, requeueInterval time.Duration) *InfraMachineController {
+func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, requeueInterval time.Duration) *InfraMachineController {
 	helper := &infraMachineControllerHelper{
-		agentController: agentController,
+		agentService:    agentService,
 		apiPowerManager: apiPowerManager,
 		state:           state,
 		requeueInterval: requeueInterval,
@@ -87,7 +87,7 @@ func NewInfraMachineController(agentController AgentController, apiPowerManager 
 }
 
 type infraMachineControllerHelper struct {
-	agentController AgentController
+	agentService    AgentService
 	apiPowerManager APIPowerManager
 	state           state.State
 	requeueInterval time.Duration
@@ -116,13 +116,9 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("machine not accepted")
 	}
 
-	status, statusCreated, err := machinestatus.GetOrCreate(ctx, h.state, infraMachine.Metadata().ID())
+	status, err := machinestatus.Modify(ctx, h.state, infraMachine.Metadata().ID(), nil)
 	if err != nil {
 		return err
-	}
-
-	if statusCreated { // reconcile is triggered by create
-		return nil
 	}
 
 	logger.Info("transform infra machine")
@@ -139,12 +135,12 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 		return err
 	}
 
-	installStatus, err := safe.ReaderGetByID[*infra.MachineState](ctx, reader, infraMachine.Metadata().ID())
+	machineState, err := safe.ReaderGetByID[*infra.MachineState](ctx, reader, infraMachine.Metadata().ID())
 	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	mode, err := boot.DetermineRequiredMode(infraMachine, status, installStatus, logger)
+	mode, err := boot.DetermineRequiredMode(infraMachine, status, machineState, logger)
 	if err != nil {
 		return err
 	}
@@ -193,6 +189,9 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 	return nil
 }
 
+// finalizerRemoval is called when the infra.Machine is being deleted.
+//
+// We do not need to wipe the disks here, as if/when the machine reconnects to Omni, a new infra.Machine will be created, and it will be marked for the initial wipe.
 func (h *infraMachineControllerHelper) finalizerRemoval(ctx context.Context, reader controller.Reader, logger *zap.Logger, infraMachine *infra.Machine) error {
 	// attempt to boot into agent mode if it is not already in agent mode
 	status, err := safe.ReaderGetByID[*baremetal.MachineStatus](ctx, reader, infraMachine.Metadata().ID())
@@ -214,7 +213,33 @@ func (h *infraMachineControllerHelper) finalizerRemoval(ctx context.Context, rea
 		logger.Warn("failed to reboot machine", zap.Error(err))
 	}
 
-	// we don't need to wipe the disks here, as if/when the machine reconnects to Omni, a new infra.Machine will be created and it will be marked for the initial wipe
+	return h.removeInternalStatus(ctx, infraMachine.Metadata().ID())
+}
+
+// removeInternalStatus removes the provider-internal baremetal.MachineStatus resource.
+func (h *infraMachineControllerHelper) removeInternalStatus(ctx context.Context, id resource.ID) error {
+	statusMD := baremetal.NewMachineStatus(id).Metadata()
+
+	destroyReady, err := h.state.Teardown(ctx, statusMD)
+	if err != nil {
+		if state.IsNotFoundError(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if !destroyReady {
+		return nil
+	}
+
+	if err = h.state.Destroy(ctx, statusMD); err != nil {
+		if state.IsNotFoundError(err) {
+			return nil
+		}
+
+		return err
+	}
 
 	return nil
 }
@@ -238,7 +263,7 @@ func (h *infraMachineControllerHelper) populateInfraMachineStatus(status *bareme
 }
 
 func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID, pendingWipeID string, logger *zap.Logger) error {
-	if err := h.agentController.WipeDisks(ctx, id); err != nil {
+	if err := h.agentService.WipeDisks(ctx, id); err != nil {
 		statusCode := grpcstatus.Code(err)
 		if statusCode == codes.Unavailable {
 			return controller.NewRequeueErrorf(h.requeueInterval, "machine is not yet available, requeue wipe")
@@ -270,6 +295,9 @@ func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID,
 
 // ensureReboot makes sure that the machine is rebooted if it can be rebooted.
 func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, logger *zap.Logger) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
 	var powerClient power.Client
 
 	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
@@ -292,7 +320,7 @@ func (h *infraMachineControllerHelper) ensurePowerManagement(ctx context.Context
 
 	id := status.Metadata().ID()
 
-	powerManagement, err := h.agentController.GetPowerManagement(ctx, id)
+	powerManagement, err := h.agentService.GetPowerManagement(ctx, id)
 	if err != nil {
 		if grpcstatus.Code(err) == codes.Unavailable {
 			return controller.NewRequeueErrorf(h.requeueInterval, "machine is not yet available, requeue getting power management")
@@ -367,7 +395,7 @@ func (h *infraMachineControllerHelper) ensurePowerManagementOnAgent(ctx context.
 		}
 	}
 
-	if err = h.agentController.SetPowerManagement(ctx, id, &agentpb.SetPowerManagementRequest{
+	if err = h.agentService.SetPowerManagement(ctx, id, &agentpb.SetPowerManagementRequest{
 		Api:  api,
 		Ipmi: ipmi,
 	}); err != nil {

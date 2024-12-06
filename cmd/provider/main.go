@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/version"
@@ -88,10 +89,7 @@ func runCmd() error {
 }
 
 func init() {
-	const (
-		apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
-		dhcpProxyIfaceOrIPFlag   = "dhcp-proxy-iface-or-ip"
-	)
+	const apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
 
 	rootCmd.Flags().StringVar(&meta.ProviderID, "id", meta.ProviderID, "The id of the infra provider, it is used to match the resources with the infra provider label.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode & logs.")
@@ -108,9 +106,10 @@ func init() {
 	rootCmd.Flags().BoolVar(&providerOptions.UseLocalBootAssets, "use-local-boot-assets", provider.DefaultOptions.UseLocalBootAssets,
 		"Use local boot assets for iPXE booting. If set, the iPXE server will use the kernel and initramfs from the local assets "+
 			"instead of forwarding the request to the image factory to boot into agent mode.")
-	rootCmd.Flags().StringVar(&providerOptions.DHCPProxyIfaceOrIP, dhcpProxyIfaceOrIPFlag, provider.DefaultOptions.DHCPProxyIfaceOrIP,
+	rootCmd.Flags().StringVar(&providerOptions.DHCPProxyIfaceOrIP, "dhcp-proxy-iface-or-ip", provider.DefaultOptions.DHCPProxyIfaceOrIP,
 		"The interface name or the IP address on the interface to run the DHCP proxy server on. "+
-			"If it is an IP address, the DHCP proxy server will run on the interface that has the IP address.")
+			"If it is an IP address, the DHCP proxy server will run on the interface that has the IP address. "+
+			"If not specified, defaults to the API advertise address.")
 	rootCmd.Flags().StringVar(&providerOptions.ImageFactoryBaseURL, "image-factory-base-url", provider.DefaultOptions.ImageFactoryBaseURL,
 		"The base URL of the image factory.")
 	rootCmd.Flags().StringVar(&providerOptions.ImageFactoryPXEBaseURL, "image-factory-pxe-base-url", provider.DefaultOptions.ImageFactoryPXEBaseURL,
@@ -119,23 +118,24 @@ func init() {
 		"The default Talos version to when forwarding iPXE requests to the image factory to boot into Talos agent.")
 	rootCmd.Flags().BoolVar(&providerOptions.AgentTestMode, "agent-test-mode", provider.DefaultOptions.AgentTestMode,
 		fmt.Sprintf("Enable agent test mode. In this mode, the Talos agent will be booted into the test mode via the kernel arg %q. "+
-			"In this mode, you probably want to set the --%s flag, as the test mode agents are probably QEMU machines whose power is managed over the HTTP API.",
+			`In this mode, you probably want to set the "--%s" flag, as the test mode agents are probably QEMU machines whose power is managed over the HTTP API.`,
 			config.TestModeKernelArg, apiPowerMgmtStateDirFlag))
 	rootCmd.Flags().StringVar(&providerOptions.APIPowerMgmtStateDir, apiPowerMgmtStateDirFlag, provider.DefaultOptions.APIPowerMgmtStateDir,
 		"The directory to read the power management API endpoints and ports, to be used to manage the power state of the machines which are managed via API "+
-			"(e.g., QEMU VMs created by 'talosctl cluster create') Mainly used for testing purposes.")
+			"(e.g., QEMU VMs created by 'qemu-up' or 'talosctl cluster create') Mainly used for testing purposes.")
 	rootCmd.Flags().StringVar(&providerOptions.BootFromDiskMethod, "boot-from-disk-method", provider.DefaultOptions.BootFromDiskMethod,
 		"Default method to use to boot server from disk if it hits iPXE endpoint after install.")
 	rootCmd.Flags().StringSliceVar(&providerOptions.MachineLabels, "machine-labels", provider.DefaultOptions.MachineLabels,
 		"Comma separated list of key=value pairs to be set to the machine. Example: key1=value1,key2,key3=value3")
 	rootCmd.Flags().BoolVar(&providerOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", provider.DefaultOptions.InsecureSkipTLSVerify,
 		"Skip TLS verification when connecting to the Omni API.")
-	rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", provider.DefaultOptions.ClearState, "Clear the state of the provider on startup.")
+
+	if constants.IsDebugBuild {
+		rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", provider.DefaultOptions.ClearState, "Clear the state of the provider on startup.")
+	}
+
 	rootCmd.Flags().BoolVar(&providerOptions.EnableResourceCache, "enable-resource-cache", provider.DefaultOptions.EnableResourceCache,
 		"Enable controller runtime resource cache.")
 	rootCmd.Flags().BoolVar(&providerOptions.WipeWithZeroes, "wipe-with-zeroes", provider.DefaultOptions.WipeWithZeroes,
 		"When wiping a machine, write zeroes to the whole disk instead doing a fast wipe.")
-
-	// mark the flags as required
-	rootCmd.MarkFlagRequired(dhcpProxyIfaceOrIPFlag) //nolint:errcheck
 }

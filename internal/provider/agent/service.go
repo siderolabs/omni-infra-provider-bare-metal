@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package agent implements the metal agent controller.
 package agent
 
 import (
@@ -13,6 +12,7 @@ import (
 	"github.com/jhump/grpctunnel"
 	"github.com/jhump/grpctunnel/tunnelpb"
 	agentpb "github.com/siderolabs/talos-metal-agent/api/agent"
+	agentconstants "github.com/siderolabs/talos-metal-agent/pkg/constants"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -25,13 +25,12 @@ import (
 )
 
 const (
-	machineIDMetadataKey = "machine-id"
-	timeout              = 30 * time.Second
-	zeroesWipeTimeout    = 3 * time.Hour
+	timeout           = 30 * time.Second
+	zeroesWipeTimeout = 24 * time.Hour
 )
 
-// Controller controls servers by establishing a reverse GRPC tunnel with them and by sending them commands.
-type Controller struct {
+// Service controls servers by establishing a reverse GRPC tunnel with them and by sending them commands.
+type Service struct {
 	logger        *zap.Logger
 	grpcServer    grpc.ServiceRegistrar
 	tunnelHandler *grpctunnel.TunnelServiceHandler
@@ -39,8 +38,8 @@ type Controller struct {
 	wipeWithZeroes bool
 }
 
-// NewController creates a new agent Controller.
-func NewController(grpcServer grpc.ServiceRegistrar, state state.State, wipeWithZeroes bool, logger *zap.Logger) *Controller {
+// NewService creates a new agent service.
+func NewService(grpcServer grpc.ServiceRegistrar, state state.State, wipeWithZeroes bool, logger *zap.Logger) *Service {
 	tunnelHandler := grpctunnel.NewTunnelServiceHandler(
 		grpctunnel.TunnelServiceHandlerOptions{
 			OnReverseTunnelOpen: func(channel grpctunnel.TunnelChannel) {
@@ -62,7 +61,7 @@ func NewController(grpcServer grpc.ServiceRegistrar, state state.State, wipeWith
 
 	tunnelpb.RegisterTunnelServiceServer(grpcServer, tunnelHandler.Service())
 
-	return &Controller{
+	return &Service{
 		logger:         logger,
 		grpcServer:     grpcServer,
 		tunnelHandler:  tunnelHandler,
@@ -98,7 +97,7 @@ func handleTunnelEvent(channel grpctunnel.TunnelChannel, state state.State, conn
 }
 
 // IsAccessible checks if the agent with the given ID is accessible.
-func (c *Controller) IsAccessible(ctx context.Context, id string) (bool, error) {
+func (c *Service) IsAccessible(ctx context.Context, id string) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -118,7 +117,7 @@ func (c *Controller) IsAccessible(ctx context.Context, id string) (bool, error) 
 }
 
 // GetPowerManagement retrieves the IPMI information from the server with the given ID.
-func (c *Controller) GetPowerManagement(ctx context.Context, id string) (*agentpb.GetPowerManagementResponse, error) {
+func (c *Service) GetPowerManagement(ctx context.Context, id string) (*agentpb.GetPowerManagementResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -129,7 +128,7 @@ func (c *Controller) GetPowerManagement(ctx context.Context, id string) (*agentp
 }
 
 // SetPowerManagement sets the IPMI information on the server with the given ID.
-func (c *Controller) SetPowerManagement(ctx context.Context, id string, req *agentpb.SetPowerManagementRequest) error {
+func (c *Service) SetPowerManagement(ctx context.Context, id string, req *agentpb.SetPowerManagementRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -142,7 +141,7 @@ func (c *Controller) SetPowerManagement(ctx context.Context, id string, req *age
 }
 
 // WipeDisks wipes the disks on the server with the given ID.
-func (c *Controller) WipeDisks(ctx context.Context, id string) error {
+func (c *Service) WipeDisks(ctx context.Context, id string) error {
 	channel := c.tunnelHandler.KeyAsChannel(id)
 	cli := agentpb.NewAgentServiceClient(channel)
 
@@ -162,7 +161,7 @@ func (c *Controller) WipeDisks(ctx context.Context, id string) error {
 }
 
 // AllConnectedMachines returns a set of all connected machines.
-func (c *Controller) AllConnectedMachines() map[string]struct{} {
+func (c *Service) AllConnectedMachines() map[string]struct{} {
 	allTunnels := c.tunnelHandler.AllReverseTunnels()
 
 	machines := make(map[string]struct{}, len(allTunnels))
@@ -189,7 +188,7 @@ func machineIDAffinityKey(ctx context.Context, logger *zap.Logger) (string, bool
 		return "", false
 	}
 
-	machineID := md.Get(machineIDMetadataKey)
+	machineID := md.Get(agentconstants.MachineIDMetadataKey)
 	if len(machineID) == 0 {
 		logger.Warn("invalid affinity key", zap.String("reason", "no machine ID in metadata"))
 

@@ -13,7 +13,7 @@ type Options struct {
 	OmniAPIEndpoint        string
 	ImageFactoryBaseURL    string
 	ImageFactoryPXEBaseURL string
-	AgentModeTalosVersion  string
+	AgentModeTalosVersion  string // todo: get this from Omni. Warning: needs to be Talos 1.9 with agent code inside
 	APIListenAddress       string
 	APIAdvertiseAddress    string
 	APIPowerMgmtStateDir   string
@@ -34,7 +34,6 @@ type Options struct {
 var DefaultOptions = Options{
 	Name:                   "Bare Metal",
 	Description:            "Bare metal infrastructure provider",
-	OmniAPIEndpoint:        "",
 	ImageFactoryBaseURL:    "https://factory.talos.dev",
 	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
 	AgentModeTalosVersion:  "v1.9.0-alpha.2",
