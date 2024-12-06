@@ -152,8 +152,8 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		userExtraKernelArgs = strings.Fields(machineResources.infraMachine.TypedSpec().Value.ExtraKernelArgs)
 	}
 
-	mode, modeErr := boot.DetermineRequiredMode(machineResources.infraMachine, machineResources.status, machineResources.installStatus, logger)
-	if modeErr != nil {
+	mode, err := boot.DetermineRequiredMode(machineResources.infraMachine, machineResources.status, machineResources.machineState, logger)
+	if err != nil {
 		return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("failed to determine required boot mode: %w", err)
 	}
 
@@ -220,9 +220,9 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 }
 
 type resources struct {
-	infraMachine  *infra.Machine
-	status        *baremetal.MachineStatus
-	installStatus *infra.MachineState
+	infraMachine *infra.Machine
+	status       *baremetal.MachineStatus
+	machineState *infra.MachineState
 }
 
 func (handler *Handler) getResources(ctx context.Context, id string) (resources, error) {
@@ -231,20 +231,20 @@ func (handler *Handler) getResources(ctx context.Context, id string) (resources,
 		return resources{}, fmt.Errorf("failed to get infra machine: %w", err)
 	}
 
-	status, _, err := machinestatus.GetOrCreate(ctx, handler.state, id)
+	status, err := machinestatus.Modify(ctx, handler.state, id, nil)
 	if err != nil {
 		return resources{}, fmt.Errorf("failed to get bare metal machine status: %w", err)
 	}
 
-	installStatus, err := safe.StateGetByID[*infra.MachineState](ctx, handler.state, id)
+	machineState, err := safe.StateGetByID[*infra.MachineState](ctx, handler.state, id)
 	if err != nil && !state.IsNotFoundError(err) {
 		return resources{}, fmt.Errorf("failed to get infra machine install status: %w", err)
 	}
 
 	return resources{
-		infraMachine:  infraMachine,
-		status:        status,
-		installStatus: installStatus,
+		infraMachine: infraMachine,
+		status:       status,
+		machineState: machineState,
 	}, nil
 }
 

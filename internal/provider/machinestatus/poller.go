@@ -20,25 +20,25 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 )
 
-// AgentController is the interface for controlling Talos agent.
-type AgentController interface {
+// AgentService is the interface for controlling Talos agent.
+type AgentService interface {
 	AllConnectedMachines() map[string]struct{}
 	IsAccessible(ctx context.Context, machineID string) (bool, error)
 }
 
 // Poller polls the machines periodically and updates their statuses.
 type Poller struct {
-	agentController AgentController
-	state           state.State
-	logger          *zap.Logger
+	agentService AgentService
+	state        state.State
+	logger       *zap.Logger
 }
 
 // NewPoller creates a new Poller.
-func NewPoller(agentController AgentController, state state.State, logger *zap.Logger) *Poller {
+func NewPoller(agentService AgentService, state state.State, logger *zap.Logger) *Poller {
 	return &Poller{
-		agentController: agentController,
-		state:           state,
-		logger:          logger,
+		agentService: agentService,
+		state:        state,
+		logger:       logger,
 	}
 }
 
@@ -70,7 +70,7 @@ func (m *Poller) poll(ctx context.Context) {
 		return
 	}
 
-	connectedMachines := m.agentController.AllConnectedMachines()
+	connectedMachines := m.agentService.AllConnectedMachines()
 	machineIDSet := map[string]struct{}{}
 
 	var numAgentConnected, numAgentDisconnected, numPoweredOn, numPoweredOff, numPowerUnknown int
@@ -93,13 +93,7 @@ func (m *Poller) poll(ctx context.Context) {
 
 		agentConnected, err = m.agentConnected(ctx, connectedMachines, status.Metadata().ID())
 		if err != nil {
-			connectionError := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || grpcstatus.Code(err) == codes.Canceled
-
-			if !connectionError {
-				m.logger.Error("failed to check connection", zap.String("machine_id", status.Metadata().ID()), zap.Error(err))
-
-				continue
-			}
+			m.logger.Error("failed to check connection", zap.String("machine_id", status.Metadata().ID()), zap.Error(err))
 		}
 
 		if agentConnected {
@@ -157,8 +151,12 @@ func (m *Poller) agentConnected(ctx context.Context, connectedMachines map[strin
 	}
 
 	// attempt to ping
-	accessible, err := m.agentController.IsAccessible(ctx, machineID)
+	accessible, err := m.agentService.IsAccessible(ctx, machineID)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || grpcstatus.Code(err) == codes.Canceled {
+			return false, nil
+		}
+
 		return false, err
 	}
 

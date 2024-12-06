@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-04T12:05:52Z by kres 232fe63.
+# Generated on 2024-12-06T14:06:35Z by kres 1ebe796.
 
 # common variables
 
@@ -21,11 +21,11 @@ PROTOBUF_GO_VERSION ?= 1.35.2
 GRPC_GO_VERSION ?= 1.5.1
 GRPC_GATEWAY_VERSION ?= 2.24.0
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.27.0
+GOIMPORTS_VERSION ?= 0.28.0
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v1.62.0
+GOLANGCILINT_VERSION ?= v1.62.2
 GOFUMPT_VERSION ?= v0.7.0
-GO_VERSION ?= 1.23.3
+GO_VERSION ?= 1.23.4
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -140,7 +140,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests provider image-provider qemu-up image-qemu-up ipxe run-integration-test lint
+all: unit-tests provider image-provider qemu-up ipxe run-integration-test lint
 
 $(ARTIFACTS):  ## Creates artifacts directory.
 	@mkdir -p $(ARTIFACTS)
@@ -240,10 +240,6 @@ qemu-up-linux-arm64: $(ARTIFACTS)/qemu-up-linux-arm64  ## Builds executable for 
 
 .PHONY: qemu-up
 qemu-up: qemu-up-linux-amd64 qemu-up-linux-arm64  ## Builds executables for qemu-up.
-
-.PHONY: image-qemu-up
-image-qemu-up:  ## Builds image for omni-infra-provider-bare-metal-qemu-up.
-	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/omni-infra-provider-bare-metal-qemu-up:$(IMAGE_TAG)"
 
 run-integration-test: provider qemu-up
 	TEMP_REGISTRY=$(TEMP_REGISTRY) OMNI_IMAGE=$(OMNI_IMAGE) OMNI_INTEGRATION_TEST_IMAGE=$(OMNI_INTEGRATION_TEST_IMAGE) SKIP_CLEANUP=$(SKIP_CLEANUP) hack/test/integration.sh

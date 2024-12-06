@@ -24,9 +24,9 @@ type Mode struct {
 }
 
 // DetermineRequiredMode determines the required boot mode.
-func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.MachineStatus, installStatus *infra.MachineState, logger *zap.Logger) (Mode, error) {
+func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.MachineStatus, machineState *infra.MachineState, logger *zap.Logger) (Mode, error) {
 	acceptanceStatus := omnispecs.InfraMachineConfigSpec_PENDING
-	tearingDown := false
+	infraMachineTearingDown := false
 	allocated := false
 	requiresPowerMgmtConfig := true
 	installed := false
@@ -35,7 +35,7 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 
 	if infraMachine != nil {
 		acceptanceStatus = infraMachine.TypedSpec().Value.AcceptanceStatus
-		tearingDown = infraMachine.Metadata().Phase() == resource.PhaseTearingDown
+		infraMachineTearingDown = infraMachine.Metadata().Phase() == resource.PhaseTearingDown
 		allocated = infraMachine.TypedSpec().Value.ClusterTalosVersion != ""
 
 		if infraMachine.TypedSpec().Value.WipeId != "" {
@@ -48,8 +48,8 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 		lastWipeID = status.TypedSpec().Value.LastWipeId
 	}
 
-	if installStatus != nil {
-		installed = installStatus.TypedSpec().Value.Installed
+	if machineState != nil {
+		installed = machineState.TypedSpec().Value.Installed
 	}
 
 	acceptancePending := acceptanceStatus == omnispecs.InfraMachineConfigSpec_PENDING
@@ -62,7 +62,7 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 	}
 
 	requiresWipe := pendingWipeID != ""
-	bootIntoAgentMode := tearingDown || acceptancePending || !allocated || requiresPowerMgmtConfig || requiresWipe
+	bootIntoAgentMode := infraMachineTearingDown || acceptancePending || !allocated || requiresPowerMgmtConfig || requiresWipe
 
 	var requiredBootMode specs.BootMode
 
@@ -78,7 +78,7 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 	}
 
 	logger.With(
-		zap.Bool("tearing_down", tearingDown),
+		zap.Bool("infra_machine_tearing_down", infraMachineTearingDown),
 		zap.Bool("requires_power_mgmt_config", requiresPowerMgmtConfig),
 		zap.Bool("installed", installed),
 		zap.String("wipe_id", wipeID),

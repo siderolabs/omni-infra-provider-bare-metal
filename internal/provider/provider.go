@@ -19,10 +19,10 @@ import (
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/hashicorp/go-multierror"
 	"github.com/siderolabs/omni/client/pkg/client"
-	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/agent"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/baremetal"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/config"
@@ -63,6 +63,11 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to determine API advertise address: %w", err)
 	}
 
+	dhcpProxyIfaceOrIP := p.options.DHCPProxyIfaceOrIP
+	if dhcpProxyIfaceOrIP == "" {
+		dhcpProxyIfaceOrIP = apiAdvertiseAddress
+	}
+
 	p.logger.Info("starting provider",
 		zap.String("api_listen_address", p.options.APIListenAddress),
 		zap.String("api_advertise_address", apiAdvertiseAddress),
@@ -84,11 +89,15 @@ func (p *Provider) Run(ctx context.Context) error {
 	omniClient := omni.BuildClient(omniState)
 
 	if p.options.ClearState {
-		if err = p.clearState(ctx, omniState); err != nil {
-			return fmt.Errorf("failed to clear state: %w", err)
-		}
+		if constants.IsDebugBuild {
+			if err = p.clearState(ctx, omniState); err != nil {
+				return fmt.Errorf("failed to clear state: %w", err)
+			}
 
-		p.logger.Info("state cleared")
+			p.logger.Info("state cleared")
+		} else {
+			p.logger.Warn("clear state is requested, but this is not a debug build, skipping")
+		}
 	}
 
 	if err = omniClient.EnsureProviderStatus(ctx, p.options.Name, p.options.Description, icon); err != nil {
@@ -117,26 +126,26 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler, p.logger.With(zap.String("component", "server")))
-	agentController := agent.NewController(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "controller"))) //nolint:contextcheck // false positive
-	machineStatusPoller := machinestatus.NewPoller(agentController, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
-	dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, p.options.DHCPProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
+	agentService := agent.NewService(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_service"))) //nolint:contextcheck // false positive
+	machineStatusPoller := machinestatus.NewPoller(agentService, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
+	dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
 	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
 	apiPowerManager := powerapi.NewPowerManager(p.options.APIPowerMgmtStateDir)
 
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	if err = cosiRuntime.RegisterQController(controllers.NewInfraMachineController(agentController, apiPowerManager, omniState, 1*time.Minute)); err != nil {
+	if err = cosiRuntime.RegisterQController(controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, 1*time.Minute)); err != nil {
 		return fmt.Errorf("failed to register controller: %w", err)
 	}
 
-	return p.runComponents(ctx, map[string]func(context.Context) error{
-		"COSI runtime":          cosiRuntime.Run,
-		"machine status poller": machineStatusPoller.Run,
-		"server":                srvr.Run,
-		// "reverse tunnel":        reverseTunnel.Run,
-		"DHCP proxy":  dhcpProxy.Run,
-		"TFTP server": tftpServer.Run,
+	return p.runComponents(ctx, []component{
+		{cosiRuntime.Run, "COSI runtime"},
+		{machineStatusPoller.Run, "machine status poller"},
+		{srvr.Run, "server"},
+		{dhcpProxy.Run, "DHCP proxy"},
+		{tftpServer.Run, "TFTP server"},
+		// {reverseTunnel.Run, "reverse tunnel"},
 	})
 }
 
@@ -151,8 +160,6 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 
 	if p.options.EnableResourceCache {
 		options = append(options, safe.WithResourceCache[*baremetal.MachineStatus]())
-		options = append(options, safe.WithResourceCache[*infra.Machine]())
-		options = append(options, safe.WithResourceCache[*infra.MachineStatus]())
 	}
 
 	cosiRuntime, err := runtime.NewRuntime(omniState, p.logger.With(zap.String("component", "cosi_runtime")), options...)
@@ -163,26 +170,33 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 	return cosiRuntime, nil
 }
 
-func (p *Provider) runComponents(ctx context.Context, components map[string]func(context.Context) error) error {
+type component struct {
+	run  func(context.Context) error
+	name string
+}
+
+func (p *Provider) runComponents(ctx context.Context, components []component) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	for name, f := range components {
+	for _, comp := range components {
+		logger := p.logger.With(zap.String("component", comp.name))
+
 		eg.Go(func() error {
 			defer cancel() // cancel the parent context, so all other components are also stopped
 
-			p.logger.Info("start component ", zap.String("name", name))
+			logger.Info("start component")
 
-			err := f(ctx)
+			err := comp.run(ctx)
 			if err != nil {
-				p.logger.Error("failed to run component", zap.String("name", name), zap.Error(err))
+				logger.Error("failed to run component", zap.Error(err))
 
 				return err
 			}
 
-			p.logger.Info("component stopped", zap.String("name", name))
+			logger.Info("component stopped")
 
 			return nil
 		})

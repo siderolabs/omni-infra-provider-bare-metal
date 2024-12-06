@@ -1,25 +1,21 @@
-# syntax = docker/dockerfile-upstream:1.11.1-labs
+# syntax = docker/dockerfile-upstream:1.12.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-05T10:44:40Z by kres 232fe63.
+# Generated on 2024-12-06T12:07:03Z by kres 1ebe796.
 
 ARG TOOLCHAIN
 
-FROM ghcr.io/siderolabs/talosctl:v1.9.0-alpha.3 AS base-image-provider
+FROM ghcr.io/siderolabs/ca-certificates:v1.9.0 AS image-ca-certificates
 
-FROM ghcr.io/siderolabs/talosctl:v1.9.0-alpha.3 AS base-image-qemu-up
-
-FROM ghcr.io/siderolabs/ca-certificates:v1.8.0 AS image-ca-certificates
-
-FROM ghcr.io/siderolabs/fhs:v1.8.0 AS image-fhs
+FROM ghcr.io/siderolabs/fhs:v1.9.0 AS image-fhs
 
 FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-linux-amd64
 
 FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-linux-arm64
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.1.36-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.1.38-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.2.1
 COPY .markdownlint.json .
@@ -217,7 +213,7 @@ FROM scratch AS qemu-up-all
 COPY --from=qemu-up-linux-amd64 / /
 COPY --from=qemu-up-linux-arm64 / /
 
-FROM base-image-provider AS image-provider
+FROM scratch AS image-provider
 ARG TARGETARCH
 COPY --from=provider provider-linux-${TARGETARCH} /provider
 COPY --from=image-fhs / /
@@ -232,12 +228,4 @@ COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
 COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-alpha.3-agent-v0.1.0-alpha.2 / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
-
-FROM base-image-qemu-up AS image-qemu-up
-ARG TARGETARCH
-COPY --from=qemu-up qemu-up-linux-${TARGETARCH} /qemu-up
-COPY --from=image-fhs / /
-COPY --from=image-ca-certificates / /
-LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
-ENTRYPOINT ["/qemu-up"]
 

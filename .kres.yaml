@@ -4,21 +4,18 @@ spec:
   ignoredPaths:
     - hack/compose/docker-compose.override.yml
 ---
+kind: auto.CommandConfig
+name: qemu-up
+spec:
+  disableImage: true
+---
 kind: common.Image
 name: image-provider
 spec:
   imageName: omni-infra-provider-bare-metal
-  baseImage: ghcr.io/siderolabs/talosctl:v1.9.0-alpha.3
   pushLatest: false
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
----
-kind: common.Image
-name: image-qemu-up
-spec:
-  imageName: omni-infra-provider-bare-metal-qemu-up
-  baseImage: ghcr.io/siderolabs/talosctl:v1.9.0-alpha.3
-  pushLatest: false
 ---
 kind: custom.Step
 name: ipxe
@@ -130,7 +127,6 @@ spec:
     sops: true
     environment:
       TEMP_REGISTRY: registry.dev.siderolabs.io
-      OMNI_INTEGRATION_TEST_IMAGE: ghcr.io/utkuozdemir/omni-integration-test:latest # todo: testing, remove later
     artifacts:
       enabled: true
       extraPaths:
@@ -140,12 +136,7 @@ spec:
           always: true
           continueOnError: true
           paths:
-            - "/tmp/omni.log"
-            - "/tmp/provider.log"
-            - "~/.talos/clusters/**/*.log"
-            - "!~/.talos/clusters/**/swtpm.log"
-            - "!~/.talos/clusters/**/dhcpd.log"
-            - "!~/.talos/clusters/**/lb.log"
+            - "/tmp/test-logs"
 ---
 kind: common.SOPS
 spec:

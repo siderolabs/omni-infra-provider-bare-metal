@@ -2,16 +2,18 @@
 
 set -eou pipefail
 
-TALOS_VERSION=1.9.0-alpha.3
+TALOS_VERSION=1.9.0-beta.0
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
-JOIN_TOKEN=testonly
 NUM_MACHINES=4
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"
+
+TEST_LOGS_DIR=/tmp/test-logs
+mkdir -p $TEST_LOGS_DIR
 
 docker pull "$OMNI_IMAGE"
 docker pull "$OMNI_INTEGRATION_TEST_IMAGE"
@@ -36,20 +38,28 @@ echo "Register cleanup script..."
 function cleanup() {
   local exit_code=$? # preserve the original exit code
 
-  docker logs omni > /tmp/omni.log || true
-  docker logs provider > /tmp/provider.log || true
-
   if [[ "$SKIP_CLEANUP" == "true" ]]; then
     echo "Skipping cleanup..."
     exit $exit_code
   fi
 
+  echo "Stop containers"
+  docker stop omni provider vault-dev || true
+
+  echo "Gather container logs"
+  docker logs omni &>$TEST_LOGS_DIR/omni.log
+  docker logs provider &>$TEST_LOGS_DIR/provider.log
+
+  echo "Gather machine logs"
+  machine_logs_dir=$TEST_LOGS_DIR/machines/
+  mkdir -p $machine_logs_dir
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} $machine_logs_dir \;
+
   pkill -f qemu-up-linux-amd64 || true
+  ${QEMU_UP} --destroy || true
+  pkill -f talosctl || true
 
-  # ${QEMU_UP} --destroy || true # disabled for now, as it removes Talos logs
-
-  echo "Stop and remove Omni, Provider and Vault..."
-
+  echo "Remove containers and Omni artifacts"
   docker rm -f omni provider vault-dev || true
   rm -rf $ARTIFACTS/omni/ || true
 
@@ -60,7 +70,7 @@ trap cleanup EXIT SIGINT
 
 echo "Bring up some QEMU machines..."
 
-${QEMU_UP} 2>&1 &
+${QEMU_UP} 2>&1 | tee $TEST_LOGS_DIR/qemu-up.log &
 
 echo "Wait for IP address $GATEWAY_IP to appear..."
 timeout 60s bash -c "until ip a | grep -q '${GATEWAY_IP}'; do echo 'Waiting for IP address...'; sleep 5; done"
@@ -111,7 +121,7 @@ docker run -d --network host \
   -v "$(pwd)/${ARTIFACTS}/omni:/artifacts" \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
-  -e SIDEROLINK_DEV_JOIN_TOKEN="${JOIN_TOKEN}" \
+  -e SIDEROLINK_DEV_JOIN_TOKEN=testonly \
   -e VAULT_TOKEN=dev-o-token \
   -e VAULT_ADDR='http://127.0.0.1:8200' \
   "$OMNI_IMAGE" \
@@ -149,12 +159,6 @@ echo "Wait for service account key to be created..."
 timeout 60s bash -c "until [ -f '${SERVICE_ACCOUNT_KEY_PATH}' ]; do echo 'Waiting for service account key...'; sleep 5; done"
 echo "Service account key is found at ${SERVICE_ACCOUNT_KEY_PATH}."
 
-echo "Determine local IP address..."
-
-LOCAL_IP=$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')
-
-echo "Local IP: $LOCAL_IP"
-
 # Export Omni endpoint and service account key
 OMNI_ENDPOINT=${BASE_URL}
 OMNI_SERVICE_ACCOUNT_KEY=$(cat $SERVICE_ACCOUNT_KEY_PATH)
@@ -165,24 +169,25 @@ export OMNI_ENDPOINT OMNI_SERVICE_ACCOUNT_KEY
 
 echo "Launch infra provider..."
 
+# We run the provider in a container, as its container image contains everything needed by the provider,
+# e.g., ipmitool and ipxe binaries, metal agent boot assets etc.
 docker run -d --network host \
   --name provider \
   -v "$HOME/.talos/clusters/bare-metal:/api-power-mgmt-state:ro" \
   -e OMNI_ENDPOINT -e OMNI_SERVICE_ACCOUNT_KEY \
   "$PROVIDER_IMAGE" \
   --insecure-skip-tls-verify \
-  --api-advertise-address="$LOCAL_IP" \
+  --api-advertise-address="$GATEWAY_IP" \
   --use-local-boot-assets \
   --agent-test-mode \
   --api-power-mgmt-state-dir=/api-power-mgmt-state \
-  --dhcp-proxy-iface-or-ip=$GATEWAY_IP \
   --debug
 
 docker logs -f provider &
 
-echo "Waiting for provider to listen on $LOCAL_IP..."
-timeout 60s bash -c "until curl -s -o /dev/null http://${LOCAL_IP}:50042; do echo 'Waiting for provider...'; sleep 5; done"
-echo "Provider is listening on $LOCAL_IP."
+echo "Waiting for provider to listen on $GATEWAY_IP..."
+timeout 60s bash -c "until curl -s -o /dev/null http://$GATEWAY_IP:50042; do echo 'Waiting for provider...'; sleep 5; done"
+echo "Provider is listening on $GATEWAY_IP."
 
 echo "Run integration tests..."
 

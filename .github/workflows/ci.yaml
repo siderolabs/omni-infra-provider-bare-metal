@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-03T00:08:31Z by kres 232fe63.
+# Generated on 2024-12-06T13:45:15Z by kres 1ebe796.
 
 name: default
 concurrency:
@@ -108,25 +108,8 @@ jobs:
       - name: qemu-up
         run: |
           make qemu-up
-      - name: Login to registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          password: ${{ secrets.GITHUB_TOKEN }}
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-      - name: image-qemu-up
-        run: |
-          make image-qemu-up
-      - name: push-omni-infra-provider-bare-metal-qemu-up
-        if: github.event_name != 'pull_request'
-        env:
-          PUSH: "true"
-        run: |
-          make image-qemu-up
       - name: run-integration-test
         env:
-          OMNI_INTEGRATION_TEST_IMAGE: ghcr.io/utkuozdemir/omni-integration-test:latest
           TEMP_REGISTRY: registry.dev.siderolabs.io
         run: |
           sudo -E make run-integration-test
@@ -146,13 +129,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: logs
-          path: |-
-            /tmp/omni.log
-            /tmp/provider.log
-            ~/.talos/clusters/**/*.log
-            !~/.talos/clusters/**/swtpm.log
-            !~/.talos/clusters/**/dhcpd.log
-            !~/.talos/clusters/**/lb.log
+          path: /tmp/test-logs
           retention-days: "5"
       - name: Generate Checksums
         if: startsWith(github.ref, 'refs/tags/')
