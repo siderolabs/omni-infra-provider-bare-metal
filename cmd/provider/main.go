@@ -20,7 +20,9 @@ import (
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/version"
 )
 
@@ -124,7 +126,11 @@ func init() {
 		"The directory to read the power management API endpoints and ports, to be used to manage the power state of the machines which are managed via API "+
 			"(e.g., QEMU VMs created by 'qemu-up' or 'talosctl cluster create') Mainly used for testing purposes.")
 	rootCmd.Flags().StringVar(&providerOptions.BootFromDiskMethod, "boot-from-disk-method", provider.DefaultOptions.BootFromDiskMethod,
-		"Default method to use to boot server from disk if it hits iPXE endpoint after install.")
+		fmt.Sprintf("Default method to use to boot server from disk if it hits iPXE endpoint after install. Valid values are: %v",
+			[]ipxe.BootFromDiskMethod{ipxe.BootIPXEExit, ipxe.Boot404, ipxe.BootSANDisk}))
+	rootCmd.Flags().StringVar(&providerOptions.IPMIPXEBootMode, "ipmi-pxe-boot-mode", provider.DefaultOptions.IPMIPXEBootMode,
+		fmt.Sprintf("Default boot mode to use when PXE booting a machine via IPMI. Valid values are: %v",
+			[]pxe.BootMode{pxe.BootModeBIOS, pxe.BootModeUEFI}))
 	rootCmd.Flags().StringSliceVar(&providerOptions.MachineLabels, "machine-labels", provider.DefaultOptions.MachineLabels,
 		"Comma separated list of key=value pairs to be set to the machine. Example: key1=value1,key2,key3=value3")
 	rootCmd.Flags().BoolVar(&providerOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", provider.DefaultOptions.InsecureSkipTLSVerify,

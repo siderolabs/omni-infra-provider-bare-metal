@@ -78,7 +78,9 @@ func (m *Poller) poll(ctx context.Context) {
 	for status := range statusList.All() {
 		machineIDSet[status.Metadata().ID()] = struct{}{}
 
-		powerState := m.getPowerState(ctx, status, m.logger)
+		logger := m.logger.With(zap.String("machine_id", status.Metadata().ID()))
+
+		powerState := m.getPowerState(ctx, status, logger)
 
 		switch powerState {
 		case specs.PowerState_POWER_STATE_ON:
@@ -88,6 +90,8 @@ func (m *Poller) poll(ctx context.Context) {
 		case specs.PowerState_POWER_STATE_UNKNOWN:
 			numPowerUnknown++
 		}
+
+		logger = logger.With(zap.Stringer("power_state", powerState))
 
 		agentConnected := false
 
@@ -102,7 +106,7 @@ func (m *Poller) poll(ctx context.Context) {
 			numAgentDisconnected++
 		}
 
-		if _, saveErr := Modify(ctx, m.state, status.Metadata().ID(), func(status *baremetal.MachineStatus) error {
+		if _, err = Modify(ctx, m.state, status.Metadata().ID(), func(status *baremetal.MachineStatus) error {
 			status.TypedSpec().Value.PowerState = powerState
 
 			if agentConnected { // if the agent is connected, we know for sure that we are in the agent mode, so we update the status accordingly
@@ -110,8 +114,8 @@ func (m *Poller) poll(ctx context.Context) {
 			}
 
 			return nil
-		}); saveErr != nil {
-			m.logger.Error("failed to save status", zap.String("machine_id", status.Metadata().ID()), zap.Error(saveErr))
+		}); err != nil {
+			logger.Error("failed to save status", zap.Error(err))
 		}
 	}
 
@@ -123,9 +127,9 @@ func (m *Poller) getPowerState(ctx context.Context, status *baremetal.MachineSta
 	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		if errors.Is(err, power.ErrNoPowerManagementInfo) {
-			logger.Debug("no power management info yet, skip update", zap.String("machine_id", status.Metadata().ID()))
+			logger.Debug("no power management info yet, skip update")
 		} else {
-			logger.Error("failed to get power client", zap.String("machine_id", status.Metadata().ID()), zap.Error(err))
+			logger.Error("failed to get power client", zap.Error(err))
 		}
 
 		return specs.PowerState_POWER_STATE_UNKNOWN
@@ -133,7 +137,7 @@ func (m *Poller) getPowerState(ctx context.Context, status *baremetal.MachineSta
 
 	poweredOn, err := powerClient.IsPoweredOn(ctx)
 	if err != nil {
-		logger.Error("failed to get power state", zap.String("machine_id", status.Metadata().ID()), zap.Error(err))
+		logger.Error("failed to get power state", zap.Error(err))
 
 		return specs.PowerState_POWER_STATE_UNKNOWN
 	}
@@ -153,7 +157,9 @@ func (m *Poller) agentConnected(ctx context.Context, connectedMachines map[strin
 	// attempt to ping
 	accessible, err := m.agentService.IsAccessible(ctx, machineID)
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || grpcstatus.Code(err) == codes.Canceled {
+		errCode := grpcstatus.Code(err)
+
+		if errCode == codes.Canceled || errCode == codes.DeadlineExceeded || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return false, nil
 		}
 

@@ -181,6 +181,7 @@ docker run -d --network host \
   --use-local-boot-assets \
   --agent-test-mode \
   --api-power-mgmt-state-dir=/api-power-mgmt-state \
+  --ipmi-pxe-boot-mode=bios \
   --debug
 
 docker logs -f provider &

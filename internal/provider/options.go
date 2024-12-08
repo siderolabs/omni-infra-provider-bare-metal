@@ -4,7 +4,10 @@
 
 package provider
 
-import "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+import (
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
+)
 
 // Options contains the provider options.
 type Options struct {
@@ -19,6 +22,7 @@ type Options struct {
 	APIPowerMgmtStateDir   string
 	DHCPProxyIfaceOrIP     string
 	BootFromDiskMethod     string
+	IPMIPXEBootMode        string
 	MachineLabels          []string
 	APIPort                int
 
@@ -38,5 +42,6 @@ var DefaultOptions = Options{
 	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
 	AgentModeTalosVersion:  "v1.9.0-alpha.2",
 	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
+	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 	APIPort:                50042,
 }

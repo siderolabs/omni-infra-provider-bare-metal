@@ -13,6 +13,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/ipmi"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
 
 // ErrNoPowerManagementInfo is returned when there is no power management info present yet for a machine.
@@ -24,6 +25,7 @@ type Client interface {
 	Reboot(ctx context.Context) error
 	IsPoweredOn(ctx context.Context) (bool, error)
 	PowerOff(ctx context.Context) error
+	SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error
 }
 
 // GetClient returns a power management client for the given bare metal machine.

@@ -34,6 +34,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/omni"
 	powerapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tftp"
 )
@@ -58,6 +59,11 @@ func New(options Options, logger *zap.Logger) *Provider {
 
 // Run runs the provider.
 func (p *Provider) Run(ctx context.Context) error {
+	pxeBootMode, err := pxe.ParseBootMode(p.options.IPMIPXEBootMode)
+	if err != nil {
+		return fmt.Errorf("failed to parse IPMI PXE boot mode: %w", err)
+	}
+
 	apiAdvertiseAddress, err := p.determineAPIAdvertiseAddress()
 	if err != nil {
 		return fmt.Errorf("failed to determine API advertise address: %w", err)
@@ -135,7 +141,9 @@ func (p *Provider) Run(ctx context.Context) error {
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	if err = cosiRuntime.RegisterQController(controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, 1*time.Minute)); err != nil {
+	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute)
+
+	if err = cosiRuntime.RegisterQController(infraMachineController); err != nil {
 		return fmt.Errorf("failed to register controller: %w", err)
 	}
 

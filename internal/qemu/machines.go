@@ -201,7 +201,7 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 			SkipInjectingConfig: true,
 			UUID:                &nodeUUID,
 			PXEBooted:           true,
-			DefaultBootOrder:    "nc", // first network, then disk
+			DefaultBootOrder:    "cn", // first disk, then network
 		})
 	}
 

@@ -7,10 +7,12 @@ package ipmi
 
 import (
 	"context"
+	"fmt"
 
 	goipmi "github.com/pensando/goipmi"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
 
 const ipmiUsername = "talos-agent"
@@ -33,6 +35,18 @@ func (c *Client) Reboot(context.Context) error {
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(context.Context) error {
 	return c.ipmiClient.Control(goipmi.ControlPowerDown)
+}
+
+// SetPXEBootOnce implements the power.Client interface.
+func (c *Client) SetPXEBootOnce(_ context.Context, mode pxe.BootMode) error {
+	switch mode {
+	case pxe.BootModeBIOS:
+		return c.ipmiClient.SetBootDevice(goipmi.BootDevicePxe)
+	case pxe.BootModeUEFI:
+		return c.ipmiClient.SetBootDeviceEFI(goipmi.BootDevicePxe)
+	default:
+		return fmt.Errorf("unsupported mode %q", mode)
+	}
 }
 
 // IsPoweredOn implements the power.Client interface.

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
 
 // Client is an API power management client: it communicates with an HTTP API to send power management commands.
@@ -34,6 +35,11 @@ func (c *Client) Reboot(ctx context.Context) error {
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(ctx context.Context) error {
 	return c.doPost(ctx, "/poweroff")
+}
+
+// SetPXEBootOnce implements the power.Client interface.
+func (c *Client) SetPXEBootOnce(ctx context.Context, _ pxe.BootMode) error {
+	return c.doPost(ctx, "/pxeboot")
 }
 
 func (c *Client) doPost(ctx context.Context, path string) error {

@@ -30,6 +30,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
 
 const (
@@ -52,11 +53,12 @@ type APIPowerManager interface {
 type InfraMachineController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
 // NewInfraMachineController initializes InfraMachineController.
-func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, requeueInterval time.Duration) *InfraMachineController {
+func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, pxeBootMode pxe.BootMode, requeueInterval time.Duration) *InfraMachineController {
 	helper := &infraMachineControllerHelper{
 		agentService:    agentService,
 		apiPowerManager: apiPowerManager,
 		state:           state,
+		pxeBootMode:     pxeBootMode,
 		requeueInterval: requeueInterval,
 	}
 
@@ -90,6 +92,7 @@ type infraMachineControllerHelper struct {
 	agentService    AgentService
 	apiPowerManager APIPowerManager
 	state           state.State
+	pxeBootMode     pxe.BootMode
 	requeueInterval time.Duration
 }
 
@@ -154,16 +157,6 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 		zap.Bool("installed", mode.Installed),
 	)
 
-	// The machine requires a reboot only if it is not in the desired mode, and either desired or the actual mode is agent mode.
-	// Switching from PXE booted Talos to booting from disk does not require a reboot by the provider, as Omni itself will do the switch.
-	requiresReboot := bootMode != requiredBootMode && (bootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE)
-
-	if requiresReboot {
-		logger.Info("reboot to switch boot mode")
-
-		return h.ensureReboot(ctx, status, logger)
-	}
-
 	if mode.RequiresPowerMgmtConfig {
 		if err = h.ensurePowerManagement(ctx, status, logger); err != nil {
 			return err
@@ -171,6 +164,17 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 
 		// the changes will trigger a new reconciliation, we can simply return here
 		return nil
+	}
+
+	// The machine requires a reboot only if it is not in the desired mode, and either desired or the actual mode is agent mode.
+	// Switching from PXE booted Talos to booting from disk does not require a reboot by the provider, as Omni itself will do the switch.
+	requiresReboot := bootMode != requiredBootMode && (bootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE)
+	requiresPXEBoot := requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_TALOS_PXE
+
+	if requiresReboot {
+		logger.Info("reboot to switch boot mode")
+
+		return h.ensureReboot(ctx, status, requiresPXEBoot, logger)
 	}
 
 	if mode.PendingWipeID != "" {
@@ -209,7 +213,7 @@ func (h *infraMachineControllerHelper) finalizerRemoval(ctx context.Context, rea
 		return nil
 	}
 
-	if err = h.ensureReboot(ctx, status, logger); err != nil {
+	if err = h.ensureReboot(ctx, status, true, logger); err != nil {
 		logger.Warn("failed to reboot machine", zap.Error(err))
 	}
 
@@ -284,7 +288,7 @@ func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID,
 		res.TypedSpec().Value.Installed = false
 
 		return nil
-	}); err != nil {
+	}); err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -294,7 +298,7 @@ func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID,
 }
 
 // ensureReboot makes sure that the machine is rebooted if it can be rebooted.
-func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, logger *zap.Logger) error {
+func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, pxeBoot bool, logger *zap.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -303,6 +307,12 @@ func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status 
 	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		return err
+	}
+
+	if pxeBoot {
+		if err = powerClient.SetPXEBootOnce(ctx, h.pxeBootMode); err != nil {
+			return err
+		}
 	}
 
 	if err = powerClient.Reboot(ctx); err != nil {
