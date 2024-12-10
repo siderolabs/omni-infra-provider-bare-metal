@@ -32,6 +32,11 @@ func (c *Client) Reboot(context.Context) error {
 	return c.ipmiClient.Control(goipmi.ControlPowerCycle)
 }
 
+// PowerOn implements the power.Client interface.
+func (c *Client) PowerOn(context.Context) error {
+	return c.ipmiClient.Control(goipmi.ControlPowerUp)
+}
+
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(context.Context) error {
 	return c.ipmiClient.Control(goipmi.ControlPowerDown)
