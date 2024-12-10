@@ -24,6 +24,7 @@ type Client interface {
 	io.Closer
 	Reboot(ctx context.Context) error
 	IsPoweredOn(ctx context.Context) (bool, error)
+	PowerOn(ctx context.Context) error
 	PowerOff(ctx context.Context) error
 	SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error
 }

@@ -32,6 +32,11 @@ func (c *Client) Reboot(ctx context.Context) error {
 	return c.doPost(ctx, "/reboot")
 }
 
+// PowerOn implements the power.Client interface.
+func (c *Client) PowerOn(ctx context.Context) error {
+	return c.doPost(ctx, "/poweron")
+}
+
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(ctx context.Context) error {
 	return c.doPost(ctx, "/poweroff")
