@@ -135,6 +135,12 @@ func (m *Poller) getPowerState(ctx context.Context, status *baremetal.MachineSta
 		return specs.PowerState_POWER_STATE_UNKNOWN
 	}
 
+	defer func() {
+		if closeErr := powerClient.Close(); closeErr != nil {
+			logger.Error("failed to close power client", zap.Error(closeErr))
+		}
+	}()
+
 	poweredOn, err := powerClient.IsPoweredOn(ctx)
 	if err != nil {
 		logger.Error("failed to get power state", zap.Error(err))

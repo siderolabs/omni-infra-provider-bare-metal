@@ -231,8 +231,8 @@ func (handler *Handler) getResources(ctx context.Context, id string) (resources,
 		return resources{}, fmt.Errorf("failed to get infra machine: %w", err)
 	}
 
-	status, err := machinestatus.Modify(ctx, handler.state, id, nil)
-	if err != nil {
+	status, err := machinestatus.Get(ctx, handler.state, id)
+	if err != nil && !state.IsNotFoundError(err) {
 		return resources{}, fmt.Errorf("failed to get bare metal machine status: %w", err)
 	}
 

@@ -21,6 +21,7 @@ type Mode struct {
 	BootMode                specs.BootMode
 	Installed               bool
 	RequiresPowerMgmtConfig bool
+	NeedsToBePoweredOn      bool
 }
 
 // DetermineRequiredMode determines the required boot mode.
@@ -63,6 +64,7 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 
 	requiresWipe := pendingWipeID != ""
 	bootIntoAgentMode := infraMachineTearingDown || acceptancePending || !allocated || requiresPowerMgmtConfig || requiresWipe
+	needsToBePoweredOn := allocated || requiresPowerMgmtConfig || installed || acceptancePending || infraMachineTearingDown || requiresWipe
 
 	var requiredBootMode specs.BootMode
 
@@ -85,6 +87,7 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 		zap.String("last_wipe_id", lastWipeID),
 		zap.Stringer("acceptance_status", acceptanceStatus),
 		zap.Stringer("required_boot_mode", requiredBootMode),
+		zap.Bool("needs_to_be_powered_on", needsToBePoweredOn),
 	).Debug("determined boot mode")
 
 	return Mode{
@@ -92,5 +95,6 @@ func DetermineRequiredMode(infraMachine *infra.Machine, status *baremetal.Machin
 		BootMode:                requiredBootMode,
 		Installed:               installed,
 		RequiresPowerMgmtConfig: requiresPowerMgmtConfig,
+		NeedsToBePoweredOn:      needsToBePoweredOn,
 	}, nil
 }

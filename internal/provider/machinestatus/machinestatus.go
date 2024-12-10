@@ -18,6 +18,14 @@ import (
 
 var mu sync.Mutex
 
+// Get gets the baremetal.MachineStatus resource from the state.
+func Get(ctx context.Context, st state.State, id resource.ID) (*baremetal.MachineStatus, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	return safe.StateGetByID[*baremetal.MachineStatus](ctx, st, id)
+}
+
 // Modify modifies the baremetal.MachineStatus resource in the state.
 func Modify(ctx context.Context, st state.State, id resource.ID, updateFn func(status *baremetal.MachineStatus) error) (*baremetal.MachineStatus, error) {
 	mu.Lock()

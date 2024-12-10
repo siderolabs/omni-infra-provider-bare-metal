@@ -54,3 +54,7 @@ message MachineStatusSpec {
   // It is used to track the last reboot time of the machine, and to enforce the MinRebootInterval.
   google.protobuf.Timestamp last_reboot_timestamp = 5;
 }
+
+message PowerStatusSpec {
+  PowerState power_state = 1;
+}

@@ -137,8 +137,6 @@ func (machines *Machines) Run(ctx context.Context) error {
 		}
 	}
 
-	<-ctx.Done()
-
 	return nil
 }
 

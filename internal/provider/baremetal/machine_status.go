@@ -26,7 +26,7 @@ func NewMachineStatus(id string) *MachineStatus {
 // MachineStatusType is the type of MachineStatus resource.
 var MachineStatusType = infra.ResourceType("BareMetalMachineStatus", providermeta.ProviderID)
 
-// MachineStatus describes machineStatus configuration.
+// MachineStatus describes machine status configuration.
 type MachineStatus = typed.Resource[MachineStatusSpec, MachineStatusExtension]
 
 // MachineStatusSpec wraps specs.MachineStatusSpec.

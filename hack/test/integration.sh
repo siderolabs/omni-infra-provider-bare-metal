@@ -70,7 +70,7 @@ trap cleanup EXIT SIGINT
 
 echo "Bring up some QEMU machines..."
 
-${QEMU_UP} 2>&1 | tee $TEST_LOGS_DIR/qemu-up.log &
+${QEMU_UP} 2>&1 | tee $TEST_LOGS_DIR/qemu-up.log
 
 echo "Wait for IP address $GATEWAY_IP to appear..."
 timeout 60s bash -c "until ip a | grep -q '${GATEWAY_IP}'; do echo 'Waiting for IP address...'; sleep 5; done"

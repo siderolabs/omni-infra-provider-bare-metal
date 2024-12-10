@@ -45,6 +45,12 @@ func (p *ProviderServiceServer) RebootMachine(ctx context.Context, request *prov
 		return nil, err
 	}
 
+	defer func() {
+		if closeErr := powerClient.Close(); closeErr != nil {
+			p.logger.Error("failed to close power client", zap.Error(closeErr))
+		}
+	}()
+
 	if err = powerClient.Reboot(ctx); err != nil {
 		return nil, err
 	}

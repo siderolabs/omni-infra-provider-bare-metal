@@ -34,9 +34,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
 
-const (
-	ipmiUsername = "talos-agent"
-)
+const ipmiUsername = "talos-agent"
 
 // AgentService is the interface for interacting with the Talos agent over the reverse GRPC tunnel.
 type AgentService interface {
@@ -50,14 +48,14 @@ type APIPowerManager interface {
 	ReadManagementAddress(id resource.ID, logger *zap.Logger) (string, error)
 }
 
-// InfraMachineController manages InfraMachine resource lifecycle.
-type InfraMachineController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
+// InfraMachineStatusController manages InfraMachine resource lifecycle.
+type InfraMachineStatusController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
-// NewInfraMachineController initializes InfraMachineController.
-func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State,
+// NewInfraMachineStatusController initializes InfraMachineStatusController.
+func NewInfraMachineStatusController(agentService AgentService, apiPowerManager APIPowerManager, state state.State,
 	pxeBootMode pxe.BootMode, requeueInterval, minRebootInterval time.Duration, machineLabels map[string]string,
-) *InfraMachineController {
-	helper := &infraMachineControllerHelper{
+) *InfraMachineStatusController {
+	helper := &infraMachineStatusControllerHelper{
 		agentService:      agentService,
 		apiPowerManager:   apiPowerManager,
 		state:             state,
@@ -69,7 +67,7 @@ func NewInfraMachineController(agentService AgentService, apiPowerManager APIPow
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *infra.MachineStatus]{
-			Name: meta.ProviderID + ".InfraMachineController",
+			Name: meta.ProviderID + ".InfraMachineStatusController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *infra.MachineStatus {
 				return infra.NewMachineStatus(infraMachine.Metadata().ID())
 			},
@@ -93,7 +91,7 @@ func NewInfraMachineController(agentService AgentService, apiPowerManager APIPow
 	)
 }
 
-type infraMachineControllerHelper struct {
+type infraMachineStatusControllerHelper struct {
 	agentService      AgentService
 	apiPowerManager   APIPowerManager
 	state             state.State
@@ -103,7 +101,7 @@ type infraMachineControllerHelper struct {
 	minRebootInterval time.Duration
 }
 
-func (h *infraMachineControllerHelper) transform(ctx context.Context, reader controller.Reader, logger *zap.Logger,
+func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, reader controller.Reader, logger *zap.Logger,
 	infraMachine *infra.Machine, infraMachineStatus *infra.MachineStatus,
 ) error {
 	preferredPowerState := infraMachine.TypedSpec().Value.PreferredPowerState
@@ -126,9 +124,13 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("machine not accepted")
 	}
 
-	status, err := machinestatus.Modify(ctx, h.state, infraMachine.Metadata().ID(), nil)
-	if err != nil {
+	status, err := machinestatus.Get(ctx, h.state, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
+	}
+
+	if status == nil {
+		status = baremetal.NewMachineStatus(infraMachine.Metadata().ID())
 	}
 
 	logger.Info("transform infra machine")
@@ -165,7 +167,7 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 	)
 
 	if mode.RequiresPowerMgmtConfig {
-		if err = h.ensurePowerManagement(ctx, status, logger); err != nil {
+		if err = h.ensurePowerManagement(ctx, infraMachine.Metadata().ID(), logger); err != nil {
 			return err
 		}
 
@@ -203,7 +205,7 @@ func (h *infraMachineControllerHelper) transform(ctx context.Context, reader con
 // finalizerRemoval is called when the infra.Machine is being deleted.
 //
 // We do not need to wipe the disks here, as if/when the machine reconnects to Omni, a new infra.Machine will be created, and it will be marked for the initial wipe.
-func (h *infraMachineControllerHelper) finalizerRemoval(ctx context.Context, reader controller.Reader, logger *zap.Logger, infraMachine *infra.Machine) error {
+func (h *infraMachineStatusControllerHelper) finalizerRemoval(ctx context.Context, reader controller.Reader, logger *zap.Logger, infraMachine *infra.Machine) error {
 	// attempt to boot into agent mode if it is not already in agent mode
 	status, err := safe.ReaderGetByID[*baremetal.MachineStatus](ctx, reader, infraMachine.Metadata().ID())
 	if err != nil {
@@ -228,7 +230,7 @@ func (h *infraMachineControllerHelper) finalizerRemoval(ctx context.Context, rea
 }
 
 // removeInternalStatus removes the provider-internal baremetal.MachineStatus resource.
-func (h *infraMachineControllerHelper) removeInternalStatus(ctx context.Context, id resource.ID) error {
+func (h *infraMachineStatusControllerHelper) removeInternalStatus(ctx context.Context, id resource.ID) error {
 	statusMD := baremetal.NewMachineStatus(id).Metadata()
 
 	destroyReady, err := h.state.Teardown(ctx, statusMD)
@@ -255,7 +257,7 @@ func (h *infraMachineControllerHelper) removeInternalStatus(ctx context.Context,
 	return nil
 }
 
-func (h *infraMachineControllerHelper) populateInfraMachineStatus(status *baremetal.MachineStatus, infraMachineStatus *infra.MachineStatus) error {
+func (h *infraMachineStatusControllerHelper) populateInfraMachineStatus(status *baremetal.MachineStatus, infraMachineStatus *infra.MachineStatus) error {
 	infraMachineStatus.TypedSpec().Value.ReadyToUse = false
 
 	// set the labels
@@ -278,7 +280,7 @@ func (h *infraMachineControllerHelper) populateInfraMachineStatus(status *bareme
 	return nil
 }
 
-func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID, pendingWipeID string, logger *zap.Logger) error {
+func (h *infraMachineStatusControllerHelper) wipe(ctx context.Context, id resource.ID, pendingWipeID string, logger *zap.Logger) error {
 	if err := h.agentService.WipeDisks(ctx, id); err != nil {
 		statusCode := grpcstatus.Code(err)
 		if statusCode == codes.Unavailable {
@@ -310,7 +312,7 @@ func (h *infraMachineControllerHelper) wipe(ctx context.Context, id resource.ID,
 }
 
 // ensureReboot makes sure that the machine is rebooted if it can be rebooted.
-func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, pxeBoot bool, logger *zap.Logger) error {
+func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, pxeBoot bool, logger *zap.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -356,31 +358,33 @@ func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status 
 }
 
 // ensurePowerManagement makes sure that the power management for the machine is initialized if it hasn't been done yet.
-func (h *infraMachineControllerHelper) ensurePowerManagement(ctx context.Context, status *baremetal.MachineStatus, logger *zap.Logger) error {
-	logger.Info("initializing power management")
-
-	id := status.Metadata().ID()
-
-	powerManagement, err := h.agentService.GetPowerManagement(ctx, id)
-	if err != nil {
-		if grpcstatus.Code(err) == codes.Unavailable {
-			return controller.NewRequeueErrorf(h.requeueInterval, "machine is not yet available, requeue getting power management")
-		}
-
-		return err
-	}
-
-	ipmiPassword, err := h.ensurePowerManagementOnAgent(ctx, id, powerManagement)
-	if err != nil {
-		return err
-	}
+func (h *infraMachineStatusControllerHelper) ensurePowerManagement(ctx context.Context, id resource.ID, logger *zap.Logger) error {
+	logger.Info("initialize power management")
 
 	logFields := make([]zap.Field, 0, 2)
 
-	if _, err = machinestatus.Modify(ctx, h.state, id, func(status *baremetal.MachineStatus) error {
+	if _, err := machinestatus.Modify(ctx, h.state, id, func(status *baremetal.MachineStatus) error {
+		if status.TypedSpec().Value.PowerManagement != nil { // we already have power management configured
+			return nil
+		}
+
+		existingPowerMgmt, err := h.agentService.GetPowerManagement(ctx, id)
+		if err != nil {
+			if grpcstatus.Code(err) == codes.Unavailable {
+				return controller.NewRequeueErrorf(h.requeueInterval, "machine is not yet available, requeue getting power management")
+			}
+
+			return err
+		}
+
+		ipmiPassword, err := h.ensurePowerManagementOnAgent(ctx, id, existingPowerMgmt)
+		if err != nil {
+			return err
+		}
+
 		status.TypedSpec().Value.PowerManagement = &specs.PowerManagement{}
 
-		if powerManagement.Api != nil {
+		if existingPowerMgmt.Api != nil {
 			address, addressErr := h.apiPowerManager.ReadManagementAddress(id, logger)
 			if addressErr != nil {
 				return addressErr
@@ -393,14 +397,14 @@ func (h *infraMachineControllerHelper) ensurePowerManagement(ctx context.Context
 			logFields = append(logFields, zap.String("api_address", address))
 		}
 
-		if powerManagement.Ipmi != nil {
+		if existingPowerMgmt.Ipmi != nil {
 			status.TypedSpec().Value.PowerManagement.Ipmi = &specs.PowerManagement_IPMI{
-				Address:  powerManagement.Ipmi.Address,
+				Address:  existingPowerMgmt.Ipmi.Address,
 				Username: ipmiUsername,
 				Password: ipmiPassword,
 			}
 
-			logFields = append(logFields, zap.String("ipmi_address", powerManagement.Ipmi.Address), zap.String("ipmi_username", ipmiUsername))
+			logFields = append(logFields, zap.String("ipmi_address", existingPowerMgmt.Ipmi.Address), zap.String("ipmi_username", ipmiUsername))
 		}
 
 		return nil
@@ -414,7 +418,11 @@ func (h *infraMachineControllerHelper) ensurePowerManagement(ctx context.Context
 }
 
 // ensurePowerManagementOnAgent ensures that the power management (e.g., IPMI) is configured and credentials are set on the Talos machine running agent.
-func (h *infraMachineControllerHelper) ensurePowerManagementOnAgent(ctx context.Context, id resource.ID, powerManagement *agentpb.GetPowerManagementResponse) (ipmiPassword string, err error) {
+func (h *infraMachineStatusControllerHelper) ensurePowerManagementOnAgent(ctx context.Context, id resource.ID, powerManagement *agentpb.GetPowerManagementResponse) (ipmiPassword string, err error) {
+	if powerManagement.Api == nil && powerManagement.Ipmi == nil {
+		return "", fmt.Errorf("machine did not provide any power management information")
+	}
+
 	var (
 		api  *agentpb.SetPowerManagementRequest_API
 		ipmi *agentpb.SetPowerManagementRequest_IPMI

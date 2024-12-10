@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/runtime"
 	runtimeoptions "github.com/cosi-project/runtime/pkg/controller/runtime/options"
 	"github.com/cosi-project/runtime/pkg/resource/protobuf"
@@ -147,10 +148,13 @@ func (p *Provider) Run(ctx context.Context) error {
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels)
-
-	if err = cosiRuntime.RegisterQController(infraMachineController); err != nil {
-		return fmt.Errorf("failed to register controller: %w", err)
+	for _, qController := range []controller.QController{
+		controllers.NewInfraMachineStatusController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels),
+		controllers.NewPowerStatusController(omniState),
+	} {
+		if err = cosiRuntime.RegisterQController(qController); err != nil {
+			return fmt.Errorf("failed to register QController: %w", err)
+		}
 	}
 
 	return p.runComponents(ctx, []component{
@@ -166,14 +170,21 @@ func (p *Provider) Run(ctx context.Context) error {
 func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runtime, error) {
 	omniState := omniAPIClient.Omni().State()
 
+	var options []runtimeoptions.Option
+
 	if err := protobuf.RegisterResource(baremetal.MachineStatusType, &baremetal.MachineStatus{}); err != nil {
 		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
 	}
 
-	var options []runtimeoptions.Option
+	if err := protobuf.RegisterResource(baremetal.PowerStatusType, &baremetal.PowerStatus{}); err != nil {
+		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
+	}
 
 	if p.options.EnableResourceCache {
-		options = append(options, safe.WithResourceCache[*baremetal.MachineStatus]())
+		options = append(options,
+			safe.WithResourceCache[*baremetal.MachineStatus](),
+			safe.WithResourceCache[*baremetal.PowerStatus](),
+		)
 	}
 
 	cosiRuntime, err := runtime.NewRuntime(omniState, p.logger.With(zap.String("component", "cosi_runtime")), options...)
