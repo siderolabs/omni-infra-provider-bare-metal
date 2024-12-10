@@ -5,6 +5,8 @@
 package provider
 
 import (
+	"time"
+
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 )
@@ -32,6 +34,8 @@ type Options struct {
 	UseLocalBootAssets    bool
 	ClearState            bool
 	WipeWithZeroes        bool
+
+	MinRebootInterval time.Duration
 }
 
 // DefaultOptions returns the default provider options.
@@ -44,4 +48,5 @@ var DefaultOptions = Options{
 	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 	APIPort:                50042,
+	MinRebootInterval:      5 * time.Minute,
 }

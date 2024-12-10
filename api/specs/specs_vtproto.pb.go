@@ -9,8 +9,10 @@ import (
 	io "io"
 
 	protohelpers "github.com/planetscale/vtprotobuf/protohelpers"
+	timestamppb1 "github.com/planetscale/vtprotobuf/types/known/timestamppb"
 	proto "google.golang.org/protobuf/proto"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -84,6 +86,7 @@ func (m *MachineStatusSpec) CloneVT() *MachineStatusSpec {
 	r.PowerState = m.PowerState
 	r.BootMode = m.BootMode
 	r.LastWipeId = m.LastWipeId
+	r.LastRebootTimestamp = (*timestamppb.Timestamp)((*timestamppb1.Timestamp)(m.LastRebootTimestamp).CloneVT())
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -180,6 +183,9 @@ func (this *MachineStatusSpec) EqualVT(that *MachineStatusSpec) bool {
 		return false
 	}
 	if this.LastWipeId != that.LastWipeId {
+		return false
+	}
+	if !(*timestamppb1.Timestamp)(this.LastRebootTimestamp).EqualVT((*timestamppb1.Timestamp)(that.LastRebootTimestamp)) {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -374,6 +380,16 @@ func (m *MachineStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.LastRebootTimestamp != nil {
+		size, err := (*timestamppb1.Timestamp)(m.LastRebootTimestamp).MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x2a
+	}
 	if len(m.LastWipeId) > 0 {
 		i -= len(m.LastWipeId)
 		copy(dAtA[i:], m.LastWipeId)
@@ -479,6 +495,10 @@ func (m *MachineStatusSpec) SizeVT() (n int) {
 	}
 	l = len(m.LastWipeId)
 	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.LastRebootTimestamp != nil {
+		l = (*timestamppb1.Timestamp)(m.LastRebootTimestamp).SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	n += len(m.unknownFields)
@@ -991,6 +1011,42 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.LastWipeId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastRebootTimestamp", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastRebootTimestamp == nil {
+				m.LastRebootTimestamp = &timestamppb.Timestamp{}
+			}
+			if err := (*timestamppb1.Timestamp)(m.LastRebootTimestamp).UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -141,7 +141,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute)
+	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval)
 
 	if err = cosiRuntime.RegisterQController(infraMachineController); err != nil {
 		return fmt.Errorf("failed to register controller: %w", err)

@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/baremetal"
@@ -53,13 +54,16 @@ type APIPowerManager interface {
 type InfraMachineController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
 // NewInfraMachineController initializes InfraMachineController.
-func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, pxeBootMode pxe.BootMode, requeueInterval time.Duration) *InfraMachineController {
+func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, pxeBootMode pxe.BootMode,
+	requeueInterval, minRebootInterval time.Duration,
+) *InfraMachineController {
 	helper := &infraMachineControllerHelper{
-		agentService:    agentService,
-		apiPowerManager: apiPowerManager,
-		state:           state,
-		pxeBootMode:     pxeBootMode,
-		requeueInterval: requeueInterval,
+		agentService:      agentService,
+		apiPowerManager:   apiPowerManager,
+		state:             state,
+		pxeBootMode:       pxeBootMode,
+		requeueInterval:   requeueInterval,
+		minRebootInterval: minRebootInterval,
 	}
 
 	return qtransform.NewQController(
@@ -89,11 +93,12 @@ func NewInfraMachineController(agentService AgentService, apiPowerManager APIPow
 }
 
 type infraMachineControllerHelper struct {
-	agentService    AgentService
-	apiPowerManager APIPowerManager
-	state           state.State
-	pxeBootMode     pxe.BootMode
-	requeueInterval time.Duration
+	agentService      AgentService
+	apiPowerManager   APIPowerManager
+	state             state.State
+	pxeBootMode       pxe.BootMode
+	requeueInterval   time.Duration
+	minRebootInterval time.Duration
 }
 
 func (h *infraMachineControllerHelper) transform(ctx context.Context, reader controller.Reader, logger *zap.Logger,
@@ -302,6 +307,17 @@ func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
+	now := time.Now()
+	lastRebootTimestamp := status.TypedSpec().Value.LastRebootTimestamp.AsTime()
+
+	elapsed := now.Sub(lastRebootTimestamp)
+
+	if elapsed < h.minRebootInterval {
+		logger.Debug("machine was rebooted recently, requeue without issuing a reboot", zap.Duration("elapsed", elapsed))
+
+		return controller.NewRequeueInterval(h.minRebootInterval - elapsed + time.Second)
+	}
+
 	var powerClient power.Client
 
 	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
@@ -319,9 +335,17 @@ func (h *infraMachineControllerHelper) ensureReboot(ctx context.Context, status 
 		return err
 	}
 
+	if _, err = machinestatus.Modify(ctx, h.state, status.Metadata().ID(), func(status *baremetal.MachineStatus) error {
+		status.TypedSpec().Value.LastRebootTimestamp = timestamppb.New(now)
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	logger.Info("rebooted machine, requeue")
 
-	return controller.NewRequeueInterval(h.requeueInterval)
+	return controller.NewRequeueInterval(h.minRebootInterval + time.Second)
 }
 
 // ensurePowerManagement makes sure that the power management for the machine is initialized if it hasn't been done yet.

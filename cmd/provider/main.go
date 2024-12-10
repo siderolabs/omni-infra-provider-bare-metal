@@ -135,6 +135,8 @@ func init() {
 		"Comma separated list of key=value pairs to be set to the machine. Example: key1=value1,key2,key3=value3")
 	rootCmd.Flags().BoolVar(&providerOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", provider.DefaultOptions.InsecureSkipTLSVerify,
 		"Skip TLS verification when connecting to the Omni API.")
+	rootCmd.Flags().DurationVar(&providerOptions.MinRebootInterval, "min-reboot-interval", provider.DefaultOptions.MinRebootInterval,
+		"the minimum interval between reboots of the machine issued by the provider. This is to prevent the provider from issuing reboots too frequently.")
 
 	if constants.IsDebugBuild {
 		rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", provider.DefaultOptions.ClearState, "Clear the state of the provider on startup.")
