@@ -54,8 +54,8 @@ type APIPowerManager interface {
 type InfraMachineController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
 // NewInfraMachineController initializes InfraMachineController.
-func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State, pxeBootMode pxe.BootMode,
-	requeueInterval, minRebootInterval time.Duration,
+func NewInfraMachineController(agentService AgentService, apiPowerManager APIPowerManager, state state.State,
+	pxeBootMode pxe.BootMode, requeueInterval, minRebootInterval time.Duration, machineLabels map[string]string,
 ) *InfraMachineController {
 	helper := &infraMachineControllerHelper{
 		agentService:      agentService,
@@ -64,6 +64,7 @@ func NewInfraMachineController(agentService AgentService, apiPowerManager APIPow
 		pxeBootMode:       pxeBootMode,
 		requeueInterval:   requeueInterval,
 		minRebootInterval: minRebootInterval,
+		machineLabels:     machineLabels,
 	}
 
 	return qtransform.NewQController(
@@ -96,6 +97,7 @@ type infraMachineControllerHelper struct {
 	agentService      AgentService
 	apiPowerManager   APIPowerManager
 	state             state.State
+	machineLabels     map[string]string
 	pxeBootMode       pxe.BootMode
 	requeueInterval   time.Duration
 	minRebootInterval time.Duration
@@ -255,6 +257,11 @@ func (h *infraMachineControllerHelper) removeInternalStatus(ctx context.Context,
 
 func (h *infraMachineControllerHelper) populateInfraMachineStatus(status *baremetal.MachineStatus, infraMachineStatus *infra.MachineStatus) error {
 	infraMachineStatus.TypedSpec().Value.ReadyToUse = false
+
+	// set the labels
+	for k, v := range h.machineLabels {
+		infraMachineStatus.Metadata().Labels().Set(k, v)
+	}
 
 	// update power state
 	switch status.TypedSpec().Value.PowerState {

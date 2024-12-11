@@ -183,6 +183,7 @@ docker run -d --network host \
   --api-power-mgmt-state-dir=/api-power-mgmt-state \
   --ipmi-pxe-boot-mode=bios \
   --min-reboot-interval=1m \
+  --machine-labels=a=b,c \
   --debug
 
 docker logs -f provider &

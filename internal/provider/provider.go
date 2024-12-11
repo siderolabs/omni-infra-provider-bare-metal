@@ -10,6 +10,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cosi-project/runtime/pkg/controller/runtime"
@@ -110,7 +111,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create/update provider status: %w", err)
 	}
 
-	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL, p.options.AgentModeTalosVersion, p.options.MachineLabels)
+	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL, p.options.AgentModeTalosVersion)
 	if err != nil {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}
@@ -131,6 +132,11 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create config handler: %w", err)
 	}
 
+	parsedMachineLabels, err := p.parseLabels()
+	if err != nil {
+		return fmt.Errorf("failed to parse machine labels: %w", err)
+	}
+
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler, p.logger.With(zap.String("component", "server")))
 	agentService := agent.NewService(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_service"))) //nolint:contextcheck // false positive
 	machineStatusPoller := machinestatus.NewPoller(agentService, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
@@ -141,7 +147,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval)
+	infraMachineController := controllers.NewInfraMachineController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels)
 
 	if err = cosiRuntime.RegisterQController(infraMachineController); err != nil {
 		return fmt.Errorf("failed to register controller: %w", err)
@@ -274,4 +280,25 @@ func (p *Provider) clearState(ctx context.Context, st state.State) error {
 	}
 
 	return errs
+}
+
+func (p *Provider) parseLabels() (map[string]string, error) {
+	labels := make(map[string]string, len(p.options.MachineLabels))
+
+	for _, l := range p.options.MachineLabels {
+		parts := strings.Split(l, "=")
+		if len(parts) > 2 {
+			return nil, fmt.Errorf("malformed label %s", l)
+		}
+
+		value := ""
+
+		if len(parts) > 1 {
+			value = parts[1]
+		}
+
+		labels[parts[0]] = value
+	}
+
+	return labels, nil
 }
