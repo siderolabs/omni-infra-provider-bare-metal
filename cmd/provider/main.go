@@ -146,4 +146,9 @@ func init() {
 		"Enable controller runtime resource cache.")
 	rootCmd.Flags().BoolVar(&providerOptions.WipeWithZeroes, "wipe-with-zeroes", provider.DefaultOptions.WipeWithZeroes,
 		"When wiping a machine, write zeroes to the whole disk instead doing a fast wipe.")
+
+	rootCmd.Flags().BoolVar(&providerOptions.ExperimentalUseRedfish, "experimental-use-redfish", provider.DefaultOptions.ExperimentalUseRedfish,
+		"Use Redfish for power management instead of IPMI. This is an EXPERIMENTAL flag and may be subject to change.")
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishSetBootSourceOverrideMode, "redfish-set-boot-source-override-mode", provider.DefaultOptions.RedfishSetBootSourceOverrideMode,
+		"Set the boot source override mode field when using Redfish for power management. Some Redfish implementations require this field to be unset.")
 }

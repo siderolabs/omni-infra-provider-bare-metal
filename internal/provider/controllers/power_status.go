@@ -22,16 +22,16 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/boot"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 )
 
 // PowerStatusController manages InfraMachine resource lifecycle.
 type PowerStatusController = qtransform.QController[*infra.Machine, *baremetal.PowerStatus]
 
 // NewPowerStatusController creates a new PowerStatusController.
-func NewPowerStatusController(state state.State) *PowerStatusController {
+func NewPowerStatusController(powerClientFactory PowerClientFactory, state state.State) *PowerStatusController {
 	helper := &powerStatusControllerHelper{
-		state: state,
+		powerClientFactory: powerClientFactory,
+		state:              state,
 	}
 
 	return qtransform.NewQController(
@@ -57,7 +57,8 @@ func NewPowerStatusController(state state.State) *PowerStatusController {
 }
 
 type powerStatusControllerHelper struct {
-	state state.State
+	powerClientFactory PowerClientFactory
+	state              state.State
 }
 
 func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ controller.Reader, logger *zap.Logger, machine *infra.Machine, powerStatus *baremetal.PowerStatus) error {
@@ -87,7 +88,7 @@ func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ cont
 	powerManagement := machineStatus.TypedSpec().Value.PowerManagement
 	preferredPowerState := machine.TypedSpec().Value.PreferredPowerState
 
-	powerClient, err := power.GetClient(powerManagement)
+	powerClient, err := helper.powerClientFactory.GetClient(powerManagement)
 	if err != nil {
 		return err
 	}

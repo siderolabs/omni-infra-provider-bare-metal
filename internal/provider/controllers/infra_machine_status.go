@@ -52,17 +52,18 @@ type APIPowerManager interface {
 type InfraMachineStatusController = qtransform.QController[*infra.Machine, *infra.MachineStatus]
 
 // NewInfraMachineStatusController initializes InfraMachineStatusController.
-func NewInfraMachineStatusController(agentService AgentService, apiPowerManager APIPowerManager, state state.State,
-	pxeBootMode pxe.BootMode, requeueInterval, minRebootInterval time.Duration, machineLabels map[string]string,
+func NewInfraMachineStatusController(agentService AgentService, apiPowerManager APIPowerManager, powerClientFactory PowerClientFactory,
+	state state.State, pxeBootMode pxe.BootMode, requeueInterval, minRebootInterval time.Duration, machineLabels map[string]string,
 ) *InfraMachineStatusController {
 	helper := &infraMachineStatusControllerHelper{
-		agentService:      agentService,
-		apiPowerManager:   apiPowerManager,
-		state:             state,
-		pxeBootMode:       pxeBootMode,
-		requeueInterval:   requeueInterval,
-		minRebootInterval: minRebootInterval,
-		machineLabels:     machineLabels,
+		agentService:       agentService,
+		apiPowerManager:    apiPowerManager,
+		powerClientFactory: powerClientFactory,
+		state:              state,
+		pxeBootMode:        pxeBootMode,
+		requeueInterval:    requeueInterval,
+		minRebootInterval:  minRebootInterval,
+		machineLabels:      machineLabels,
 	}
 
 	return qtransform.NewQController(
@@ -92,13 +93,14 @@ func NewInfraMachineStatusController(agentService AgentService, apiPowerManager 
 }
 
 type infraMachineStatusControllerHelper struct {
-	agentService      AgentService
-	apiPowerManager   APIPowerManager
-	state             state.State
-	machineLabels     map[string]string
-	pxeBootMode       pxe.BootMode
-	requeueInterval   time.Duration
-	minRebootInterval time.Duration
+	agentService       AgentService
+	apiPowerManager    APIPowerManager
+	powerClientFactory PowerClientFactory
+	state              state.State
+	machineLabels      map[string]string
+	pxeBootMode        pxe.BootMode
+	requeueInterval    time.Duration
+	minRebootInterval  time.Duration
 }
 
 func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, reader controller.Reader, logger *zap.Logger,
@@ -329,7 +331,7 @@ func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context, s
 
 	var powerClient power.Client
 
-	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
+	powerClient, err := h.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		return err
 	}
@@ -400,6 +402,7 @@ func (h *infraMachineStatusControllerHelper) ensurePowerManagement(ctx context.C
 		if existingPowerMgmt.Ipmi != nil {
 			status.TypedSpec().Value.PowerManagement.Ipmi = &specs.PowerManagement_IPMI{
 				Address:  existingPowerMgmt.Ipmi.Address,
+				Port:     existingPowerMgmt.Ipmi.Port,
 				Username: ipmiUsername,
 				Password: ipmiPassword,
 			}

@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	providerpb "github.com/siderolabs/omni-infra-provider-bare-metal/api/provider"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/service"
 )
 
@@ -25,26 +27,33 @@ type Tunneler interface {
 	Tunnel() *grpctunnel.ReverseTunnelServer
 }
 
+// PowerClientFactory is the interface for creating power clients.
+type PowerClientFactory interface {
+	GetClient(powerManagement *specs.PowerManagement) (power.Client, error)
+}
+
 // Tunnel represents the reverse GRPC tunnel to Omni.
 type Tunnel struct {
-	tunneler Tunneler
-	logger   *zap.Logger
-	state    state.State
+	tunneler           Tunneler
+	powerClientFactory PowerClientFactory
+	logger             *zap.Logger
+	state              state.State
 }
 
 // New creates a new Tunnel.
-func New(state state.State, tunneler Tunneler, logger *zap.Logger) *Tunnel {
+func New(powerClientFactory PowerClientFactory, state state.State, tunneler Tunneler, logger *zap.Logger) *Tunnel {
 	return &Tunnel{
-		state:    state,
-		tunneler: tunneler,
-		logger:   logger,
+		powerClientFactory: powerClientFactory,
+		state:              state,
+		tunneler:           tunneler,
+		logger:             logger,
 	}
 }
 
 // Run starts the reverse GRPC tunnel to Omni.
-func (t *Tunnel) Run(ctx context.Context) error {
-	reverseTunnelServer := t.tunneler.Tunnel()
-	providerServiceServer := service.NewProviderServiceServer(t.state, t.logger)
+func (tunnel *Tunnel) Run(ctx context.Context) error {
+	reverseTunnelServer := tunnel.tunneler.Tunnel()
+	providerServiceServer := service.NewProviderServiceServer(tunnel.powerClientFactory, tunnel.state, tunnel.logger)
 
 	providerpb.RegisterProviderServiceServer(reverseTunnelServer, providerServiceServer)
 
@@ -55,7 +64,7 @@ func (t *Tunnel) Run(ctx context.Context) error {
 				return nil
 			}
 
-			t.logger.Error("failed to serve reverse tunnel", zap.Error(err))
+			tunnel.logger.Error("failed to serve reverse tunnel", zap.Error(err))
 
 			select {
 			case <-ctx.Done():

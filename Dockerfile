@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-06T12:07:03Z by kres 1ebe796.
+# Generated on 2024-12-16T23:04:25Z by kres 318187b.
 
 ARG TOOLCHAIN
 
@@ -17,10 +17,10 @@ FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-l
 # runs markdownlint
 FROM docker.io/oven/bun:1.1.38-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.2.1
+RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
 COPY ./README.md ./README.md
-RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
+RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
 
 # collects proto specs
 FROM scratch AS proto-specs
@@ -225,7 +225,7 @@ COPY --from=ghcr.io/siderolabs/ipmitool:v1.8.0-16-g71d23b4 / /
 COPY --from=ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 /usr/libexec/zbin /bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
-COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-alpha.3-agent-v0.1.0-alpha.2 / /assets
+COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-beta.1-agent-v0.1.0-beta.0 / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
 

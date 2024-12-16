@@ -4,3 +4,13 @@
 
 // Package controllers implements COSI controllers for the bare metal provider.
 package controllers
+
+import (
+	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
+)
+
+// PowerClientFactory is the interface for creating power clients.
+type PowerClientFactory interface {
+	GetClient(powerManagement *specs.PowerManagement) (power.Client, error)
+}

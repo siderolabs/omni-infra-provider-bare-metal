@@ -28,25 +28,28 @@ type Options struct {
 	MachineLabels          []string
 	APIPort                int
 
-	EnableResourceCache   bool
-	AgentTestMode         bool
-	InsecureSkipTLSVerify bool
-	UseLocalBootAssets    bool
-	ClearState            bool
-	WipeWithZeroes        bool
+	EnableResourceCache              bool
+	AgentTestMode                    bool
+	InsecureSkipTLSVerify            bool
+	UseLocalBootAssets               bool
+	ClearState                       bool
+	WipeWithZeroes                   bool
+	ExperimentalUseRedfish           bool
+	RedfishSetBootSourceOverrideMode bool
 
 	MinRebootInterval time.Duration
 }
 
 // DefaultOptions returns the default provider options.
 var DefaultOptions = Options{
-	Name:                   "Bare Metal",
-	Description:            "Bare metal infrastructure provider",
-	ImageFactoryBaseURL:    "https://factory.talos.dev",
-	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-	AgentModeTalosVersion:  "v1.9.0-alpha.2",
-	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
-	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
-	APIPort:                50042,
-	MinRebootInterval:      5 * time.Minute,
+	Name:                             "Bare Metal",
+	Description:                      "Bare metal infrastructure provider",
+	ImageFactoryBaseURL:              "https://factory.talos.dev",
+	ImageFactoryPXEBaseURL:           "https://pxe.factory.talos.dev",
+	AgentModeTalosVersion:            "v1.9.0-alpha.2",
+	BootFromDiskMethod:               string(ipxe.BootIPXEExit),
+	IPMIPXEBootMode:                  string(pxe.BootModeUEFI),
+	APIPort:                          50042,
+	MinRebootInterval:                5 * time.Minute,
+	RedfishSetBootSourceOverrideMode: true,
 }

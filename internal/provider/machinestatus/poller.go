@@ -26,19 +26,26 @@ type AgentService interface {
 	IsAccessible(ctx context.Context, machineID string) (bool, error)
 }
 
+// PowerClientFactory is the interface for creating power clients.
+type PowerClientFactory interface {
+	GetClient(powerManagement *specs.PowerManagement) (power.Client, error)
+}
+
 // Poller polls the machines periodically and updates their statuses.
 type Poller struct {
-	agentService AgentService
-	state        state.State
-	logger       *zap.Logger
+	agentService       AgentService
+	powerClientFactory PowerClientFactory
+	state              state.State
+	logger             *zap.Logger
 }
 
 // NewPoller creates a new Poller.
-func NewPoller(agentService AgentService, state state.State, logger *zap.Logger) *Poller {
+func NewPoller(agentService AgentService, powerClientFactory PowerClientFactory, state state.State, logger *zap.Logger) *Poller {
 	return &Poller{
-		agentService: agentService,
-		state:        state,
-		logger:       logger,
+		agentService:       agentService,
+		powerClientFactory: powerClientFactory,
+		state:              state,
+		logger:             logger,
 	}
 }
 
@@ -124,7 +131,7 @@ func (m *Poller) poll(ctx context.Context) {
 }
 
 func (m *Poller) getPowerState(ctx context.Context, status *baremetal.MachineStatus, logger *zap.Logger) specs.PowerState {
-	powerClient, err := power.GetClient(status.TypedSpec().Value.PowerManagement)
+	powerClient, err := m.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		if errors.Is(err, power.ErrNoPowerManagementInfo) {
 			logger.Debug("no power management info yet, skip update")

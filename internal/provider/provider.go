@@ -35,6 +35,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/omni"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 	powerapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
@@ -77,9 +78,10 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	p.logger.Info("starting provider",
-		zap.String("api_listen_address", p.options.APIListenAddress),
+		zap.Any("options", p.options),
 		zap.String("api_advertise_address", apiAdvertiseAddress),
-		zap.Int("api_port", p.options.APIPort))
+		zap.String("dhcp_proxy_iface_or_ip", dhcpProxyIfaceOrIP),
+	)
 
 	omniAPIClient, err := p.buildOmniAPIClient(p.options.OmniAPIEndpoint, p.options.InsecureSkipTLSVerify)
 	if err != nil {
@@ -138,9 +140,13 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to parse machine labels: %w", err)
 	}
 
+	powerClientFactory := power.NewClientFactory(power.ClientFactoryOptions{
+		ExperimentalUseRedfish:           p.options.ExperimentalUseRedfish,
+		RedfishSetBootSourceOverrideMode: p.options.RedfishSetBootSourceOverrideMode,
+	}, p.logger)
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler, p.logger.With(zap.String("component", "server")))
 	agentService := agent.NewService(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_service"))) //nolint:contextcheck // false positive
-	machineStatusPoller := machinestatus.NewPoller(agentService, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
+	machineStatusPoller := machinestatus.NewPoller(agentService, powerClientFactory, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
 	dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
 	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
 	apiPowerManager := powerapi.NewPowerManager(p.options.APIPowerMgmtStateDir)
@@ -149,8 +155,8 @@ func (p *Provider) Run(ctx context.Context) error {
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
 	for _, qController := range []controller.QController{
-		controllers.NewInfraMachineStatusController(agentService, apiPowerManager, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels),
-		controllers.NewPowerStatusController(omniState),
+		controllers.NewInfraMachineStatusController(agentService, apiPowerManager, powerClientFactory, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels),
+		controllers.NewPowerStatusController(powerClientFactory, omniState),
 	} {
 		if err = cosiRuntime.RegisterQController(qController); err != nil {
 			return fmt.Errorf("failed to register QController: %w", err)

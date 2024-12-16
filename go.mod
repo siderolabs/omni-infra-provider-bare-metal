@@ -25,12 +25,12 @@ require (
 	github.com/siderolabs/talos-metal-agent v0.1.0-alpha.3
 	github.com/siderolabs/talos/pkg/machinery v1.9.0-beta.0
 	github.com/spf13/cobra v1.8.1
+	github.com/stmcginnis/gofish v0.20.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.32.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.2
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -144,6 +144,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241206012308-a4fef0638583 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	k8s.io/api v0.32.0-rc.1 // indirect
 	k8s.io/apimachinery v0.32.0-rc.1 // indirect
