@@ -400,6 +400,7 @@ func (h *infraMachineStatusControllerHelper) ensurePowerManagement(ctx context.C
 		if existingPowerMgmt.Ipmi != nil {
 			status.TypedSpec().Value.PowerManagement.Ipmi = &specs.PowerManagement_IPMI{
 				Address:  existingPowerMgmt.Ipmi.Address,
+				Port:     existingPowerMgmt.Ipmi.Port,
 				Username: ipmiUsername,
 				Password: ipmiPassword,
 			}
