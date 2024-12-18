@@ -34,32 +34,17 @@ For local development using Talos running on QEMU, follow these steps:
    docker run -d -p 5005:5000 --restart always --name local registry:2
    ```
 
-3. Start Talos nodes on QEMU, set to PXE boot:
+3. Build `qemu-up` command line tool, and use it to start some QEMU machines:
 
    ```bash
-   talosctl cluster create \
-     --provisioner=qemu \
-     --cidr=172.20.0.0/24 \
-     --controlplanes=3 \
-     --workers=0 \
-     --disable-dhcp-hostname=true \
-     --with-bootloader=true \
-     --with-apply-config=false \
-     --skip-injecting-config=true \
-     --wait=false \
-     --with-init-node=true \
-     --default-boot-order=nc \
-     --pxe-booted \
-     --memory=8192 \
-     --cpus=6 \
-     --with-uefi=false \
-     --with-uuid-hostnames
+   make qemu-up
+   sudo -E _out/qemu-up-linux-amd64
    ```
 
 4. (Optional) If you have made local changes to the [Talos Metal agent](https://github.com/siderolabs/talos-metal-agent), follow these steps to use your local version:
     1. Build and push Talos Metal Agent boot assets image following [these instructions](https://github.com/siderolabs/talos-metal-agent/blob/main/README.md).
     2. Replace the `ghcr.io/siderolabs/talos-metal-agent-boot-assets` image reference in [.kres.yaml](.kres.yaml) with your built image,
-       e.g., `127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v1.9.0-alpha.2-agent-v0.1.0-alpha.0-1-gbf1282b-dirty`.
+       e.g., `127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v1.9.0-agent-v0.1.0-beta.1-1-gbf1282b-dirty`.
     3. Re-kres the project to propagate this change into `Dockerfile`:
 
        ```bash
@@ -88,7 +73,7 @@ For local development using Talos running on QEMU, follow these steps:
      --use-local-boot-assets \
      --agent-test-mode \
      --api-power-mgmt-state-dir=/api-power-mgmt-state \
-     --dhcp-proxy-iface-or-ip=172.20.0.1 \
+     --dhcp-proxy-iface-or-ip=172.42.0.1 \
      --debug
    ```
 
@@ -104,3 +89,10 @@ For local development using Talos running on QEMU, follow these steps:
     - `--api-power-mgmt-state-dir`: Specifies where to read the API power management address of the nodes.
     - `--dhcp-proxy-iface-or-ip`: Specifies the IP address or interface name for running the DHCP proxy
       (e.g., the IP address of the QEMU bridge interface).
+      The tool `qemu-up` uses the subnet `172.42.0.0/24` by default, and the bridge IP address on the host is `172.42.0.1`.
+
+7. When you are done with the development/testing, destroy all QEMU machines and their network bridge:
+
+   ```bash
+   sudo -E _out/qemu-up-linux-amd64 --destroy
+   ```

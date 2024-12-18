@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-16T23:04:25Z by kres 318187b.
+# Generated on 2024-12-18T11:15:26Z by kres b9507d6.
 
 ARG TOOLCHAIN
 
@@ -225,7 +225,7 @@ COPY --from=ghcr.io/siderolabs/ipmitool:v1.8.0-16-g71d23b4 / /
 COPY --from=ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 /usr/libexec/zbin /bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
-COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-beta.1-agent-v0.1.0-beta.0 / /assets
+COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-agent-v0.1.0-beta.1 / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
 
