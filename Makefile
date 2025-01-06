@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-11T22:07:40Z by kres 8183c20.
+# Generated on 2025-01-06T21:49:59Z by kres undefined.
 
 # common variables
 
@@ -17,9 +17,9 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.35.2
+PROTOBUF_GO_VERSION ?= 1.36.1
 GRPC_GO_VERSION ?= 1.5.1
-GRPC_GATEWAY_VERSION ?= 2.24.0
+GRPC_GATEWAY_VERSION ?= 2.25.1
 VTPROTOBUF_VERSION ?= 0.6.0
 GOIMPORTS_VERSION ?= 0.28.0
 DEEPCOPY_VERSION ?= v0.5.6
@@ -41,13 +41,11 @@ PLATFORM ?= linux/amd64
 PROGRESS ?= auto
 PUSH ?= false
 CI_ARGS ?=
-BUILDKIT_MULTI_PLATFORM ?= 1
 COMMON_ARGS = --file=Dockerfile
 COMMON_ARGS += --provenance=false
 COMMON_ARGS += --progress=$(PROGRESS)
 COMMON_ARGS += --platform=$(PLATFORM)
 COMMON_ARGS += --push=$(PUSH)
-COMMON_ARGS += --build-arg=BUILDKIT_MULTI_PLATFORM=$(BUILDKIT_MULTI_PLATFORM)
 COMMON_ARGS += --build-arg=ARTIFACTS="$(ARTIFACTS)"
 COMMON_ARGS += --build-arg=SHA="$(SHA)"
 COMMON_ARGS += --build-arg=TAG="$(TAG)"
@@ -154,18 +152,9 @@ target-%:  ## Builds the specified target defined in the Dockerfile. The build r
 
 local-%:  ## Builds the specified target defined in the Dockerfile using the local output type. The build result will be output to the specified local destination.
 	@$(MAKE) target-$* TARGET_ARGS="--output=type=local,dest=$(DEST) $(TARGET_ARGS)"
-	@PLATFORM=$(PLATFORM) DEST=$(DEST) bash -c '\
-	  for platform in $$(tr "," "\n" <<< "$$PLATFORM"); do \
-	    echo $$platform; \
-	    directory="$${platform//\//_}"; \
-	    if [[ -d "$$DEST/$$directory" ]]; then \
-	      mv -f "$$DEST/$$directory/"* $$DEST; \
-	      rmdir "$$DEST/$$directory/"; \
-	    fi; \
-	  done'
 
 generate:  ## Generate .proto definitions.
-	@$(MAKE) local-$@ DEST=./ BUILDKIT_MULTI_PLATFORM=0
+	@$(MAKE) local-$@ DEST=./
 
 lint-golangci-lint:  ## Runs golangci-lint linter.
 	@$(MAKE) target-$@
@@ -222,7 +211,7 @@ lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-markdown  ## Run all
 
 .PHONY: image-provider
 image-provider:  ## Builds image for omni-infra-provider-bare-metal.
-	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/omni-infra-provider-bare-metal:$(IMAGE_TAG)"
+	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/omni-infra-provider-bare-metal:$(IMAGE_TAG) --build-arg=BUILDKIT_MULTI_PLATFORM=1"
 
 .PHONY: $(ARTIFACTS)/qemu-up-linux-amd64
 $(ARTIFACTS)/qemu-up-linux-amd64:

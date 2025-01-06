@@ -2,7 +2,7 @@
 
 set -eou pipefail
 
-TALOS_VERSION=1.9.0-beta.0
+TALOS_VERSION=1.9.1 # just make the build pass
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
