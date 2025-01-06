@@ -114,7 +114,8 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create/update provider status: %w", err)
 	}
 
-	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL, p.options.AgentModeTalosVersion)
+	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL,
+		p.options.AgentModeTalosVersion, p.logger.With(zap.String("component", "image_factory_client")))
 	if err != nil {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}

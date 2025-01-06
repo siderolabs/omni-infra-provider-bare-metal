@@ -104,6 +104,8 @@ func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ cont
 		return err
 	}
 
+	logger = logger.With(zap.Bool("is_powered_on", isPoweredOn), zap.Bool("needs_to_be_powered_on", mode.NeedsToBePoweredOn), zap.Stringer("preferred_power_state", preferredPowerState))
+
 	switch {
 	case !isPoweredOn && (mode.NeedsToBePoweredOn || preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_ON):
 		logger.Debug("power on machine")
@@ -122,7 +124,7 @@ func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ cont
 
 		return helper.updatePowerState(ctx, powerStatus, true, false)
 	default:
-		logger.Debug("machine power state is already as desired", zap.Stringer("power_state", preferredPowerState))
+		logger.Debug("machine power state is already as desired")
 
 		return helper.updatePowerState(ctx, powerStatus, isPoweredOn, false)
 	}

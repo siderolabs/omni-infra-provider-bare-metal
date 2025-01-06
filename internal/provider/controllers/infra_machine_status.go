@@ -185,7 +185,7 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 	if requiresReboot {
 		logger.Info("reboot to switch boot mode")
 
-		return h.ensureReboot(ctx, status, requiresPXEBoot, logger)
+		return h.ensureReboot(ctx, infraMachine, infraMachineStatus, status, requiresPXEBoot, logger)
 	}
 
 	if mode.PendingWipeID != "" {
@@ -201,7 +201,7 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 		infraMachineStatus.TypedSpec().Value.ReadyToUse = true
 	}
 
-	return nil
+	return h.handleRebootRequest(ctx, infraMachine, infraMachineStatus, status, logger)
 }
 
 // finalizerRemoval is called when the infra.Machine is being deleted.
@@ -224,11 +224,55 @@ func (h *infraMachineStatusControllerHelper) finalizerRemoval(ctx context.Contex
 		return nil
 	}
 
-	if err = h.ensureReboot(ctx, status, true, logger); err != nil {
+	if err = h.ensureReboot(ctx, infraMachine, nil, status, true, logger); err != nil {
 		logger.Warn("failed to reboot machine", zap.Error(err))
 	}
 
 	return h.removeInternalStatus(ctx, infraMachine.Metadata().ID())
+}
+
+func (h *infraMachineStatusControllerHelper) handleRebootRequest(ctx context.Context, infraMachine *infra.Machine,
+	infraMachineStatus *infra.MachineStatus, status *baremetal.MachineStatus, logger *zap.Logger,
+) error {
+	if infraMachine.TypedSpec().Value.RequestedRebootId == infraMachineStatus.TypedSpec().Value.LastRebootId { // nothing to do
+		return nil
+	}
+
+	logger = logger.With(
+		zap.String("requested_reboot_id", infraMachine.TypedSpec().Value.RequestedRebootId),
+		zap.String("last_reboot_id", infraMachineStatus.TypedSpec().Value.LastRebootId),
+	)
+
+	lastRebootTimestamp := infraMachineStatus.TypedSpec().Value.LastRebootTimestamp
+	skipReboot := lastRebootTimestamp != nil && lastRebootTimestamp.AsTime().After(time.Now().Add(-h.minRebootInterval))
+
+	if skipReboot { // rebooted recently, skip the reboot
+		logger.Debug("machine was rebooted recently, skip the reboot", zap.Time("last_reboot_timestamp", lastRebootTimestamp.AsTime()))
+
+		infraMachineStatus.TypedSpec().Value.LastRebootId = infraMachine.TypedSpec().Value.RequestedRebootId
+
+		return nil
+	}
+
+	if status.TypedSpec().Value.PowerManagement == nil {
+		return fmt.Errorf("power management is not configured, cannot reboot")
+	}
+
+	powerClient, err := h.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
+	if err != nil {
+		return err
+	}
+
+	if err = powerClient.Reboot(ctx); err != nil {
+		return err
+	}
+
+	logger.Info("rebooted machine")
+
+	infraMachineStatus.TypedSpec().Value.LastRebootId = infraMachine.TypedSpec().Value.RequestedRebootId
+	infraMachineStatus.TypedSpec().Value.LastRebootTimestamp = timestamppb.Now()
+
+	return nil
 }
 
 // removeInternalStatus removes the provider-internal baremetal.MachineStatus resource.
@@ -314,7 +358,9 @@ func (h *infraMachineStatusControllerHelper) wipe(ctx context.Context, id resour
 }
 
 // ensureReboot makes sure that the machine is rebooted if it can be rebooted.
-func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context, status *baremetal.MachineStatus, pxeBoot bool, logger *zap.Logger) error {
+func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context,
+	infraMachine *infra.Machine, infraMachineStatus *infra.MachineStatus, status *baremetal.MachineStatus, pxeBoot bool, logger *zap.Logger,
+) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -346,12 +392,17 @@ func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context, s
 		return err
 	}
 
-	if _, err = machinestatus.Modify(ctx, h.state, status.Metadata().ID(), func(status *baremetal.MachineStatus) error {
-		status.TypedSpec().Value.LastRebootTimestamp = timestamppb.New(now)
+	if infraMachineStatus != nil { // running, not tearing down
+		infraMachineStatus.TypedSpec().Value.LastRebootId = infraMachine.TypedSpec().Value.RequestedRebootId
+		infraMachineStatus.TypedSpec().Value.LastRebootTimestamp = timestamppb.New(now)
 
-		return nil
-	}); err != nil {
-		return err
+		if _, err = machinestatus.Modify(ctx, h.state, status.Metadata().ID(), func(status *baremetal.MachineStatus) error {
+			status.TypedSpec().Value.LastRebootTimestamp = timestamppb.New(now)
+
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	logger.Info("rebooted machine, requeue")

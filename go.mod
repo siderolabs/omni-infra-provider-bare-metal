@@ -5,32 +5,36 @@ go 1.23.4
 replace (
 	github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
 	github.com/pin/tftp/v3 => github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad
+
+	// todo: switch to upstream after merge: https://github.com/siderolabs/omni/pull/814
+	github.com/siderolabs/omni => github.com/utkuozdemir/sidero-omni v0.0.0-20250106123857-2485398e9fc2
+	github.com/siderolabs/omni/client => github.com/utkuozdemir/sidero-omni/client v0.0.0-20250106123857-2485398e9fc2
 )
 
 require (
-	github.com/cosi-project/runtime v0.8.0
+	github.com/cosi-project/runtime v0.9.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.2.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/insomniacslk/dhcp v0.0.0-20241203100832-a481575ed0ef
+	github.com/insomniacslk/dhcp v0.0.0-20241224095048-b56fa0d5f25d
 	github.com/jhump/grpctunnel v0.3.0
 	github.com/pensando/goipmi v0.0.0-20240603174436-eb122d901c23
 	github.com/pin/tftp/v3 v3.1.0
 	github.com/planetscale/vtprotobuf v0.6.1-0.20241121165744-79df5c4772f2
 	github.com/siderolabs/gen v0.8.0
-	github.com/siderolabs/image-factory v0.6.3
+	github.com/siderolabs/image-factory v0.6.5
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v0.45.0
-	github.com/siderolabs/talos v1.9.0
-	github.com/siderolabs/talos-metal-agent v0.1.0-beta.0
-	github.com/siderolabs/talos/pkg/machinery v1.9.0
+	github.com/siderolabs/omni/client v0.0.0-20241219125157-6190568b4700
+	github.com/siderolabs/talos v1.10.0-alpha.0
+	github.com/siderolabs/talos-metal-agent v0.1.0-beta.1
+	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stmcginnis/gofish v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
-	google.golang.org/grpc v1.69.0
-	google.golang.org/protobuf v1.36.0
+	google.golang.org/grpc v1.69.2
+	google.golang.org/protobuf v1.36.1
 )
 
 require (
@@ -54,7 +58,7 @@ require (
 	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v27.4.0+incompatible // indirect
+	github.com/docker/docker v27.4.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -77,7 +81,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-containerregistry v0.20.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.25.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter/v2 v2.2.3 // indirect
@@ -109,13 +113,13 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/siderolabs/crypto v0.5.1 // indirect
 	github.com/siderolabs/go-api-signature v0.3.6 // indirect
-	github.com/siderolabs/go-blockdevice/v2 v2.0.8 // indirect
+	github.com/siderolabs/go-blockdevice/v2 v2.0.9 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-kubernetes v0.2.17 // indirect
 	github.com/siderolabs/go-pointer v1.0.0 // indirect
 	github.com/siderolabs/go-procfs v0.1.2 // indirect
 	github.com/siderolabs/go-retry v0.3.3 // indirect
-	github.com/siderolabs/go-talos-support v0.1.1 // indirect
+	github.com/siderolabs/go-talos-support v0.1.2 // indirect
 	github.com/siderolabs/proto-codec v0.1.1 // indirect
 	github.com/siderolabs/protoenc v0.2.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -135,14 +139,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
+	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.8.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241216192217-9240e9c98484 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241216192217-9240e9c98484 // indirect
+	golang.org/x/time v0.9.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250102185135-69823020774d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

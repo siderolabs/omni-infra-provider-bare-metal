@@ -11,6 +11,7 @@ import (
 
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
+	"go.uber.org/zap"
 )
 
 var agentModeExtensions = []string{
@@ -31,12 +32,13 @@ var agentModeExtensions = []string{
 // Client is an image factory client.
 type Client struct {
 	factoryClient         *client.Client
+	logger                *zap.Logger
 	pxeBaseURL            string
 	agentModeTalosVersion string
 }
 
 // NewClient creates a new image factory client.
-func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string) (*Client, error) {
+func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string, logger *zap.Logger) (*Client, error) {
 	factoryClient, err := client.New(baseURL)
 	if err != nil {
 		return nil, err
@@ -46,6 +48,7 @@ func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string) (*Client, erro
 		pxeBaseURL:            pxeBaseURL,
 		agentModeTalosVersion: agentModeTalosVersion,
 		factoryClient:         factoryClient,
+		logger:                logger,
 	}, nil
 }
 
@@ -53,6 +56,11 @@ func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string) (*Client, erro
 //
 // If agentMode is true, the schematic will be created with the firmware extensions and the metal-agent extension.
 func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVersion, arch string, extensions, extraKernelArgs []string) (string, error) {
+	logger := c.logger.With(zap.String("talos_version", talosVersion), zap.String("arch", arch),
+		zap.Strings("extensions", extensions), zap.Strings("extra_kernel_args", extraKernelArgs))
+
+	logger.Info("generate schematic iPXE URL")
+
 	var metaValues []schematic.MetaValue
 
 	if !agentMode && talosVersion == "" {
@@ -78,6 +86,13 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 		},
 	}
 
+	marshaled, err := sch.Marshal()
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal schematic: %w", err)
+	}
+
+	logger.Debug("generated schematic", zap.String("schematic", string(marshaled)))
+
 	schematicID, err := c.factoryClient.SchematicCreate(ctx, sch)
 	if err != nil {
 		return "", fmt.Errorf("failed to create schematic: %w", err)
@@ -85,5 +100,7 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 
 	ipxeURL := fmt.Sprintf("%s/pxe/%s/%s/metal-%s", c.pxeBaseURL, schematicID, talosVersion, arch)
 
-	return ipxeURL, err
+	logger.Debug("generated schematic iPXE URL", zap.String("ipxe_url", ipxeURL))
+
+	return ipxeURL, nil
 }
