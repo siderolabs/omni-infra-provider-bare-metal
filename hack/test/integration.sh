@@ -43,6 +43,8 @@ function cleanup() {
     exit $exit_code
   fi
 
+  rm -rf ./omnictl
+
   echo "Stop containers"
   docker stop omni provider vault-dev || true
 
@@ -110,7 +112,7 @@ fi
 echo "Launch Omni..."
 
 export OMNI_PORT=8099
-export BASE_URL="https://localhost:$OMNI_PORT/"
+export BASE_URL="https://localhost:$OMNI_PORT"
 export AUTH_USERNAME="${AUTH0_TEST_USERNAME}"
 export AUTH0_CLIENT_ID="${AUTH0_CLIENT_ID}"
 export AUTH0_DOMAIN="${AUTH0_DOMAIN}"
@@ -153,28 +155,35 @@ echo "Wait for Omni to listen on ${BASE_URL}..."
 timeout 60s bash -c "until curl -s -k -o /dev/null $BASE_URL; do echo 'Waiting for Omni...'; sleep 5; done"
 echo "Omni is listening on ${BASE_URL}."
 
-SERVICE_ACCOUNT_KEY_PATH="${ARTIFACTS}/omni/key"
+ADMIN_SERVICE_ACCOUNT_KEY_PATH="${ARTIFACTS}/omni/key"
 
 echo "Wait for service account key to be created..."
-timeout 60s bash -c "until [ -f '${SERVICE_ACCOUNT_KEY_PATH}' ]; do echo 'Waiting for service account key...'; sleep 5; done"
-echo "Service account key is found at ${SERVICE_ACCOUNT_KEY_PATH}."
+timeout 60s bash -c "until [ -f '${ADMIN_SERVICE_ACCOUNT_KEY_PATH}' ]; do echo 'Waiting for admin service account key...'; sleep 5; done"
+echo "Admin service account key is found at ${ADMIN_SERVICE_ACCOUNT_KEY_PATH}."
 
-# Export Omni endpoint and service account key
-OMNI_ENDPOINT=${BASE_URL}
-OMNI_SERVICE_ACCOUNT_KEY=$(cat $SERVICE_ACCOUNT_KEY_PATH)
+ADMIN_SERVICE_ACCOUNT_KEY=$(cat "$ADMIN_SERVICE_ACCOUNT_KEY_PATH")
 
-export OMNI_ENDPOINT OMNI_SERVICE_ACCOUNT_KEY
+export OMNI_SERVICE_ACCOUNT_KEY="${ADMIN_SERVICE_ACCOUNT_KEY}"
+export OMNI_ENDPOINT="${BASE_URL}"
 
-# Launch infra provider in the background
+echo "Download omnictl..."
+curl -k -o ./omnictl "${BASE_URL}/omnictl/omnictl-linux-amd64"
+chmod +x ./omnictl
 
-echo "Launch infra provider..."
+echo "Create InfraProvider service account..."
+
+PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify serviceaccount create --use-user-role=false \
+  --role=InfraProvider infra-provider:bare-metal | grep 'OMNI_SERVICE_ACCOUNT_KEY=' | cut -d'=' -f2-)
+
+echo "Launch infra provider in the background..."
 
 # We run the provider in a container, as its container image contains everything needed by the provider,
 # e.g., ipmitool and ipxe binaries, metal agent boot assets etc.
 docker run -d --network host \
   --name provider \
   -v "$HOME/.talos/clusters/bare-metal:/api-power-mgmt-state:ro" \
-  -e OMNI_ENDPOINT -e OMNI_SERVICE_ACCOUNT_KEY \
+  -e OMNI_ENDPOINT \
+  -e OMNI_SERVICE_ACCOUNT_KEY="${PROVIDER_SERVICE_ACCOUNT_KEY}" \
   "$PROVIDER_IMAGE" \
   --insecure-skip-tls-verify \
   --api-advertise-address="$GATEWAY_IP" \
@@ -198,7 +207,7 @@ docker run --rm --network host \
   --name omni-integration-test \
   -v "$(pwd)/hack/certs:/etc/ssl/certs" \
   -e SSL_CERT_DIR=/etc/ssl/certs \
-  -e OMNI_SERVICE_ACCOUNT_KEY \
+  -e OMNI_SERVICE_ACCOUNT_KEY="$ADMIN_SERVICE_ACCOUNT_KEY" \
   "$OMNI_INTEGRATION_TEST_IMAGE" \
   --endpoint=${BASE_URL} \
   --expected-machines=$NUM_MACHINES \

@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/cosi-project/runtime/pkg/controller"
@@ -19,6 +20,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
+	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
 	agentpb "github.com/siderolabs/talos-metal-agent/api/agent"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -306,7 +308,16 @@ func (h *infraMachineStatusControllerHelper) removeInternalStatus(ctx context.Co
 func (h *infraMachineStatusControllerHelper) populateInfraMachineStatus(status *baremetal.MachineStatus, infraMachineStatus *infra.MachineStatus) error {
 	infraMachineStatus.TypedSpec().Value.ReadyToUse = false
 
-	// set the labels
+	// clear existing labels
+	for k := range infraMachineStatus.Metadata().Labels().Raw() {
+		if strings.HasPrefix(k, omni.SystemLabelPrefix) {
+			continue
+		}
+
+		infraMachineStatus.Metadata().Labels().Delete(k)
+	}
+
+	// set the new labels
 	for k, v := range h.machineLabels {
 		infraMachineStatus.Metadata().Labels().Set(k, v)
 	}
@@ -427,12 +438,12 @@ func (h *infraMachineStatusControllerHelper) ensurePowerManagement(ctx context.C
 				return controller.NewRequeueErrorf(h.requeueInterval, "machine is not yet available, requeue getting power management")
 			}
 
-			return err
+			return fmt.Errorf("failed to get power management information: %w", err)
 		}
 
 		ipmiPassword, err := h.ensurePowerManagementOnAgent(ctx, id, existingPowerMgmt)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to ensure power management on agent: %w", err)
 		}
 
 		status.TypedSpec().Value.PowerManagement = &specs.PowerManagement{}
