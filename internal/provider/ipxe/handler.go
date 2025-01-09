@@ -150,6 +150,12 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 
 	if machineResources.infraMachine != nil {
 		userExtraKernelArgs = strings.Fields(machineResources.infraMachine.TypedSpec().Value.ExtraKernelArgs)
+
+		if machineResources.infraMachine.TypedSpec().Value.Cordoned {
+			logger.Info("machine is cordoned, skip making a boot decision")
+
+			return bootDecision{body: "machine is cordoned", statusCode: http.StatusNotFound}, nil
+		}
 	}
 
 	mode, err := boot.DetermineRequiredMode(machineResources.infraMachine, machineResources.status, machineResources.machineState, logger)

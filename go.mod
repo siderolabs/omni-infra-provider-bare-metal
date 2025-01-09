@@ -5,10 +5,6 @@ go 1.23.4
 replace (
 	github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
 	github.com/pin/tftp/v3 => github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad
-
-	// todo: switch to upstream after merge: https://github.com/siderolabs/omni/pull/814
-	github.com/siderolabs/omni => github.com/utkuozdemir/sidero-omni v0.0.0-20250106123857-2485398e9fc2
-	github.com/siderolabs/omni/client => github.com/utkuozdemir/sidero-omni/client v0.0.0-20250106123857-2485398e9fc2
 )
 
 require (
@@ -16,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.2.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/insomniacslk/dhcp v0.0.0-20241224095048-b56fa0d5f25d
+	github.com/insomniacslk/dhcp v0.0.0-20250109001534-8abf58130905
 	github.com/jhump/grpctunnel v0.3.0
 	github.com/pensando/goipmi v0.0.0-20240603174436-eb122d901c23
 	github.com/pin/tftp/v3 v3.1.0
@@ -24,25 +20,25 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/image-factory v0.6.5
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v0.0.0-20241219125157-6190568b4700
+	github.com/siderolabs/omni/client v0.0.0-20250109104148-394065f7f487
 	github.com/siderolabs/talos v1.10.0-alpha.0
 	github.com/siderolabs/talos-metal-agent v0.1.0-beta.1
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stmcginnis/gofish v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.34.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.69.2
-	google.golang.org/protobuf v1.36.1
+	google.golang.org/protobuf v1.36.2
 )
 
 require (
 	cel.dev/expr v0.19.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.1.3 // indirect
+	github.com/ProtonMail/go-crypto v1.1.4 // indirect
 	github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f // indirect
-	github.com/ProtonMail/gopenpgp/v2 v2.8.1 // indirect
+	github.com/ProtonMail/gopenpgp/v2 v2.8.2 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/alexflint/go-filemutex v1.3.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
@@ -54,7 +50,7 @@ require (
 	github.com/containerd/go-cni v1.1.11 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/containernetworking/cni v1.2.3 // indirect
-	github.com/containernetworking/plugins v1.6.1 // indirect
+	github.com/containernetworking/plugins v1.6.2 // indirect
 	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -138,15 +134,15 @@ require (
 	go.opentelemetry.io/otel/sdk v1.32.0 // indirect
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250102185135-69823020774d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250106144421-5f5ef82da422 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -106,6 +106,12 @@ func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ cont
 
 	logger = logger.With(zap.Bool("is_powered_on", isPoweredOn), zap.Bool("needs_to_be_powered_on", mode.NeedsToBePoweredOn), zap.Stringer("preferred_power_state", preferredPowerState))
 
+	if machine.TypedSpec().Value.Cordoned {
+		logger.Debug("machine is cordoned, skip power management")
+
+		return helper.updatePowerState(ctx, powerStatus, isPoweredOn, false)
+	}
+
 	switch {
 	case !isPoweredOn && (mode.NeedsToBePoweredOn || preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_ON):
 		logger.Debug("power on machine")

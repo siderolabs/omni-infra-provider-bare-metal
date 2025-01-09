@@ -122,6 +122,12 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 		zap.Stringer("phase", infraMachine.Metadata().Phase()),
 	)
 
+	if infraMachine.TypedSpec().Value.Cordoned {
+		logger.Debug("machine is cordoned, skip")
+
+		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("machine is cordoned")
+	}
+
 	if acceptanceStatus != omnispecs.InfraMachineConfigSpec_ACCEPTED {
 		logger.Debug("machine not accepted, skip")
 
