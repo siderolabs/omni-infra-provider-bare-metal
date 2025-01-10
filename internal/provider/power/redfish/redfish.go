@@ -8,6 +8,8 @@ package redfish
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/siderolabs/gen/xslices"
@@ -144,17 +146,29 @@ func (c *Client) getSystem(client *gofish.APIClient) (*redfish.ComputerSystem, e
 }
 
 // NewClient returns a new Redfish power management client.
-func NewClient(address, username, password string, setBootSourceOverrideMode bool, logger *zap.Logger) *Client {
+func NewClient(options Options, address, username, password string, logger *zap.Logger) *Client {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		host = address
+	}
+
+	protocol := "http"
+	if options.UseHTTPS {
+		protocol = "https"
+	}
+
+	endpoint := fmt.Sprintf("%s://%s", protocol, net.JoinHostPort(host, strconv.Itoa(options.Port)))
+
 	return &Client{
 		config: gofish.ClientConfig{
-			Endpoint:            "https://" + address,
-			Username:            username,
-			Password:            password,
-			Insecure:            true,
-			TLSHandshakeTimeout: 5, // seconds
-			BasicAuth:           true,
+			Endpoint:  endpoint,
+			Username:  username,
+			Password:  password,
+			Insecure:  options.InsecureSkipTLSVerify,
+			BasicAuth: true,
 		},
-		setBootSourceOverrideMode: setBootSourceOverrideMode,
+
+		setBootSourceOverrideMode: options.SetBootSourceOverrideMode,
 		logger:                    logger,
 	}
 }

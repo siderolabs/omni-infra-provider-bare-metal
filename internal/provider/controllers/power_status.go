@@ -88,7 +88,7 @@ func (helper *powerStatusControllerHelper) transform(ctx context.Context, _ cont
 	powerManagement := machineStatus.TypedSpec().Value.PowerManagement
 	preferredPowerState := machine.TypedSpec().Value.PreferredPowerState
 
-	powerClient, err := helper.powerClientFactory.GetClient(powerManagement)
+	powerClient, err := helper.powerClientFactory.GetClient(ctx, powerManagement)
 	if err != nil {
 		return err
 	}
