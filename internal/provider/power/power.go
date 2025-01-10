@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -34,58 +35,93 @@ type Client interface {
 
 // ClientFactory is a factory to create power management clients.
 type ClientFactory struct {
-	logger  *zap.Logger
-	options ClientFactoryOptions
+	logger                         *zap.Logger
+	addressToRedfishAvailability   map[string]bool
+	options                        ClientFactoryOptions
+	addressToRedfishAvailabilityMu sync.Mutex
 }
 
 // ClientFactoryOptions contains options for the client factory.
 type ClientFactoryOptions struct {
-	ExperimentalUseRedfish           bool
-	RedfishSetBootSourceOverrideMode bool
+	RedfishOptions redfish.Options
 }
 
 // NewClientFactory creates a new power management client factory.
 func NewClientFactory(options ClientFactoryOptions, logger *zap.Logger) *ClientFactory {
 	return &ClientFactory{
-		options: options,
-		logger:  logger,
+		options:                      options,
+		logger:                       logger,
+		addressToRedfishAvailability: map[string]bool{},
 	}
 }
 
 // GetClient returns a power management client for the given bare metal machine.
-func (factory *ClientFactory) GetClient(mgmt *specs.PowerManagement) (Client, error) {
+func (factory *ClientFactory) GetClient(ctx context.Context, mgmt *specs.PowerManagement) (Client, error) {
 	if mgmt == nil {
 		return nil, ErrNoPowerManagementInfo
 	}
 
 	apiInfo := mgmt.Api
 	if apiInfo != nil {
-		client, err := api.NewClient(apiInfo)
+		apiClient, err := api.NewClient(apiInfo)
 		if err != nil {
 			return nil, err
 		}
 
-		return &loggingClient{client: client, logger: factory.logger.With(zap.String("power_client", "api"))}, nil
+		return &loggingClient{client: apiClient, logger: factory.logger.With(zap.String("power_client", "api"))}, nil
 	}
 
 	ipmiInfo := mgmt.Ipmi
-	if ipmiInfo != nil {
-		if factory.options.ExperimentalUseRedfish {
-			logger := factory.logger.With(zap.String("power_client", "redfish"))
-			client := redfish.NewClient(ipmiInfo.Address, ipmiInfo.Username, ipmiInfo.Password, factory.options.RedfishSetBootSourceOverrideMode, logger)
 
-			return &loggingClient{client: client, logger: logger}, nil
-		}
-
-		client, err := ipmi.NewClient(ipmiInfo)
-		if err != nil {
-			return nil, err
-		}
-
-		return &loggingClient{client: client, logger: factory.logger.With(zap.String("power_client", "ipmi"))}, nil
+	if ipmiInfo == nil {
+		return nil, ErrNoPowerManagementInfo
 	}
 
-	return nil, ErrNoPowerManagementInfo
+	useRedfish := factory.options.RedfishOptions.UseAlways || (factory.options.RedfishOptions.UseWhenAvailable && factory.redfishAvailable(ctx, ipmiInfo))
+
+	if useRedfish {
+		logger := factory.logger.With(zap.String("power_client", "redfish"))
+		redfishClient := redfish.NewClient(factory.options.RedfishOptions, ipmiInfo.Address, ipmiInfo.Username, ipmiInfo.Password, logger)
+
+		return &loggingClient{client: redfishClient, logger: logger}, nil
+	}
+
+	ipmiClient, err := ipmi.NewClient(ipmiInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &loggingClient{client: ipmiClient, logger: factory.logger.With(zap.String("power_client", "ipmi"))}, nil
+}
+
+func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *specs.PowerManagement_IPMI) bool {
+	factory.addressToRedfishAvailabilityMu.Lock()
+	defer factory.addressToRedfishAvailabilityMu.Unlock()
+
+	address := ipmiInfo.Address
+
+	available, ok := factory.addressToRedfishAvailability[address]
+	if ok {
+		return available
+	}
+
+	factory.logger.Debug("probe redfish availability", zap.String("address", address))
+
+	redfishClient := redfish.NewClient(factory.options.RedfishOptions, address, ipmiInfo.Username, ipmiInfo.Password, factory.logger)
+
+	if _, err := redfishClient.IsPoweredOn(ctx); err != nil {
+		factory.logger.Debug("redfish is not available on address", zap.String("address", address), zap.Error(err))
+
+		factory.addressToRedfishAvailability[address] = false
+
+		return false
+	}
+
+	factory.logger.Debug("redfish is available on address", zap.String("address", address))
+
+	factory.addressToRedfishAvailability[address] = true
+
+	return true
 }
 
 type loggingClient struct {

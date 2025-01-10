@@ -6,11 +6,13 @@
 package controllers
 
 import (
+	"context"
+
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 )
 
 // PowerClientFactory is the interface for creating power clients.
 type PowerClientFactory interface {
-	GetClient(powerManagement *specs.PowerManagement) (power.Client, error)
+	GetClient(ctx context.Context, powerManagement *specs.PowerManagement) (power.Client, error)
 }

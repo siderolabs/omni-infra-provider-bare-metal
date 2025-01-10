@@ -147,8 +147,17 @@ func init() {
 	rootCmd.Flags().BoolVar(&providerOptions.WipeWithZeroes, "wipe-with-zeroes", provider.DefaultOptions.WipeWithZeroes,
 		"When wiping a machine, write zeroes to the whole disk instead doing a fast wipe.")
 
-	rootCmd.Flags().BoolVar(&providerOptions.ExperimentalUseRedfish, "experimental-use-redfish", provider.DefaultOptions.ExperimentalUseRedfish,
-		"Use Redfish for power management instead of IPMI. This is an EXPERIMENTAL flag and may be subject to change.")
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishSetBootSourceOverrideMode, "redfish-set-boot-source-override-mode", provider.DefaultOptions.RedfishSetBootSourceOverrideMode,
+	// RedFish options
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseAlways, "redfish-use-always", provider.DefaultOptions.RedfishOptions.UseAlways,
+		"Always use Redfish for power management.")
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseWhenAvailable, "redfish-use-when-available", provider.DefaultOptions.RedfishOptions.UseWhenAvailable,
+		"Use Redfish for power management when available.")
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseHTTPS, "redfish-use-https", provider.DefaultOptions.RedfishOptions.UseHTTPS,
+		"Use HTTPS for Redfish connections.")
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.InsecureSkipTLSVerify, "redfish-insecure-skip-tls-verify", provider.DefaultOptions.RedfishOptions.InsecureSkipTLSVerify,
+		"Skip TLS verification when connecting to Redfish.")
+	rootCmd.Flags().IntVar(&providerOptions.RedfishOptions.Port, "redfish-port", provider.DefaultOptions.RedfishOptions.Port,
+		"The port to connect to Redfish.")
+	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.SetBootSourceOverrideMode, "redfish-set-boot-source-override-mode", provider.DefaultOptions.RedfishOptions.SetBootSourceOverrideMode,
 		"Set the boot source override mode field when using Redfish for power management. Some Redfish implementations require this field to be unset.")
 }
