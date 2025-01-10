@@ -266,7 +266,7 @@ func (h *infraMachineStatusControllerHelper) handleRebootRequest(ctx context.Con
 		return fmt.Errorf("power management is not configured, cannot reboot")
 	}
 
-	powerClient, err := h.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
+	powerClient, err := h.powerClientFactory.GetClient(ctx, status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context,
 
 	var powerClient power.Client
 
-	powerClient, err := h.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
+	powerClient, err := h.powerClientFactory.GetClient(ctx, status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		return err
 	}

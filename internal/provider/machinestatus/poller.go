@@ -28,7 +28,7 @@ type AgentService interface {
 
 // PowerClientFactory is the interface for creating power clients.
 type PowerClientFactory interface {
-	GetClient(powerManagement *specs.PowerManagement) (power.Client, error)
+	GetClient(ctx context.Context, powerManagement *specs.PowerManagement) (power.Client, error)
 }
 
 // Poller polls the machines periodically and updates their statuses.
@@ -131,7 +131,7 @@ func (m *Poller) poll(ctx context.Context) {
 }
 
 func (m *Poller) getPowerState(ctx context.Context, status *baremetal.MachineStatus, logger *zap.Logger) specs.PowerState {
-	powerClient, err := m.powerClientFactory.GetClient(status.TypedSpec().Value.PowerManagement)
+	powerClient, err := m.powerClientFactory.GetClient(ctx, status.TypedSpec().Value.PowerManagement)
 	if err != nil {
 		if errors.Is(err, power.ErrNoPowerManagementInfo) {
 			logger.Debug("no power management info yet, skip update")

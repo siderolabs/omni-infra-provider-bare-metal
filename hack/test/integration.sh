@@ -28,7 +28,7 @@ echo "Download talosctl..."
 
 mkdir -p ${ARTIFACTS}
 
-[ -f ${ARTIFACTS}/talosctl ] || (crane export ghcr.io/siderolabs/talosctl:latest | tar x -C ${ARTIFACTS})
+[ -f ${ARTIFACTS}/talosctl ] || (crane export ghcr.io/siderolabs/talosctl:v${TALOS_VERSION} | tar x -C ${ARTIFACTS})
 
 TALOSCTL=$(realpath "${ARTIFACTS}/talosctl")
 QEMU_UP="${ARTIFACTS}/qemu-up-linux-amd64 --talosctl-path=${TALOSCTL} --cidr $SUBNET_CIDR --num-machines=$NUM_MACHINES"
@@ -69,6 +69,11 @@ function cleanup() {
 }
 
 trap cleanup EXIT SIGINT
+
+echo "Stop any existing QEMU machines..."
+
+${QEMU_UP} --destroy || true
+pkill -f talosctl || true
 
 echo "Bring up some QEMU machines..."
 

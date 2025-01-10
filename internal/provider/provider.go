@@ -142,8 +142,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	powerClientFactory := power.NewClientFactory(power.ClientFactoryOptions{
-		ExperimentalUseRedfish:           p.options.ExperimentalUseRedfish,
-		RedfishSetBootSourceOverrideMode: p.options.RedfishSetBootSourceOverrideMode,
+		RedfishOptions: p.options.RedfishOptions,
 	}, p.logger)
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler, p.logger.With(zap.String("component", "server")))
 	agentService := agent.NewService(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_service"))) //nolint:contextcheck // false positive
