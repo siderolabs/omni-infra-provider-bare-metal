@@ -21,6 +21,7 @@ import (
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/hashicorp/go-multierror"
 	"github.com/siderolabs/omni/client/pkg/client"
+	providercontrollers "github.com/siderolabs/omni/client/pkg/infra/controllers"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ip"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/omni"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
 	powerapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
@@ -153,6 +155,15 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
+
+	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID, providercontrollers.ProviderHealthStatusOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create health check controller: %w", err)
+	}
+
+	if err = cosiRuntime.RegisterController(healthCheckController); err != nil {
+		return fmt.Errorf("failed to register health check controller: %w", err)
+	}
 
 	for _, qController := range []controller.QController{
 		controllers.NewInfraMachineStatusController(agentService, apiPowerManager, powerClientFactory, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels),

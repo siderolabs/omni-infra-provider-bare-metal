@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-01-06T13:04:38Z by kres fcff05e.
+# Generated on 2025-01-15T13:52:34Z by kres 3b3f992.
 
 ARG TOOLCHAIN
 
@@ -15,7 +15,7 @@ FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-l
 FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-linux-arm64
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.1.40-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.1.43-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .

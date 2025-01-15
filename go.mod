@@ -5,6 +5,9 @@ go 1.23.4
 replace (
 	github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
 	github.com/pin/tftp/v3 => github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad
+
+	// todo: remove after merge: https://github.com/siderolabs/omni/pull/838
+	github.com/siderolabs/omni/client => github.com/utkuozdemir/sidero-omni/client v0.0.0-20250115135048-fc5c1963ee0c
 )
 
 require (
@@ -111,7 +114,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	github.com/siderolabs/crypto v0.5.1 // indirect
 	github.com/siderolabs/go-api-signature v0.3.6 // indirect
-	github.com/siderolabs/go-blockdevice/v2 v2.0.10 // indirect
+	github.com/siderolabs/go-blockdevice/v2 v2.0.11 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-kubernetes v0.2.17 // indirect
 	github.com/siderolabs/go-pointer v1.0.0 // indirect
