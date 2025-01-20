@@ -327,6 +327,8 @@ github.com/siderolabs/image-factory v0.6.5 h1:TpRo5WWbgo2dSx0/+QkhuNB0QrTS9o2qE+
 github.com/siderolabs/image-factory v0.6.5/go.mod h1:CucCuWZLJsXXXqDhdJN/cPejapeJYQIOIbhIGKBs14c=
 github.com/siderolabs/net v0.4.0 h1:1bOgVay/ijPkJz4qct98nHsiB/ysLQU0KLoBC4qLm7I=
 github.com/siderolabs/net v0.4.0/go.mod h1:/ibG+Hm9HU27agp5r9Q3eZicEfjquzNzQNux5uEk0kM=
+github.com/siderolabs/omni/client v0.0.0-20250117134704-2fcfc825eaf0 h1:NO0ZbBNEmm5Bymj7TmLB+hOwcgFG9/ltKDSMMQFpD+M=
+github.com/siderolabs/omni/client v0.0.0-20250117134704-2fcfc825eaf0/go.mod h1:+1GjGq9nEQEME/gGFC61ZN1iImj/GfSMNG48qJOE7r8=
 github.com/siderolabs/proto-codec v0.1.1 h1:4jiUwW/vaXTZ+YNgZDs37B4aj/1mzV/erIkzUUCRY9g=
 github.com/siderolabs/proto-codec v0.1.1/go.mod h1:rIvmhKJG8+JwSCGPX+cQljpOMDmuHhLKPkt6KaFwEaU=
 github.com/siderolabs/protoenc v0.2.1 h1:BqxEmeWQeMpNP3R6WrPqDatX8sM/r4t97OP8mFmg6GA=
@@ -367,8 +369,6 @@ github.com/ulikunitz/xz v0.5.12 h1:37Nm15o69RwBkXM0J6A5OlE67RZTfzUxTj8fB3dfcsc=
 github.com/ulikunitz/xz v0.5.12/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
 github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad h1:l/GaA5Ut8YynZNW0jBhcE6W4aodMPOyURqpza76lhCw=
 github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad/go.mod h1:Kvfewx0+8GO2KpUCPRZAzVjzVN+TnRgn7tuaPlkf3fw=
-github.com/utkuozdemir/sidero-omni/client v0.0.0-20250115135048-fc5c1963ee0c h1:USiyyYy3zhli03P87bQCwBBcGPjgDKXLPhYDZsG3sQA=
-github.com/utkuozdemir/sidero-omni/client v0.0.0-20250115135048-fc5c1963ee0c/go.mod h1:+1GjGq9nEQEME/gGFC61ZN1iImj/GfSMNG48qJOE7r8=
 github.com/vbatts/tar-split v0.11.6 h1:4SjTW5+PU11n6fZenf2IPoV8/tz3AaYHMWjf23envGs=
 github.com/vbatts/tar-split v0.11.6/go.mod h1:dqKNtesIOr2j2Qv3W/cHjnvk9I8+G7oAkFDFN6TCBEI=
 github.com/vishvananda/netlink v1.3.0 h1:X7l42GfcV4S6E4vHTsw48qbrV+9PVojNfIhZcwQdrZk=

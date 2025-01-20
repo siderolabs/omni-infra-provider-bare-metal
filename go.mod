@@ -5,9 +5,6 @@ go 1.23.4
 replace (
 	github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
 	github.com/pin/tftp/v3 => github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad
-
-	// todo: remove after merge: https://github.com/siderolabs/omni/pull/838
-	github.com/siderolabs/omni/client => github.com/utkuozdemir/sidero-omni/client v0.0.0-20250115135048-fc5c1963ee0c
 )
 
 require (
@@ -23,7 +20,7 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/image-factory v0.6.5
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v0.0.0-20250109104148-394065f7f487
+	github.com/siderolabs/omni/client v0.0.0-20250117134704-2fcfc825eaf0
 	github.com/siderolabs/talos v1.10.0-alpha.0
 	github.com/siderolabs/talos-metal-agent v0.1.0-beta.1
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0
