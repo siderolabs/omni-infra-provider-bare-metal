@@ -181,7 +181,6 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 			return err
 		}
 
-		// the changes will trigger a new reconciliation, we can simply return here
 		return nil
 	}
 
@@ -189,6 +188,16 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 	// Switching from PXE booted Talos to booting from disk does not require a reboot by the provider, as Omni itself will do the switch.
 	requiresReboot := bootMode != requiredBootMode && (bootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE)
 	requiresPXEBoot := requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_TALOS_PXE
+
+	// if there is a pending wipe but the machine is marked as ready to use, we
+	// set the flag to false and requeue without an error (so the value gets persisted)
+	if mode.PendingWipeID != "" && infraMachineStatus.TypedSpec().Value.ReadyToUse {
+		logger.Info("machine has a pending wipe, mark it as not ready to use")
+
+		infraMachineStatus.TypedSpec().Value.ReadyToUse = false
+
+		return controller.NewRequeueInterval(1 * time.Second)
+	}
 
 	if requiresReboot {
 		logger.Info("reboot to switch boot mode")
@@ -200,14 +209,9 @@ func (h *infraMachineStatusControllerHelper) transform(ctx context.Context, read
 		if err = h.wipe(ctx, infraMachine.Metadata().ID(), mode.PendingWipeID, logger); err != nil {
 			return err
 		}
-
-		// the changes will trigger a new reconciliation, we can simply return here
-		return nil
 	}
 
-	if !mode.Installed { // mark it as ready to use if there is no installation
-		infraMachineStatus.TypedSpec().Value.ReadyToUse = true
-	}
+	infraMachineStatus.TypedSpec().Value.ReadyToUse = true // there is no pending wipe, mark it as ready to use
 
 	return h.handleRebootRequest(ctx, infraMachine, infraMachineStatus, status, logger)
 }
@@ -312,8 +316,6 @@ func (h *infraMachineStatusControllerHelper) removeInternalStatus(ctx context.Co
 }
 
 func (h *infraMachineStatusControllerHelper) populateInfraMachineStatus(status *baremetal.MachineStatus, infraMachineStatus *infra.MachineStatus) error {
-	infraMachineStatus.TypedSpec().Value.ReadyToUse = false
-
 	// clear existing labels
 	for k := range infraMachineStatus.Metadata().Labels().Raw() {
 		if strings.HasPrefix(k, omni.SystemLabelPrefix) {
@@ -389,7 +391,7 @@ func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context,
 	if elapsed < h.minRebootInterval {
 		logger.Debug("machine was rebooted recently, requeue without issuing a reboot", zap.Duration("elapsed", elapsed))
 
-		return controller.NewRequeueInterval(h.minRebootInterval - elapsed + time.Second)
+		return controller.NewRequeueErrorf(h.minRebootInterval-elapsed+time.Second, "machine was rebooted recently, requeue without issuing a reboot")
 	}
 
 	var powerClient power.Client
@@ -424,7 +426,7 @@ func (h *infraMachineStatusControllerHelper) ensureReboot(ctx context.Context,
 
 	logger.Info("rebooted machine, requeue")
 
-	return controller.NewRequeueInterval(h.minRebootInterval + time.Second)
+	return controller.NewRequeueErrorf(h.minRebootInterval+time.Second, "rebooted machine, requeue")
 }
 
 // ensurePowerManagement makes sure that the power management for the machine is initialized if it hasn't been done yet.

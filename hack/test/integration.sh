@@ -24,6 +24,8 @@ make image-provider REGISTRY="$TEMP_REGISTRY" TAG=test PUSH=true
 
 PROVIDER_IMAGE="$TEMP_REGISTRY/siderolabs/omni-infra-provider-bare-metal:test"
 
+docker pull "$PROVIDER_IMAGE"
+
 echo "Download talosctl..."
 
 mkdir -p ${ARTIFACTS}

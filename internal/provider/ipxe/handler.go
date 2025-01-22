@@ -33,6 +33,7 @@ chain --replace %s
 `
 
 	ipxeScriptTemplateFormatLocalAssets = `#!ipxe
+imgfree
 kernel %s %s
 initrd %s
 boot
