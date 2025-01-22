@@ -156,7 +156,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
 	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
 
-	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID, providercontrollers.ProviderHealthStatusOptions{})
+	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID.String(), providercontrollers.ProviderHealthStatusOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create health check controller: %w", err)
 	}
@@ -189,11 +189,11 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 
 	var options []runtimeoptions.Option
 
-	if err := protobuf.RegisterResource(baremetal.MachineStatusType, &baremetal.MachineStatus{}); err != nil {
+	if err := protobuf.RegisterResource(baremetal.MachineStatusType(), &baremetal.MachineStatus{}); err != nil {
 		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
 	}
 
-	if err := protobuf.RegisterResource(baremetal.PowerStatusType, &baremetal.PowerStatus{}); err != nil {
+	if err := protobuf.RegisterResource(baremetal.PowerStatusType(), &baremetal.PowerStatus{}); err != nil {
 		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
 	}
 

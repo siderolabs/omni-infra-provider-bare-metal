@@ -18,13 +18,15 @@ import (
 // NewMachineStatus creates a new MachineStatus.
 func NewMachineStatus(id string) *MachineStatus {
 	return typed.NewResource[MachineStatusSpec, MachineStatusExtension](
-		resource.NewMetadata(Namespace, MachineStatusType, id, resource.VersionUndefined),
+		resource.NewMetadata(Namespace(), MachineStatusType(), id, resource.VersionUndefined),
 		protobuf.NewResourceSpec(&specs.MachineStatusSpec{}),
 	)
 }
 
-// MachineStatusType is the type of MachineStatus resource.
-var MachineStatusType = infra.ResourceType("BareMetalMachineStatus", providermeta.ProviderID)
+// MachineStatusType returns the type of MachineStatus resource.
+func MachineStatusType() string {
+	return infra.ResourceType("BareMetalMachineStatus", providermeta.ProviderID.String())
+}
 
 // MachineStatus describes machine status configuration.
 type MachineStatus = typed.Resource[MachineStatusSpec, MachineStatusExtension]
@@ -38,9 +40,9 @@ type MachineStatusExtension struct{}
 // ResourceDefinition implements [typed.Extension] interface.
 func (MachineStatusExtension) ResourceDefinition() meta.ResourceDefinitionSpec {
 	return meta.ResourceDefinitionSpec{
-		Type:             MachineStatusType,
+		Type:             MachineStatusType(),
 		Aliases:          []resource.Type{},
-		DefaultNamespace: Namespace,
+		DefaultNamespace: Namespace(),
 		PrintColumns:     []meta.PrintColumn{},
 	}
 }

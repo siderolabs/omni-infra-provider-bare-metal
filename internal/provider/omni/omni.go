@@ -40,7 +40,7 @@ func (c *Client) GetSiderolinkAPIURL(ctx context.Context) (string, error) {
 	}
 
 	token, err := jointoken.NewWithExtraData(connectionParams.TypedSpec().Value.JoinToken, map[string]string{
-		omni.LabelInfraProviderID: meta.ProviderID, // go to omni, don't do the check of MachineReqStatus
+		omni.LabelInfraProviderID: meta.ProviderID.String(), // go to omni, don't do the check of MachineReqStatus
 	})
 	if err != nil {
 		return "", err
@@ -69,7 +69,7 @@ func (c *Client) EnsureProviderStatus(ctx context.Context, name, description str
 		res.TypedSpec().Value.Icon = base64.RawStdEncoding.EncodeToString(rawIcon)
 	}
 
-	providerStatus := infra.NewProviderStatus(meta.ProviderID)
+	providerStatus := infra.NewProviderStatus(meta.ProviderID.String())
 
 	populate(providerStatus)
 

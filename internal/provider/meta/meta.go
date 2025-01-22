@@ -6,4 +6,26 @@
 package meta
 
 // ProviderID is the ID of the provider.
-var ProviderID = "bare-metal"
+var ProviderID providerIDFlag = "bare-metal"
+
+// providerIDFlag is a flag type for the provider ID.
+type providerIDFlag string
+
+// String implements the pflag.Value interface.
+//
+// It returns the id of the provider.
+func (p *providerIDFlag) String() string {
+	return string(*p)
+}
+
+// Set implements the pflag.Value interface.
+func (p *providerIDFlag) Set(val string) error {
+	*p = providerIDFlag(val)
+
+	return nil
+}
+
+// Type implements the pflag.Value interface.
+func (p *providerIDFlag) Type() string {
+	return "string"
+}

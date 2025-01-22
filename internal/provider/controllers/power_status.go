@@ -36,7 +36,7 @@ func NewPowerStatusController(powerClientFactory PowerClientFactory, state state
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *baremetal.PowerStatus]{
-			Name: meta.ProviderID + ".PowerStatusController",
+			Name: meta.ProviderID.String() + ".PowerStatusController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *baremetal.PowerStatus {
 				return baremetal.NewPowerStatus(infraMachine.Metadata().ID())
 			},

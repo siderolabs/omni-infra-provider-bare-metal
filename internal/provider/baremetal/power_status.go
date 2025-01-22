@@ -18,13 +18,15 @@ import (
 // NewPowerStatus creates a new PowerStatus.
 func NewPowerStatus(id string) *PowerStatus {
 	return typed.NewResource[PowerStatusSpec, PowerStatusExtension](
-		resource.NewMetadata(Namespace, PowerStatusType, id, resource.VersionUndefined),
+		resource.NewMetadata(Namespace(), PowerStatusType(), id, resource.VersionUndefined),
 		protobuf.NewResourceSpec(&specs.PowerStatusSpec{}),
 	)
 }
 
-// PowerStatusType is the type of PowerStatus resource.
-var PowerStatusType = infra.ResourceType("BareMetalPowerStatus", providermeta.ProviderID)
+// PowerStatusType returns the type of PowerStatus resource.
+func PowerStatusType() string {
+	return infra.ResourceType("BareMetalPowerStatus", providermeta.ProviderID.String())
+}
 
 // PowerStatus describes power status configuration.
 type PowerStatus = typed.Resource[PowerStatusSpec, PowerStatusExtension]
@@ -38,9 +40,9 @@ type PowerStatusExtension struct{}
 // ResourceDefinition implements [typed.Extension] interface.
 func (PowerStatusExtension) ResourceDefinition() meta.ResourceDefinitionSpec {
 	return meta.ResourceDefinitionSpec{
-		Type:             PowerStatusType,
+		Type:             PowerStatusType(),
 		Aliases:          []resource.Type{},
-		DefaultNamespace: Namespace,
+		DefaultNamespace: Namespace(),
 		PrintColumns:     []meta.PrintColumn{},
 	}
 }

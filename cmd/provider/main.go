@@ -93,7 +93,7 @@ func runCmd() error {
 func init() {
 	const apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
 
-	rootCmd.Flags().StringVar(&meta.ProviderID, "id", meta.ProviderID, "The id of the infra provider, it is used to match the resources with the infra provider label.")
+	rootCmd.Flags().Var(&meta.ProviderID, "id", "The id of the infra provider, it is used to match the resources with the infra provider label.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode & logs.")
 
 	rootCmd.Flags().StringVar(&providerOptions.APIListenAddress, "api-listen-address", provider.DefaultOptions.APIListenAddress,

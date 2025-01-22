@@ -70,7 +70,7 @@ func NewInfraMachineStatusController(agentService AgentService, apiPowerManager 
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *infra.MachineStatus]{
-			Name: meta.ProviderID + ".InfraMachineStatusController",
+			Name: meta.ProviderID.String() + ".InfraMachineStatusController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *infra.MachineStatus {
 				return infra.NewMachineStatus(infraMachine.Metadata().ID())
 			},

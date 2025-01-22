@@ -8,8 +8,10 @@ package baremetal
 import (
 	"github.com/siderolabs/omni/client/pkg/infra"
 
-	providermeta "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 )
 
 // Namespace is the resource namespace of this provider.
-var Namespace = infra.ResourceNamespace(providermeta.ProviderID)
+func Namespace() string {
+	return infra.ResourceNamespace(meta.ProviderID.String())
+}
