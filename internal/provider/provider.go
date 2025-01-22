@@ -8,6 +8,8 @@ package provider
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -22,26 +24,27 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/siderolabs/omni/client/pkg/client"
 	providercontrollers "github.com/siderolabs/omni/client/pkg/infra/controllers"
+	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
+	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/agent"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/baremetal"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc"
+	bmcapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/api"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/config"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/dhcp"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/imagefactory"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ip"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/omni"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power"
-	powerapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tftp"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
 //go:embed data/icon.svg
@@ -90,7 +93,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to build omni client: %w", err)
 	}
 
-	defer omniAPIClient.Close() //nolint:errcheck
+	defer util.LogClose(omniAPIClient, p.logger)
 
 	cosiRuntime, err := p.buildCOSIRuntime(omniAPIClient)
 	if err != nil {
@@ -98,7 +101,6 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	omniState := state.WrapCore(cosiRuntime.CachedState())
-	omniClient := omni.BuildClient(omniState)
 
 	if p.options.ClearState {
 		if constants.IsDebugBuild {
@@ -112,9 +114,11 @@ func (p *Provider) Run(ctx context.Context) error {
 		}
 	}
 
-	if err = omniClient.EnsureProviderStatus(ctx, p.options.Name, p.options.Description, icon); err != nil {
-		return fmt.Errorf("failed to create/update provider status: %w", err)
+	if err = p.ensureProviderStatus(ctx, omniState); err != nil {
+		return err
 	}
+
+	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
 
 	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL,
 		p.options.AgentModeTalosVersion, p.logger.With(zap.String("component", "image_factory_client")))
@@ -122,7 +126,9 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}
 
-	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, omniState, ipxe.HandlerOptions{
+	pxeBootEventCh := make(chan controllers.PXEBootEvent)
+
+	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, omniState, pxeBootEventCh, ipxe.HandlerOptions{
 		APIAdvertiseAddress: apiAdvertiseAddress,
 		APIPort:             p.options.APIPort,
 		UseLocalBootAssets:  p.options.UseLocalBootAssets,
@@ -133,7 +139,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create iPXE handler: %w", err)
 	}
 
-	configHandler, err := config.NewHandler(ctx, omniClient, p.logger.With(zap.String("component", "config_handler")))
+	configHandler, err := config.NewHandler(ctx, omniState, p.logger.With(zap.String("component", "config_handler")))
 	if err != nil {
 		return fmt.Errorf("failed to create config handler: %w", err)
 	}
@@ -143,18 +149,15 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to parse machine labels: %w", err)
 	}
 
-	powerClientFactory := power.NewClientFactory(power.ClientFactoryOptions{
+	bmcClientFactory := bmc.NewClientFactory(bmc.ClientFactoryOptions{
 		RedfishOptions: p.options.RedfishOptions,
 	}, p.logger)
-	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler, p.logger.With(zap.String("component", "server")))
-	agentService := agent.NewService(srvr, omniState, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_service"))) //nolint:contextcheck // false positive
-	machineStatusPoller := machinestatus.NewPoller(agentService, powerClientFactory, omniState, p.logger.With(zap.String("component", "machine_status_poller")))
 	dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
 	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
-	apiPowerManager := powerapi.NewPowerManager(p.options.APIPowerMgmtStateDir)
-
-	// todo: enable if we re-enable reverse tunnel on Omni: https://github.com/siderolabs/omni/pull/746
-	// reverseTunnel := tunnel.New(omniState, omniAPIClient, p.logger.With(zap.String("component", "reverse_tunnel")))
+	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
+	agentClient := agent.NewClient(agentConnectionEventCh, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
+	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler,
+		agentClient.TunnelServiceServer(), p.logger.With(zap.String("component", "server")))
 
 	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID.String(), providercontrollers.ProviderHealthStatusOptions{})
 	if err != nil {
@@ -166,8 +169,12 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	for _, qController := range []controller.QController{
-		controllers.NewInfraMachineStatusController(agentService, apiPowerManager, powerClientFactory, omniState, pxeBootMode, 1*time.Minute, p.options.MinRebootInterval, parsedMachineLabels),
-		controllers.NewPowerStatusController(powerClientFactory, omniState),
+		controllers.NewMachineStatusController(bmcClientFactory, agentClient, agentConnectionEventCh, pxeBootEventCh, 30*time.Second),
+		controllers.NewInfraMachineStatusController(parsedMachineLabels),
+		controllers.NewBMCConfigurationController(agentClient, bmcClientFactory, bmcAPIAddressReader, 1*time.Minute),
+		controllers.NewPowerOperationController(bmcClientFactory, p.options.MinRebootInterval),
+		controllers.NewRebootStatusController(bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
+		controllers.NewWipeStatusController(agentClient),
 	} {
 		if err = cosiRuntime.RegisterQController(qController); err != nil {
 			return fmt.Errorf("failed to register QController: %w", err)
@@ -176,11 +183,9 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	return p.runComponents(ctx, []component{
 		{cosiRuntime.Run, "COSI runtime"},
-		{machineStatusPoller.Run, "machine status poller"},
 		{srvr.Run, "server"},
 		{dhcpProxy.Run, "DHCP proxy"},
 		{tftpServer.Run, "TFTP server"},
-		// {reverseTunnel.Run, "reverse tunnel"},
 	})
 }
 
@@ -189,18 +194,23 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 
 	var options []runtimeoptions.Option
 
-	if err := protobuf.RegisterResource(baremetal.MachineStatusType(), &baremetal.MachineStatus{}); err != nil {
-		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
-	}
-
-	if err := protobuf.RegisterResource(baremetal.PowerStatusType(), &baremetal.PowerStatus{}); err != nil {
-		return nil, fmt.Errorf("failed to register protobuf resource: %w", err)
+	if err := errors.Join(
+		protobuf.RegisterResource(resources.BMCConfigurationType(), &resources.BMCConfiguration{}),
+		protobuf.RegisterResource(resources.MachineStatusType(), &resources.MachineStatus{}),
+		protobuf.RegisterResource(resources.PowerOperationType(), &resources.PowerOperation{}),
+		protobuf.RegisterResource(resources.RebootStatusType(), &resources.RebootStatus{}),
+		protobuf.RegisterResource(resources.WipeStatusType(), &resources.WipeStatus{}),
+	); err != nil {
+		return nil, fmt.Errorf("failed to register resources: %w", err)
 	}
 
 	if p.options.EnableResourceCache {
 		options = append(options,
-			safe.WithResourceCache[*baremetal.MachineStatus](),
-			safe.WithResourceCache[*baremetal.PowerStatus](),
+			safe.WithResourceCache[*resources.BMCConfiguration](),
+			safe.WithResourceCache[*resources.MachineStatus](),
+			safe.WithResourceCache[*resources.PowerOperation](),
+			safe.WithResourceCache[*resources.RebootStatus](),
+			safe.WithResourceCache[*resources.WipeStatus](),
 		)
 	}
 
@@ -212,11 +222,44 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 	return cosiRuntime, nil
 }
 
+func (p *Provider) ensureProviderStatus(ctx context.Context, st state.State) error {
+	populate := func(res *infra.ProviderStatus) {
+		res.Metadata().Labels().Set(omni.LabelIsStaticInfraProvider, "")
+
+		res.TypedSpec().Value.Name = p.options.Name
+		res.TypedSpec().Value.Description = p.options.Description
+		res.TypedSpec().Value.Icon = base64.RawStdEncoding.EncodeToString(icon)
+	}
+
+	providerStatus := infra.NewProviderStatus(meta.ProviderID.String())
+
+	populate(providerStatus)
+
+	if err := st.Create(ctx, providerStatus); err != nil {
+		if !state.IsConflictError(err) {
+			return err
+		}
+
+		if _, err = safe.StateUpdateWithConflicts(ctx, st, providerStatus.Metadata(), func(res *infra.ProviderStatus) error {
+			populate(res)
+
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type component struct {
 	run  func(context.Context) error
 	name string
 }
 
+// runComponents runs the long-running components in their own goroutines.
+//
+// It will terminate all components when one of them terminates, irrespective of whether it terminates with an error.
 func (p *Provider) runComponents(ctx context.Context, components []component) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -227,12 +270,11 @@ func (p *Provider) runComponents(ctx context.Context, components []component) er
 		logger := p.logger.With(zap.String("component", comp.name))
 
 		eg.Go(func() error {
-			defer cancel() // cancel the parent context, so all other components are also stopped
+			defer cancel() // cancel the parent context, so all other components are also stopped even if this one does not return an error
 
 			logger.Info("start component")
 
-			err := comp.run(ctx)
-			if err != nil {
+			if err := comp.run(ctx); err != nil {
 				logger.Error("failed to run component", zap.Error(err))
 
 				return err
@@ -285,7 +327,7 @@ func (p *Provider) buildOmniAPIClient(endpoint string, insecureSkipTLSVerify boo
 
 // clearState clears the persistent state of this provider. Useful for debugging purposes.
 func (p *Provider) clearState(ctx context.Context, st state.State) error {
-	list, err := st.List(ctx, baremetal.NewMachineStatus("").Metadata())
+	list, err := st.List(ctx, resources.NewMachineStatus("").Metadata())
 	if err != nil {
 		return fmt.Errorf("failed to list bare metal machinees: %w", err)
 	}

@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
 // Server represents the TFTP server serving iPXE binaries.
@@ -111,7 +112,7 @@ func handleRead(filename string, rf io.ReaderFrom, logger *zap.Logger) error {
 		return err
 	}
 
-	defer file.Close() //nolint:errcheck
+	defer util.LogClose(file, logger)
 
 	n, err := rf.ReadFrom(file)
 	if err != nil {

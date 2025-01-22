@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package ipmi provides power management functionality using IPMI.
+// Package ipmi provides BMC functionality using IPMI.
 package ipmi
 
 import (
@@ -12,7 +12,7 @@ import (
 	goipmi "github.com/pensando/goipmi"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 )
 
 const ipmiUsername = "talos-agent"
@@ -73,7 +73,7 @@ func (c *Client) IsPoweredOn(context.Context) (bool, error) {
 }
 
 // NewClient creates a new IPMI client.
-func NewClient(info *specs.PowerManagement_IPMI) (*Client, error) {
+func NewClient(info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
 	conn := &goipmi.Connection{
 		Hostname:  info.Address,
 		Port:      int(info.Port),

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"github.com/jhump/grpctunnel/tunnelpb"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -40,7 +41,9 @@ func (s *Server) RegisterService(desc *grpc.ServiceDesc, impl any) {
 }
 
 // New creates a new server.
-func New(ctx context.Context, listenAddress string, port int, serveAssetsDir bool, configHandler, ipxeHandler http.Handler, logger *zap.Logger) *Server {
+func New(ctx context.Context, listenAddress string, port int, serveAssetsDir bool, configHandler, ipxeHandler http.Handler,
+	tunnelServiceServer tunnelpb.TunnelServiceServer, logger *zap.Logger,
+) *Server {
 	recoveryOption := recovery.WithRecoveryHandler(recoveryHandler(logger))
 
 	grpcServer := grpc.NewServer(
@@ -48,6 +51,8 @@ func New(ctx context.Context, listenAddress string, port int, serveAssetsDir boo
 		grpc.ChainStreamInterceptor(recovery.StreamServerInterceptor(recoveryOption)),
 		grpc.Creds(insecure.NewCredentials()),
 	)
+
+	tunnelpb.RegisterTunnelServiceServer(grpcServer, tunnelServiceServer)
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(port)),

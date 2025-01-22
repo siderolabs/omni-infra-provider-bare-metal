@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package api provides power management functionality using an HTTP API, e.g., the HTTP API run by 'talosctl cluster create'.
+// Package api provides BMC functionality using an HTTP API, e.g., the HTTP API run by 'talosctl cluster create'.
 package api
 
 import (
@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 )
 
-// Client is an API power management client: it communicates with an HTTP API to send power management commands.
+// Client is an API BMC client: it communicates with an HTTP API to send BMC commands.
 type Client struct {
 	address string
 }
@@ -108,7 +108,7 @@ func closeBody(resp *http.Response) {
 	resp.Body.Close()
 }
 
-// NewClient creates a new API power management client.
-func NewClient(info *specs.PowerManagement_API) (*Client, error) {
+// NewClient creates a new API BMC client.
+func NewClient(info *specs.BMCConfigurationSpec_API) (*Client, error) {
 	return &Client{address: info.Address}, nil
 }

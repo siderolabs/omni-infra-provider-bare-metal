@@ -20,9 +20,9 @@ import (
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/version"
 )
 

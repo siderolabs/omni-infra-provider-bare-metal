@@ -17,18 +17,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// PowerManager is an API power management state manager.
-type PowerManager struct {
+// AddressReader reads the BMC address from the state directory for a given machine ID.
+type AddressReader struct {
 	stateDir string
 }
 
-// NewPowerManager creates a new API PowerManager.
-func NewPowerManager(stateDir string) *PowerManager {
-	return &PowerManager{stateDir: stateDir}
+// NewAddressReader creates a new API AddressReader.
+func NewAddressReader(stateDir string) *AddressReader {
+	return &AddressReader{stateDir: stateDir}
 }
 
-// ReadManagementAddress reads the power management address from the state directory for the given machine ID.
-func (manager *PowerManager) ReadManagementAddress(machineID string, logger *zap.Logger) (string, error) {
+// ReadManagementAddress reads the BMC address from the state directory for the given machine ID.
+func (manager *AddressReader) ReadManagementAddress(machineID string, logger *zap.Logger) (string, error) {
 	files, err := os.ReadDir(manager.stateDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to read directory %s: %w", manager.stateDir, err)

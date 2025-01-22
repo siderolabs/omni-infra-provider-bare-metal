@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package baremetal
+package resources
 
 import (
 	"github.com/cosi-project/runtime/pkg/resource"
@@ -23,12 +23,12 @@ func NewMachineStatus(id string) *MachineStatus {
 	)
 }
 
-// MachineStatusType returns the type of MachineStatus resource.
+// MachineStatusType is the type of MachineStatus resource.
 func MachineStatusType() string {
-	return infra.ResourceType("BareMetalMachineStatus", providermeta.ProviderID.String())
+	return infra.ResourceType("MachineStatus", providermeta.ProviderID.String())
 }
 
-// MachineStatus describes machine status configuration.
+// MachineStatus describes the resource configuration.
 type MachineStatus = typed.Resource[MachineStatusSpec, MachineStatusExtension]
 
 // MachineStatusSpec wraps specs.MachineStatusSpec.

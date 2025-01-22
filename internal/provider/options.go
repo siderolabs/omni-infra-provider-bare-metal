@@ -7,9 +7,9 @@ package provider
 import (
 	"time"
 
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/redfish"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/redfish"
 )
 
 // Options contains the provider options.
@@ -47,7 +47,7 @@ var DefaultOptions = Options{
 	Description:            "Bare metal infrastructure provider",
 	ImageFactoryBaseURL:    "https://factory.talos.dev",
 	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-	AgentModeTalosVersion:  "v1.9.1",
+	AgentModeTalosVersion:  "v1.9.2",
 	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 	APIPort:                50042,

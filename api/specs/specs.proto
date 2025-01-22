@@ -6,7 +6,18 @@ option go_package = "github.com/siderolabs/omni-infra-provider-bare-metal/api/sp
 
 import "google/protobuf/timestamp.proto";
 
-message PowerManagement {
+enum PowerState {
+  POWER_STATE_UNKNOWN = 0;
+  POWER_STATE_OFF = 1;
+  POWER_STATE_ON = 2;
+}
+
+message PowerOperationSpec {
+  PowerState last_power_operation = 1;
+  google.protobuf.Timestamp last_power_on_timestamp = 2;
+}
+
+message BMCConfigurationSpec {
   message IPMI {
     string address = 1;
     uint32 port = 2;
@@ -22,39 +33,42 @@ message PowerManagement {
   API api = 2;
 }
 
+message MachineStatusSpec {
+  bool agent_accessible = 1;
+  PowerState power_state = 2;
+  BootMode last_pxe_boot_mode = 3;
+}
+
+message WipeStatusSpec {
+  // LastWipeId is the ID of the last wipe operation that was performed on the machine.
+  //
+  // It is used to track if the machine needs to be wiped for an allocation.
+  string last_wipe_id = 1;
+
+  // LastWipeInstallEventId is set to the same value of InfraMachine.InstallEventId field each time machine gets wiped.
+  //
+  // Using this, the provider is able to track the installation state of Talos on the machine. It does it by comparing this stored value
+  // with the value of InfraMachine.InstallEventId field.
+  //
+  // If the value of InfraMachine.InstallEventId field is greater than the value of this field,
+  // it means that Omni observed, after the wipe, at least one event indicating Talos is installed on that machine.
+  uint64 last_wipe_install_event_id = 2;
+
+  bool initial_wipe_done = 3;
+}
+
+message RebootStatusSpec {
+  string last_reboot_id = 1;
+
+  // LastRebootTimestamp is the timestamp of the last reboot (or power on) of the machine.
+  //
+  // It is used to track the last reboot time of the machine, and to enforce the MinRebootInterval.
+  google.protobuf.Timestamp last_reboot_timestamp = 2;
+}
+
 enum BootMode {
   BOOT_MODE_UNKNOWN = 0;
   BOOT_MODE_AGENT_PXE = 1;
   BOOT_MODE_TALOS_PXE = 2;
   BOOT_MODE_TALOS_DISK = 3;
-}
-
-enum PowerState {
-  POWER_STATE_UNKNOWN = 0;
-  POWER_STATE_OFF = 1;
-  POWER_STATE_ON = 2;
-}
-
-message MachineStatusSpec {
-  PowerManagement power_management = 1;
-
-  PowerState power_state = 2;
-
-  // LastBootMode is the last observed boot mode of the machine. It is updated by the PXE server each time it boots a server,
-  // and is also updated by the status of the agent connectivity.
-  BootMode boot_mode = 3;
-
-  // LastWipeId is the ID of the last wipe operation that was performed on the machine.
-  //
-  // It is used to track if the machine needs to be wiped for an allocation.
-  string last_wipe_id = 4;
-
-  // LastRebootTimestamp is the timestamp of the last reboot (or power on) of the machine.
-  //
-  // It is used to track the last reboot time of the machine, and to enforce the MinRebootInterval.
-  google.protobuf.Timestamp last_reboot_timestamp = 5;
-}
-
-message PowerStatusSpec {
-  PowerState power_state = 1;
 }

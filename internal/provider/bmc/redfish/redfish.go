@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package redfish provides power management functionality using Redfish.
+// Package redfish provides BMC functionality using Redfish.
 package redfish
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/stmcginnis/gofish/redfish"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 )
 
 // Client is a wrapper around the gofish client.
@@ -145,7 +145,7 @@ func (c *Client) getSystem(client *gofish.APIClient) (*redfish.ComputerSystem, e
 	return systems[0], nil
 }
 
-// NewClient returns a new Redfish power management client.
+// NewClient returns a new Redfish BMC client.
 func NewClient(options Options, address, username, password string, logger *zap.Logger) *Client {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {

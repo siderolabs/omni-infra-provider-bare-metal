@@ -108,4 +108,5 @@ func init() {
 	rootCmd.Flags().Uint64Var(&qemuOptions.DiskSize, "disk-size", qemu.DefaultOptions.DiskSize, "Disk size for each machine.")
 	rootCmd.Flags().Int64Var(&qemuOptions.MemSize, "mem-size", qemu.DefaultOptions.MemSize, "Memory size for each machine.")
 	rootCmd.Flags().StringSliceVar(&qemuOptions.Nameservers, "nameservers", qemu.DefaultOptions.Nameservers, "Nameservers for the machines' network.")
+	rootCmd.Flags().StringVar(&qemuOptions.DefaultBootOrder, "default-boot-order", qemu.DefaultOptions.DefaultBootOrder, "Default boot order for the machines.")
 }

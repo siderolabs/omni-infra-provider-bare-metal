@@ -25,6 +25,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zapio"
+
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
 const (
@@ -130,7 +132,7 @@ func (machines *Machines) Run(ctx context.Context) error {
 			Level: zapcore.InfoLevel,
 		}
 
-		defer logWriter.Close() //nolint:errcheck
+		defer util.LogClose(logWriter, machines.logger)
 
 		if err = machines.createNew(ctx, qemuProvisioner, logWriter); err != nil {
 			return err
@@ -199,7 +201,7 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 			SkipInjectingConfig: true,
 			UUID:                &nodeUUID,
 			PXEBooted:           true,
-			DefaultBootOrder:    "cn", // first disk, then network
+			DefaultBootOrder:    machines.options.DefaultBootOrder, // first disk, then network
 		})
 	}
 
@@ -239,7 +241,9 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 // Destroy destroys the existing set of machines.
 func (machines *Machines) Destroy(ctx context.Context) error {
-	defer os.RemoveAll(filepath.Join(machines.stateDir, machines.options.Name)) //nolint:errcheck
+	defer util.LogErr(func() error {
+		return os.RemoveAll(filepath.Join(machines.stateDir, machines.options.Name))
+	}, machines.logger)
 
 	qemuProvisioner, err := providers.Factory(ctx, providerName)
 	if err != nil {
@@ -256,13 +260,13 @@ func (machines *Machines) Destroy(ctx context.Context) error {
 		return fmt.Errorf("failed to load existing cluster while clearing state: %w", err)
 	}
 
-	logWriter := zapio.Writer{
+	logWriter := &zapio.Writer{
 		Log:   machines.logger,
 		Level: zapcore.InfoLevel,
 	}
-	defer logWriter.Close() //nolint:errcheck
+	defer util.LogClose(logWriter, machines.logger)
 
-	if err = qemuProvisioner.Destroy(ctx, cluster, provision.WithDeleteOnErr(true), provision.WithLogWriter(&logWriter)); err != nil {
+	if err = qemuProvisioner.Destroy(ctx, cluster, provision.WithDeleteOnErr(true), provision.WithLogWriter(logWriter)); err != nil {
 		if strings.Contains(err.Error(), "no such network interface") {
 			return nil
 		}

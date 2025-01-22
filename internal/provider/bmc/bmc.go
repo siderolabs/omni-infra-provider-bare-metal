@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package power provides power management functionality for machines.
-package power
+// Package bmc provides BMC functionality for machines.
+package bmc
 
 import (
 	"context"
@@ -14,16 +14,14 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/api"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/ipmi"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/pxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/power/redfish"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/api"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/ipmi"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/redfish"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 )
 
-// ErrNoPowerManagementInfo is returned when there is no power management info present yet for a machine.
-var ErrNoPowerManagementInfo = fmt.Errorf("no power management info found")
-
-// Client is the interface to interact with a single machine to send power commands to it.
+// Client is the interface to interact with a single machine to send BMC commands to it.
 type Client interface {
 	io.Closer
 	Reboot(ctx context.Context) error
@@ -33,7 +31,7 @@ type Client interface {
 	SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error
 }
 
-// ClientFactory is a factory to create power management clients.
+// ClientFactory is a factory to create BMC clients.
 type ClientFactory struct {
 	logger                         *zap.Logger
 	addressToRedfishAvailability   map[string]bool
@@ -46,7 +44,7 @@ type ClientFactoryOptions struct {
 	RedfishOptions redfish.Options
 }
 
-// NewClientFactory creates a new power management client factory.
+// NewClientFactory creates a new BMC client factory.
 func NewClientFactory(options ClientFactoryOptions, logger *zap.Logger) *ClientFactory {
 	return &ClientFactory{
 		options:                      options,
@@ -55,46 +53,45 @@ func NewClientFactory(options ClientFactoryOptions, logger *zap.Logger) *ClientF
 	}
 }
 
-// GetClient returns a power management client for the given bare metal machine.
-func (factory *ClientFactory) GetClient(ctx context.Context, mgmt *specs.PowerManagement) (Client, error) {
-	if mgmt == nil {
-		return nil, ErrNoPowerManagementInfo
+// GetClient returns a BMC client for the given bare metal machine.
+func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.BMCConfiguration) (Client, error) {
+	if config == nil {
+		return nil, fmt.Errorf("BMC config is nil")
 	}
 
-	apiInfo := mgmt.Api
-	if apiInfo != nil {
-		apiClient, err := api.NewClient(apiInfo)
+	spec := config.TypedSpec().Value
+
+	if spec.Ipmi == nil && spec.Api == nil {
+		return nil, fmt.Errorf("invalid BMC config: both IPMI and API fields are nil")
+	}
+
+	if spec.Api != nil {
+		apiClient, err := api.NewClient(spec.Api)
 		if err != nil {
 			return nil, err
 		}
 
-		return &loggingClient{client: apiClient, logger: factory.logger.With(zap.String("power_client", "api"))}, nil
+		return &loggingClient{client: apiClient, logger: factory.logger.With(zap.String("bmc_client", "api"))}, nil
 	}
 
-	ipmiInfo := mgmt.Ipmi
-
-	if ipmiInfo == nil {
-		return nil, ErrNoPowerManagementInfo
-	}
-
-	useRedfish := factory.options.RedfishOptions.UseAlways || (factory.options.RedfishOptions.UseWhenAvailable && factory.redfishAvailable(ctx, ipmiInfo))
+	useRedfish := factory.options.RedfishOptions.UseAlways || (factory.options.RedfishOptions.UseWhenAvailable && factory.redfishAvailable(ctx, spec.Ipmi))
 
 	if useRedfish {
-		logger := factory.logger.With(zap.String("power_client", "redfish"))
-		redfishClient := redfish.NewClient(factory.options.RedfishOptions, ipmiInfo.Address, ipmiInfo.Username, ipmiInfo.Password, logger)
+		logger := factory.logger.With(zap.String("bmc_client", "redfish"))
+		redfishClient := redfish.NewClient(factory.options.RedfishOptions, spec.Ipmi.Address, spec.Ipmi.Username, spec.Ipmi.Password, logger)
 
 		return &loggingClient{client: redfishClient, logger: logger}, nil
 	}
 
-	ipmiClient, err := ipmi.NewClient(ipmiInfo)
+	ipmiClient, err := ipmi.NewClient(spec.Ipmi)
 	if err != nil {
 		return nil, err
 	}
 
-	return &loggingClient{client: ipmiClient, logger: factory.logger.With(zap.String("power_client", "ipmi"))}, nil
+	return &loggingClient{client: ipmiClient, logger: factory.logger.With(zap.String("bmc_client", "ipmi"))}, nil
 }
 
-func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *specs.PowerManagement_IPMI) bool {
+func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *specs.BMCConfigurationSpec_IPMI) bool {
 	factory.addressToRedfishAvailabilityMu.Lock()
 	defer factory.addressToRedfishAvailabilityMu.Unlock()
 

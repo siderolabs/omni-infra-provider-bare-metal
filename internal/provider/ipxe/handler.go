@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
@@ -22,9 +23,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/baremetal"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/boot"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machinestatus"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 )
 
 const (
@@ -70,16 +71,13 @@ type HandlerOptions struct {
 // Handler represents an iPXE handler.
 type Handler struct {
 	imageFactoryClient ImageFactoryClient
-	state              state.State
-
-	logger *zap.Logger
-
+	reader             controller.Reader
+	logger             *zap.Logger
+	pxeBootEventCh     chan<- controllers.PXEBootEvent
 	bootFromDiskMethod BootFromDiskMethod
-
-	defaultKernelArgs []string
-	agentKernelArgs   []string
-
-	options HandlerOptions
+	defaultKernelArgs  []string
+	agentKernelArgs    []string
+	options            HandlerOptions
 }
 
 // ServeHTTP serves the iPXE request.
@@ -118,13 +116,10 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// save the machine in any case
-	if _, err = machinestatus.Modify(ctx, handler.state, uuid, func(status *baremetal.MachineStatus) error {
-		status.TypedSpec().Value.BootMode = decision.mode
-
-		return nil
-	}); err != nil {
-		handler.logger.Error("failed to mark machine as dirty", zap.Error(err))
+	select {
+	case <-ctx.Done():
+		handler.logger.Error("failed to send PXE boot event", zap.String("uuid", uuid))
+	case handler.pxeBootEventCh <- controllers.PXEBootEvent{MachineID: uuid, Mode: decision.mode}:
 	}
 }
 
@@ -134,6 +129,7 @@ type bootDecision struct {
 	mode       specs.BootMode
 }
 
+//nolint:cyclop
 func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string, logger *zap.Logger) (bootDecision, error) {
 	switch arch { // https://ipxe.org/cfg/buildarch
 	case archArm64:
@@ -142,34 +138,39 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		arch = archAmd64
 	}
 
-	machineResources, err := handler.getResources(ctx, uuid)
-	if err != nil {
-		return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("failed to get resources: %w", err)
+	infraMachine, err := safe.ReaderGetByID[*infra.Machine](ctx, handler.reader, uuid)
+	if err != nil && !state.IsNotFoundError(err) {
+		return bootDecision{}, err
 	}
+
+	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, handler.reader, uuid)
+	if err != nil && !state.IsNotFoundError(err) {
+		return bootDecision{}, err
+	}
+
+	wipeStatus, err := safe.ReaderGetByID[*resources.WipeStatus](ctx, handler.reader, uuid)
+	if err != nil && !state.IsNotFoundError(err) {
+		return bootDecision{}, err
+	}
+
+	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
 
 	var userExtraKernelArgs []string
 
-	if machineResources.infraMachine != nil {
-		userExtraKernelArgs = strings.Fields(machineResources.infraMachine.TypedSpec().Value.ExtraKernelArgs)
+	if infraMachine != nil {
+		userExtraKernelArgs = strings.Fields(infraMachine.TypedSpec().Value.ExtraKernelArgs)
 
-		if machineResources.infraMachine.TypedSpec().Value.Cordoned {
+		if infraMachine.TypedSpec().Value.Cordoned {
 			logger.Info("machine is cordoned, skip making a boot decision")
 
 			return bootDecision{body: "machine is cordoned", statusCode: http.StatusNotFound}, nil
 		}
 	}
 
-	mode, err := boot.DetermineRequiredMode(machineResources.infraMachine, machineResources.status, machineResources.machineState, logger)
-	if err != nil {
-		return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("failed to determine required boot mode: %w", err)
-	}
-
-	requiredBootMode := mode.BootMode
-
-	logger = logger.With(zap.Stringer("required_boot_mode", requiredBootMode))
-
 	switch requiredBootMode {
 	case specs.BootMode_BOOT_MODE_AGENT_PXE:
+		logger.Info("boot into agent mode")
+
 		body, statusCode, agentErr := handler.bootIntoAgentMode(ctx, arch, userExtraKernelArgs)
 		if agentErr != nil {
 			return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("failed to boot into agent mode: %w", agentErr)
@@ -185,8 +186,8 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 
 		consoleKernelArgs := handler.consoleKernelArgs(arch)
 		extraKernelArgs := slices.Concat(handler.defaultKernelArgs, consoleKernelArgs, userExtraKernelArgs)
-		talosVersion := machineResources.infraMachine.TypedSpec().Value.ClusterTalosVersion
-		extensions := machineResources.infraMachine.TypedSpec().Value.Extensions
+		talosVersion := infraMachine.TypedSpec().Value.ClusterTalosVersion
+		extensions := infraMachine.TypedSpec().Value.Extensions
 
 		var ipxeURL string
 
@@ -224,35 +225,6 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 	default:
 		return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("unknown boot mode: %s", requiredBootMode)
 	}
-}
-
-type resources struct {
-	infraMachine *infra.Machine
-	status       *baremetal.MachineStatus
-	machineState *infra.MachineState
-}
-
-func (handler *Handler) getResources(ctx context.Context, id string) (resources, error) {
-	infraMachine, err := safe.StateGetByID[*infra.Machine](ctx, handler.state, id)
-	if err != nil && !state.IsNotFoundError(err) {
-		return resources{}, fmt.Errorf("failed to get infra machine: %w", err)
-	}
-
-	status, err := machinestatus.Get(ctx, handler.state, id)
-	if err != nil && !state.IsNotFoundError(err) {
-		return resources{}, fmt.Errorf("failed to get bare metal machine status: %w", err)
-	}
-
-	machineState, err := safe.StateGetByID[*infra.MachineState](ctx, handler.state, id)
-	if err != nil && !state.IsNotFoundError(err) {
-		return resources{}, fmt.Errorf("failed to get infra machine install status: %w", err)
-	}
-
-	return resources{
-		infraMachine: infraMachine,
-		status:       status,
-		machineState: machineState,
-	}, nil
 }
 
 func (handler *Handler) bootIntoAgentMode(ctx context.Context, arch string, extraKernelArgs []string) (string, int, error) {
@@ -308,7 +280,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(imageFactoryClient ImageFactoryClient, state state.State, options HandlerOptions, logger *zap.Logger) (*Handler, error) {
+func NewHandler(imageFactoryClient ImageFactoryClient, r controller.Reader, pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse boot from disk method: %w", err)
@@ -316,7 +288,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, state state.State, option
 
 	logger.Info("patch iPXE binaries")
 
-	if err := patchBinaries(options.APIAdvertiseAddress, options.APIPort); err != nil {
+	if err = patchBinaries(options.APIAdvertiseAddress, options.APIPort, logger); err != nil {
 		return nil, err
 	}
 
@@ -342,7 +314,8 @@ func NewHandler(imageFactoryClient ImageFactoryClient, state state.State, option
 	agentKernelArgs := slices.Concat(defaultKernelArgs, agentExtraKernelArgs)
 
 	return &Handler{
-		state:              state,
+		pxeBootEventCh:     pxeBootEventCh,
+		reader:             r,
 		imageFactoryClient: imageFactoryClient,
 		options:            options,
 		defaultKernelArgs:  defaultKernelArgs,

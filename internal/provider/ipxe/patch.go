@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"go.uber.org/zap"
+
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
 // bootTemplate is embedded into iPXE binary when that binary is sent to the node.
@@ -95,7 +98,7 @@ func buildBootScript(endpoint string, port int) ([]byte, error) {
 // EFI iPXE binaries are uncompressed, so these are patched directly.
 // BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back using zbin.
 // (zbin is built with iPXE).
-func patchBinaries(apiAdvertiseAddress string, apiPort int) error {
+func patchBinaries(apiAdvertiseAddress string, apiPort int, logger *zap.Logger) error {
 	bootScript, err := buildBootScript(apiAdvertiseAddress, apiPort)
 	if err != nil {
 		return fmt.Errorf("failed to build boot script: %w", err)
@@ -123,11 +126,11 @@ func patchBinaries(apiAdvertiseAddress string, apiPort int) error {
 		return fmt.Errorf("failed to patch undionly.kpxe.bin: %w", err)
 	}
 
-	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe"); err != nil {
+	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe: %w", err)
 	}
 
-	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe.0"); err != nil {
+	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe.0", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe.0: %w", err)
 	}
 
@@ -179,13 +182,13 @@ func patchScript(source, destination string, script []byte) error {
 }
 
 // compressKPXE is equivalent to: ./util/zbin bin/undionly.kpxe.bin bin/undionly.kpxe.zinfo > bin/undionly.kpxe.zbin.
-func compressKPXE(binFile, infoFile, outFile string) error {
+func compressKPXE(binFile, infoFile, outFile string, logger *zap.Logger) error {
 	out, err := os.Create(outFile)
 	if err != nil {
 		return err
 	}
 
-	defer out.Close() //nolint:errcheck
+	defer util.LogClose(out, logger)
 
 	cmd := exec.Command("/bin/zbin", binFile, infoFile)
 	cmd.Stdout = out

@@ -22,11 +22,29 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-func (m *PowerManagement_IPMI) CloneVT() *PowerManagement_IPMI {
+func (m *PowerOperationSpec) CloneVT() *PowerOperationSpec {
 	if m == nil {
-		return (*PowerManagement_IPMI)(nil)
+		return (*PowerOperationSpec)(nil)
 	}
-	r := new(PowerManagement_IPMI)
+	r := new(PowerOperationSpec)
+	r.LastPowerOperation = m.LastPowerOperation
+	r.LastPowerOnTimestamp = (*timestamppb.Timestamp)((*timestamppb1.Timestamp)(m.LastPowerOnTimestamp).CloneVT())
+	if len(m.unknownFields) > 0 {
+		r.unknownFields = make([]byte, len(m.unknownFields))
+		copy(r.unknownFields, m.unknownFields)
+	}
+	return r
+}
+
+func (m *PowerOperationSpec) CloneMessageVT() proto.Message {
+	return m.CloneVT()
+}
+
+func (m *BMCConfigurationSpec_IPMI) CloneVT() *BMCConfigurationSpec_IPMI {
+	if m == nil {
+		return (*BMCConfigurationSpec_IPMI)(nil)
+	}
+	r := new(BMCConfigurationSpec_IPMI)
 	r.Address = m.Address
 	r.Port = m.Port
 	r.Username = m.Username
@@ -38,15 +56,15 @@ func (m *PowerManagement_IPMI) CloneVT() *PowerManagement_IPMI {
 	return r
 }
 
-func (m *PowerManagement_IPMI) CloneMessageVT() proto.Message {
+func (m *BMCConfigurationSpec_IPMI) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *PowerManagement_API) CloneVT() *PowerManagement_API {
+func (m *BMCConfigurationSpec_API) CloneVT() *BMCConfigurationSpec_API {
 	if m == nil {
-		return (*PowerManagement_API)(nil)
+		return (*BMCConfigurationSpec_API)(nil)
 	}
-	r := new(PowerManagement_API)
+	r := new(BMCConfigurationSpec_API)
 	r.Address = m.Address
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -55,15 +73,15 @@ func (m *PowerManagement_API) CloneVT() *PowerManagement_API {
 	return r
 }
 
-func (m *PowerManagement_API) CloneMessageVT() proto.Message {
+func (m *BMCConfigurationSpec_API) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *PowerManagement) CloneVT() *PowerManagement {
+func (m *BMCConfigurationSpec) CloneVT() *BMCConfigurationSpec {
 	if m == nil {
-		return (*PowerManagement)(nil)
+		return (*BMCConfigurationSpec)(nil)
 	}
-	r := new(PowerManagement)
+	r := new(BMCConfigurationSpec)
 	r.Ipmi = m.Ipmi.CloneVT()
 	r.Api = m.Api.CloneVT()
 	if len(m.unknownFields) > 0 {
@@ -73,7 +91,7 @@ func (m *PowerManagement) CloneVT() *PowerManagement {
 	return r
 }
 
-func (m *PowerManagement) CloneMessageVT() proto.Message {
+func (m *BMCConfigurationSpec) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
@@ -82,11 +100,9 @@ func (m *MachineStatusSpec) CloneVT() *MachineStatusSpec {
 		return (*MachineStatusSpec)(nil)
 	}
 	r := new(MachineStatusSpec)
-	r.PowerManagement = m.PowerManagement.CloneVT()
+	r.AgentAccessible = m.AgentAccessible
 	r.PowerState = m.PowerState
-	r.BootMode = m.BootMode
-	r.LastWipeId = m.LastWipeId
-	r.LastRebootTimestamp = (*timestamppb.Timestamp)((*timestamppb1.Timestamp)(m.LastRebootTimestamp).CloneVT())
+	r.LastPxeBootMode = m.LastPxeBootMode
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -98,12 +114,14 @@ func (m *MachineStatusSpec) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *PowerStatusSpec) CloneVT() *PowerStatusSpec {
+func (m *WipeStatusSpec) CloneVT() *WipeStatusSpec {
 	if m == nil {
-		return (*PowerStatusSpec)(nil)
+		return (*WipeStatusSpec)(nil)
 	}
-	r := new(PowerStatusSpec)
-	r.PowerState = m.PowerState
+	r := new(WipeStatusSpec)
+	r.LastWipeId = m.LastWipeId
+	r.LastWipeInstallEventId = m.LastWipeInstallEventId
+	r.InitialWipeDone = m.InitialWipeDone
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -111,11 +129,51 @@ func (m *PowerStatusSpec) CloneVT() *PowerStatusSpec {
 	return r
 }
 
-func (m *PowerStatusSpec) CloneMessageVT() proto.Message {
+func (m *WipeStatusSpec) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (this *PowerManagement_IPMI) EqualVT(that *PowerManagement_IPMI) bool {
+func (m *RebootStatusSpec) CloneVT() *RebootStatusSpec {
+	if m == nil {
+		return (*RebootStatusSpec)(nil)
+	}
+	r := new(RebootStatusSpec)
+	r.LastRebootId = m.LastRebootId
+	r.LastRebootTimestamp = (*timestamppb.Timestamp)((*timestamppb1.Timestamp)(m.LastRebootTimestamp).CloneVT())
+	if len(m.unknownFields) > 0 {
+		r.unknownFields = make([]byte, len(m.unknownFields))
+		copy(r.unknownFields, m.unknownFields)
+	}
+	return r
+}
+
+func (m *RebootStatusSpec) CloneMessageVT() proto.Message {
+	return m.CloneVT()
+}
+
+func (this *PowerOperationSpec) EqualVT(that *PowerOperationSpec) bool {
+	if this == that {
+		return true
+	} else if this == nil || that == nil {
+		return false
+	}
+	if this.LastPowerOperation != that.LastPowerOperation {
+		return false
+	}
+	if !(*timestamppb1.Timestamp)(this.LastPowerOnTimestamp).EqualVT((*timestamppb1.Timestamp)(that.LastPowerOnTimestamp)) {
+		return false
+	}
+	return string(this.unknownFields) == string(that.unknownFields)
+}
+
+func (this *PowerOperationSpec) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*PowerOperationSpec)
+	if !ok {
+		return false
+	}
+	return this.EqualVT(that)
+}
+func (this *BMCConfigurationSpec_IPMI) EqualVT(that *BMCConfigurationSpec_IPMI) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -136,14 +194,14 @@ func (this *PowerManagement_IPMI) EqualVT(that *PowerManagement_IPMI) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *PowerManagement_IPMI) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*PowerManagement_IPMI)
+func (this *BMCConfigurationSpec_IPMI) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*BMCConfigurationSpec_IPMI)
 	if !ok {
 		return false
 	}
 	return this.EqualVT(that)
 }
-func (this *PowerManagement_API) EqualVT(that *PowerManagement_API) bool {
+func (this *BMCConfigurationSpec_API) EqualVT(that *BMCConfigurationSpec_API) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -155,14 +213,14 @@ func (this *PowerManagement_API) EqualVT(that *PowerManagement_API) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *PowerManagement_API) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*PowerManagement_API)
+func (this *BMCConfigurationSpec_API) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*BMCConfigurationSpec_API)
 	if !ok {
 		return false
 	}
 	return this.EqualVT(that)
 }
-func (this *PowerManagement) EqualVT(that *PowerManagement) bool {
+func (this *BMCConfigurationSpec) EqualVT(that *BMCConfigurationSpec) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -177,8 +235,8 @@ func (this *PowerManagement) EqualVT(that *PowerManagement) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *PowerManagement) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*PowerManagement)
+func (this *BMCConfigurationSpec) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*BMCConfigurationSpec)
 	if !ok {
 		return false
 	}
@@ -190,19 +248,13 @@ func (this *MachineStatusSpec) EqualVT(that *MachineStatusSpec) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if !this.PowerManagement.EqualVT(that.PowerManagement) {
+	if this.AgentAccessible != that.AgentAccessible {
 		return false
 	}
 	if this.PowerState != that.PowerState {
 		return false
 	}
-	if this.BootMode != that.BootMode {
-		return false
-	}
-	if this.LastWipeId != that.LastWipeId {
-		return false
-	}
-	if !(*timestamppb1.Timestamp)(this.LastRebootTimestamp).EqualVT((*timestamppb1.Timestamp)(that.LastRebootTimestamp)) {
+	if this.LastPxeBootMode != that.LastPxeBootMode {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -215,26 +267,54 @@ func (this *MachineStatusSpec) EqualMessageVT(thatMsg proto.Message) bool {
 	}
 	return this.EqualVT(that)
 }
-func (this *PowerStatusSpec) EqualVT(that *PowerStatusSpec) bool {
+func (this *WipeStatusSpec) EqualVT(that *WipeStatusSpec) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
 		return false
 	}
-	if this.PowerState != that.PowerState {
+	if this.LastWipeId != that.LastWipeId {
+		return false
+	}
+	if this.LastWipeInstallEventId != that.LastWipeInstallEventId {
+		return false
+	}
+	if this.InitialWipeDone != that.InitialWipeDone {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *PowerStatusSpec) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*PowerStatusSpec)
+func (this *WipeStatusSpec) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*WipeStatusSpec)
 	if !ok {
 		return false
 	}
 	return this.EqualVT(that)
 }
-func (m *PowerManagement_IPMI) MarshalVT() (dAtA []byte, err error) {
+func (this *RebootStatusSpec) EqualVT(that *RebootStatusSpec) bool {
+	if this == that {
+		return true
+	} else if this == nil || that == nil {
+		return false
+	}
+	if this.LastRebootId != that.LastRebootId {
+		return false
+	}
+	if !(*timestamppb1.Timestamp)(this.LastRebootTimestamp).EqualVT((*timestamppb1.Timestamp)(that.LastRebootTimestamp)) {
+		return false
+	}
+	return string(this.unknownFields) == string(that.unknownFields)
+}
+
+func (this *RebootStatusSpec) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*RebootStatusSpec)
+	if !ok {
+		return false
+	}
+	return this.EqualVT(that)
+}
+func (m *PowerOperationSpec) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -247,12 +327,60 @@ func (m *PowerManagement_IPMI) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PowerManagement_IPMI) MarshalToVT(dAtA []byte) (int, error) {
+func (m *PowerOperationSpec) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *PowerManagement_IPMI) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *PowerOperationSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.unknownFields != nil {
+		i -= len(m.unknownFields)
+		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.LastPowerOnTimestamp != nil {
+		size, err := (*timestamppb1.Timestamp)(m.LastPowerOnTimestamp).MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.LastPowerOperation != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.LastPowerOperation))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BMCConfigurationSpec_IPMI) MarshalVT() (dAtA []byte, err error) {
+	if m == nil {
+		return nil, nil
+	}
+	size := m.SizeVT()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BMCConfigurationSpec_IPMI) MarshalToVT(dAtA []byte) (int, error) {
+	size := m.SizeVT()
+	return m.MarshalToSizedBufferVT(dAtA[:size])
+}
+
+func (m *BMCConfigurationSpec_IPMI) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -293,7 +421,7 @@ func (m *PowerManagement_IPMI) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 	return len(dAtA) - i, nil
 }
 
-func (m *PowerManagement_API) MarshalVT() (dAtA []byte, err error) {
+func (m *BMCConfigurationSpec_API) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -306,12 +434,12 @@ func (m *PowerManagement_API) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PowerManagement_API) MarshalToVT(dAtA []byte) (int, error) {
+func (m *BMCConfigurationSpec_API) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *PowerManagement_API) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *BMCConfigurationSpec_API) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -333,7 +461,7 @@ func (m *PowerManagement_API) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *PowerManagement) MarshalVT() (dAtA []byte, err error) {
+func (m *BMCConfigurationSpec) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -346,12 +474,12 @@ func (m *PowerManagement) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PowerManagement) MarshalToVT(dAtA []byte) (int, error) {
+func (m *BMCConfigurationSpec) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *PowerManagement) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *BMCConfigurationSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -416,25 +544,8 @@ func (m *MachineStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.LastRebootTimestamp != nil {
-		size, err := (*timestamppb1.Timestamp)(m.LastRebootTimestamp).MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.LastWipeId) > 0 {
-		i -= len(m.LastWipeId)
-		copy(dAtA[i:], m.LastWipeId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.LastWipeId)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.BootMode != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.BootMode))
+	if m.LastPxeBootMode != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.LastPxeBootMode))
 		i--
 		dAtA[i] = 0x18
 	}
@@ -443,20 +554,20 @@ func (m *MachineStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x10
 	}
-	if m.PowerManagement != nil {
-		size, err := m.PowerManagement.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+	if m.AgentAccessible {
 		i--
-		dAtA[i] = 0xa
+		if m.AgentAccessible {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *PowerStatusSpec) MarshalVT() (dAtA []byte, err error) {
+func (m *WipeStatusSpec) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -469,12 +580,12 @@ func (m *PowerStatusSpec) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PowerStatusSpec) MarshalToVT(dAtA []byte) (int, error) {
+func (m *WipeStatusSpec) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *PowerStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *WipeStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -486,15 +597,99 @@ func (m *PowerStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.PowerState != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PowerState))
+	if m.InitialWipeDone {
 		i--
-		dAtA[i] = 0x8
+		if m.InitialWipeDone {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.LastWipeInstallEventId != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.LastWipeInstallEventId))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.LastWipeId) > 0 {
+		i -= len(m.LastWipeId)
+		copy(dAtA[i:], m.LastWipeId)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.LastWipeId)))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *PowerManagement_IPMI) SizeVT() (n int) {
+func (m *RebootStatusSpec) MarshalVT() (dAtA []byte, err error) {
+	if m == nil {
+		return nil, nil
+	}
+	size := m.SizeVT()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RebootStatusSpec) MarshalToVT(dAtA []byte) (int, error) {
+	size := m.SizeVT()
+	return m.MarshalToSizedBufferVT(dAtA[:size])
+}
+
+func (m *RebootStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.unknownFields != nil {
+		i -= len(m.unknownFields)
+		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.LastRebootTimestamp != nil {
+		size, err := (*timestamppb1.Timestamp)(m.LastRebootTimestamp).MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.LastRebootId) > 0 {
+		i -= len(m.LastRebootId)
+		copy(dAtA[i:], m.LastRebootId)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.LastRebootId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PowerOperationSpec) SizeVT() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.LastPowerOperation != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.LastPowerOperation))
+	}
+	if m.LastPowerOnTimestamp != nil {
+		l = (*timestamppb1.Timestamp)(m.LastPowerOnTimestamp).SizeVT()
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	n += len(m.unknownFields)
+	return n
+}
+
+func (m *BMCConfigurationSpec_IPMI) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -519,7 +714,7 @@ func (m *PowerManagement_IPMI) SizeVT() (n int) {
 	return n
 }
 
-func (m *PowerManagement_API) SizeVT() (n int) {
+func (m *BMCConfigurationSpec_API) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -533,7 +728,7 @@ func (m *PowerManagement_API) SizeVT() (n int) {
 	return n
 }
 
-func (m *PowerManagement) SizeVT() (n int) {
+func (m *BMCConfigurationSpec) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -557,17 +752,46 @@ func (m *MachineStatusSpec) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PowerManagement != nil {
-		l = m.PowerManagement.SizeVT()
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	if m.AgentAccessible {
+		n += 2
 	}
 	if m.PowerState != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.PowerState))
 	}
-	if m.BootMode != 0 {
-		n += 1 + protohelpers.SizeOfVarint(uint64(m.BootMode))
+	if m.LastPxeBootMode != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.LastPxeBootMode))
 	}
+	n += len(m.unknownFields)
+	return n
+}
+
+func (m *WipeStatusSpec) SizeVT() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	l = len(m.LastWipeId)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.LastWipeInstallEventId != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.LastWipeInstallEventId))
+	}
+	if m.InitialWipeDone {
+		n += 2
+	}
+	n += len(m.unknownFields)
+	return n
+}
+
+func (m *RebootStatusSpec) SizeVT() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.LastRebootId)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
@@ -579,20 +803,7 @@ func (m *MachineStatusSpec) SizeVT() (n int) {
 	return n
 }
 
-func (m *PowerStatusSpec) SizeVT() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.PowerState != 0 {
-		n += 1 + protohelpers.SizeOfVarint(uint64(m.PowerState))
-	}
-	n += len(m.unknownFields)
-	return n
-}
-
-func (m *PowerManagement_IPMI) UnmarshalVT(dAtA []byte) error {
+func (m *PowerOperationSpec) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -615,10 +826,116 @@ func (m *PowerManagement_IPMI) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PowerManagement_IPMI: wiretype end group for non-group")
+			return fmt.Errorf("proto: PowerOperationSpec: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PowerManagement_IPMI: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PowerOperationSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastPowerOperation", wireType)
+			}
+			m.LastPowerOperation = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LastPowerOperation |= PowerState(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastPowerOnTimestamp", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastPowerOnTimestamp == nil {
+				m.LastPowerOnTimestamp = &timestamppb.Timestamp{}
+			}
+			if err := (*timestamppb1.Timestamp)(m.LastPowerOnTimestamp).UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BMCConfigurationSpec_IPMI) UnmarshalVT(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BMCConfigurationSpec_IPMI: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BMCConfigurationSpec_IPMI: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -758,7 +1075,7 @@ func (m *PowerManagement_IPMI) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PowerManagement_API) UnmarshalVT(dAtA []byte) error {
+func (m *BMCConfigurationSpec_API) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -781,10 +1098,10 @@ func (m *PowerManagement_API) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PowerManagement_API: wiretype end group for non-group")
+			return fmt.Errorf("proto: BMCConfigurationSpec_API: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PowerManagement_API: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: BMCConfigurationSpec_API: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -841,7 +1158,7 @@ func (m *PowerManagement_API) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PowerManagement) UnmarshalVT(dAtA []byte) error {
+func (m *BMCConfigurationSpec) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -864,10 +1181,10 @@ func (m *PowerManagement) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PowerManagement: wiretype end group for non-group")
+			return fmt.Errorf("proto: BMCConfigurationSpec: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PowerManagement: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: BMCConfigurationSpec: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -900,7 +1217,7 @@ func (m *PowerManagement) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Ipmi == nil {
-				m.Ipmi = &PowerManagement_IPMI{}
+				m.Ipmi = &BMCConfigurationSpec_IPMI{}
 			}
 			if err := m.Ipmi.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -936,7 +1253,7 @@ func (m *PowerManagement) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Api == nil {
-				m.Api = &PowerManagement_API{}
+				m.Api = &BMCConfigurationSpec_API{}
 			}
 			if err := m.Api.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -994,10 +1311,10 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PowerManagement", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AgentAccessible", wireType)
 			}
-			var msglen int
+			var v int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -1007,28 +1324,12 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				v |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PowerManagement == nil {
-				m.PowerManagement = &PowerManagement{}
-			}
-			if err := m.PowerManagement.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
+			m.AgentAccessible = bool(v != 0)
 		case 2:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PowerState", wireType)
@@ -1050,9 +1351,9 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 			}
 		case 3:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BootMode", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field LastPxeBootMode", wireType)
 			}
-			m.BootMode = 0
+			m.LastPxeBootMode = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -1062,12 +1363,63 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.BootMode |= BootMode(b&0x7F) << shift
+				m.LastPxeBootMode |= BootMode(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-		case 4:
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *WipeStatusSpec) UnmarshalVT(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: WipeStatusSpec: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: WipeStatusSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LastWipeId", wireType)
 			}
@@ -1099,7 +1451,129 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 			}
 			m.LastWipeId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastWipeInstallEventId", wireType)
+			}
+			m.LastWipeInstallEventId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LastWipeInstallEventId |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitialWipeDone", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.InitialWipeDone = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RebootStatusSpec) UnmarshalVT(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RebootStatusSpec: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RebootStatusSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastRebootId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.LastRebootId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LastRebootTimestamp", wireType)
 			}
@@ -1135,76 +1609,6 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *PowerStatusSpec) UnmarshalVT(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return protohelpers.ErrIntOverflow
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: PowerStatusSpec: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PowerStatusSpec: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PowerState", wireType)
-			}
-			m.PowerState = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PowerState |= PowerState(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])

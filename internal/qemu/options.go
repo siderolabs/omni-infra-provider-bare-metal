@@ -6,11 +6,12 @@ package qemu
 
 // Options for the set of machines.
 type Options struct {
-	Name         string
-	CIDR         string
-	CNIBundleURL string
-	TalosctlPath string
-	CPUs         string
+	Name             string
+	CIDR             string
+	CNIBundleURL     string
+	TalosctlPath     string
+	CPUs             string
+	DefaultBootOrder string
 
 	Nameservers []string
 
@@ -33,4 +34,6 @@ var DefaultOptions = Options{
 	CPUs:     "3",
 	DiskSize: 6 * 1024 * 1024 * 1024,
 	MemSize:  3072 * 1024 * 1024,
+
+	DefaultBootOrder: "cn",
 }
