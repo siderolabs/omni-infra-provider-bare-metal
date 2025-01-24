@@ -6,7 +6,7 @@ TALOS_VERSION=1.9.1
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
-NUM_MACHINES=4
+NUM_MACHINES=8
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
@@ -23,6 +23,8 @@ echo "Build and push provider image to the temp registry $TEMP_REGISTRY..."
 make image-provider REGISTRY="$TEMP_REGISTRY" TAG=test PUSH=true
 
 PROVIDER_IMAGE="$TEMP_REGISTRY/siderolabs/omni-infra-provider-bare-metal:test"
+
+docker pull "$PROVIDER_IMAGE"
 
 echo "Download talosctl..."
 
@@ -211,10 +213,12 @@ echo "Run integration tests..."
 docker run --rm --network host \
   --name omni-integration-test \
   -v "$(pwd)/hack/certs:/etc/ssl/certs" \
+  -v "$(pwd)/hack/test:/var/test" \
   -e SSL_CERT_DIR=/etc/ssl/certs \
   -e OMNI_SERVICE_ACCOUNT_KEY="$ADMIN_SERVICE_ACCOUNT_KEY" \
   "$OMNI_INTEGRATION_TEST_IMAGE" \
   --endpoint=${BASE_URL} \
-  --expected-machines=$NUM_MACHINES \
   --talos-version="${TALOS_VERSION}" \
-  --test.run "StaticInfraProvider"
+  --provision-config-file=/var/test/provisionconfig.yaml \
+  --skip-extensions-check-on-create \
+  --test.run "StaticInfraProvider/|ConfigPatching"
