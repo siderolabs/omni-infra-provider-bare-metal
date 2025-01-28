@@ -152,7 +152,6 @@ func (p *Provider) Run(ctx context.Context) error {
 	bmcClientFactory := bmc.NewClientFactory(bmc.ClientFactoryOptions{
 		RedfishOptions: p.options.RedfishOptions,
 	}, p.logger)
-	dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
 	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
 	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
 	agentClient := agent.NewClient(agentConnectionEventCh, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
@@ -181,12 +180,19 @@ func (p *Provider) Run(ctx context.Context) error {
 		}
 	}
 
-	return p.runComponents(ctx, []component{
+	components := []component{
 		{cosiRuntime.Run, "COSI runtime"},
 		{srvr.Run, "server"},
-		{dhcpProxy.Run, "DHCP proxy"},
 		{tftpServer.Run, "TFTP server"},
-	})
+	}
+
+	if !p.options.DisableDHCPProxy {
+		dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
+
+		components = append(components, component{dhcpProxy.Run, "DHCP proxy"})
+	}
+
+	return p.runComponents(ctx, components)
 }
 
 func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runtime, error) {

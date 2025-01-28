@@ -62,7 +62,7 @@ type powerOperationControllerHelper struct {
 	minRebootInterval time.Duration
 }
 
-//nolint:gocyclo,cyclop
+//nolint:cyclop
 func (helper *powerOperationControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
 	infraMachine *infra.Machine, powerOperation *resources.PowerOperation,
 ) error {
@@ -149,8 +149,6 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		}
 
 		powerOperation.TypedSpec().Value.LastPowerOperation = specs.PowerState_POWER_STATE_OFF
-	case infraMachine.TypedSpec().Value.Cordoned:
-		logger.Debug("machine is cordoned, skip power management")
 	default:
 		logger.Debug("machine power state is already as desired")
 	}

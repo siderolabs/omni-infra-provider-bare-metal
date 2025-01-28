@@ -35,6 +35,7 @@ type Options struct {
 	UseLocalBootAssets    bool
 	ClearState            bool
 	WipeWithZeroes        bool
+	DisableDHCPProxy      bool
 
 	RedfishOptions redfish.Options
 

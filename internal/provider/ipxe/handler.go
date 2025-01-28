@@ -18,6 +18,7 @@ import (
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
+	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	"github.com/siderolabs/talos-metal-agent/pkg/config"
 	"go.uber.org/zap"
@@ -97,11 +98,11 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	decision, err := handler.makeBootDecision(ctx, arch, uuid, logger)
 	if err != nil {
-		handler.logger.Error("failed to check if Talos is installed", zap.Error(err))
+		handler.logger.Error("failed to make boot decision", zap.Error(err))
 
 		w.WriteHeader(http.StatusInternalServerError)
 
-		if _, err = w.Write([]byte("failed to check if Talos is installed")); err != nil {
+		if _, err = w.Write([]byte("failed to make boot decision")); err != nil {
 			handler.logger.Error("failed to write error response", zap.Error(err))
 		}
 
@@ -111,7 +112,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(decision.statusCode)
 
 	if _, err = w.Write([]byte(decision.body)); err != nil {
-		handler.logger.Error("failed to write ok response", zap.Error(err))
+		handler.logger.Error("failed to write response", zap.Error(err))
 
 		return
 	}
@@ -129,7 +130,7 @@ type bootDecision struct {
 	mode       specs.BootMode
 }
 
-//nolint:cyclop
+//nolint:gocyclo,cyclop
 func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string, logger *zap.Logger) (bootDecision, error) {
 	switch arch { // https://ipxe.org/cfg/buildarch
 	case archArm64:
@@ -153,6 +154,22 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		return bootDecision{}, err
 	}
 
+	if infraMachine != nil {
+		logger = logger.With(zap.String("machine_id", infraMachine.Metadata().ID()))
+
+		if infraMachine.TypedSpec().Value.Cordoned {
+			logger.Info("machine is cordoned, skip making a boot decision")
+
+			return bootDecision{body: "machine is cordoned", statusCode: http.StatusNotFound}, nil
+		}
+
+		if infraMachine.TypedSpec().Value.AcceptanceStatus == omnispecs.InfraMachineConfigSpec_REJECTED {
+			logger.Info("machine is rejected, return not found")
+
+			return bootDecision{statusCode: http.StatusNotFound}, nil
+		}
+	}
+
 	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
 
 	var userExtraKernelArgs []string
@@ -169,7 +186,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 
 	switch requiredBootMode {
 	case specs.BootMode_BOOT_MODE_AGENT_PXE:
-		logger.Info("boot into agent mode")
+		logger.Info("boot machine: Talos agent mode")
 
 		body, statusCode, agentErr := handler.bootIntoAgentMode(ctx, arch, userExtraKernelArgs)
 		if agentErr != nil {
@@ -182,7 +199,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 			statusCode: statusCode,
 		}, nil
 	case specs.BootMode_BOOT_MODE_TALOS_PXE:
-		logger.Info("boot Talos over iPXE")
+		logger.Info("boot machine: Talos over iPXE")
 
 		consoleKernelArgs := handler.consoleKernelArgs(arch)
 		extraKernelArgs := slices.Concat(handler.defaultKernelArgs, consoleKernelArgs, userExtraKernelArgs)
@@ -204,7 +221,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 			statusCode: http.StatusOK,
 		}, nil
 	case specs.BootMode_BOOT_MODE_TALOS_DISK:
-		logger.Info("boot from disk")
+		logger.Info("boot machine: from the disk")
 
 		switch handler.bootFromDiskMethod {
 		case Boot404:

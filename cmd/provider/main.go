@@ -146,6 +146,8 @@ func init() {
 		"Enable controller runtime resource cache.")
 	rootCmd.Flags().BoolVar(&providerOptions.WipeWithZeroes, "wipe-with-zeroes", provider.DefaultOptions.WipeWithZeroes,
 		"When wiping a machine, write zeroes to the whole disk instead doing a fast wipe.")
+	rootCmd.Flags().BoolVar(&providerOptions.DisableDHCPProxy, "disable-dhcp-proxy", provider.DefaultOptions.DisableDHCPProxy,
+		"Disable the DHCP proxy server.")
 
 	// RedFish options
 	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseAlways, "redfish-use-always", provider.DefaultOptions.RedfishOptions.UseAlways,
