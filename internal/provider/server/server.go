@@ -7,6 +7,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -25,12 +26,16 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+
+	providertls "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
 // Server represents the HTTP and GRPC servers.
 type Server struct {
 	grpcServer *grpc.Server
 	httpServer *http.Server
+	tlsServer  *http.Server
+	logger     *zap.Logger
 }
 
 // RegisterService registers a service with the GRPC server.
@@ -41,8 +46,8 @@ func (s *Server) RegisterService(desc *grpc.ServiceDesc, impl any) {
 }
 
 // New creates a new server.
-func New(ctx context.Context, listenAddress string, port int, serveAssetsDir bool, configHandler, ipxeHandler http.Handler,
-	tunnelServiceServer tunnelpb.TunnelServiceServer, logger *zap.Logger,
+func New(ctx context.Context, listenAddress string, port, tlsPort int, serveAssetsDir bool, certs *providertls.Certs,
+	configHandler, ipxeHandler http.Handler, tunnelServiceServer tunnelpb.TunnelServiceServer, logger *zap.Logger,
 ) *Server {
 	recoveryOption := recovery.WithRecoveryHandler(recoveryHandler(logger))
 
@@ -53,6 +58,23 @@ func New(ctx context.Context, listenAddress string, port int, serveAssetsDir boo
 	)
 
 	tunnelpb.RegisterTunnelServiceServer(grpcServer, tunnelServiceServer)
+
+	var tlsServer *http.Server
+
+	if certs != nil { // TLS mode, initialize the TLS server with the GRPC handler
+		tlsServer = &http.Server{
+			Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(tlsPort)),
+			Handler: grpcServer,
+			BaseContext: func(net.Listener) context.Context {
+				return ctx
+			},
+			TLSConfig: &tls.Config{
+				GetCertificate: certs.GetCertificate,
+				ClientAuth:     tls.NoClientCert,
+				MinVersion:     tls.VersionTLS13,
+			},
+		}
+	}
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(port)),
@@ -65,6 +87,8 @@ func New(ctx context.Context, listenAddress string, port int, serveAssetsDir boo
 	return &Server{
 		grpcServer: grpcServer,
 		httpServer: httpServer,
+		tlsServer:  tlsServer,
+		logger:     logger,
 	}
 }
 
@@ -73,19 +97,12 @@ func (s *Server) Run(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		<-ctx.Done()
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := s.httpServer.Shutdown(shutdownCtx); err != nil { //nolint:contextcheck
-			return fmt.Errorf("failed to shutdown iPXE server: %w", err)
-		}
-
-		return nil
+		return s.shutdownOnCancel(ctx, s.httpServer)
 	})
 
 	eg.Go(func() error {
+		s.logger.Info("start HTTP server", zap.String("address", s.httpServer.Addr))
+
 		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("failed to run server: %w", err)
 		}
@@ -93,10 +110,39 @@ func (s *Server) Run(ctx context.Context) error {
 		return nil
 	})
 
+	if s.tlsServer != nil {
+		eg.Go(func() error {
+			return s.shutdownOnCancel(ctx, s.tlsServer)
+		})
+
+		eg.Go(func() error {
+			s.logger.Info("start TLS HTTP server", zap.String("address", s.tlsServer.Addr))
+
+			if err := s.tlsServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				return fmt.Errorf("failed to run TLS server: %w", err)
+			}
+
+			return nil
+		})
+	}
+
 	return eg.Wait()
 }
 
-func newMultiHandler(configHandler, ipxeHandler http.Handler, grpcHandler http.Handler, serveAssetsDir bool, logger *zap.Logger) http.Handler {
+func (s *Server) shutdownOnCancel(ctx context.Context, server *http.Server) error {
+	<-ctx.Done()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil { //nolint:contextcheck
+		return fmt.Errorf("failed to shutdown iPXE server: %w", err)
+	}
+
+	return nil
+}
+
+func newMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serveAssetsDir bool, logger *zap.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/config", configHandler)

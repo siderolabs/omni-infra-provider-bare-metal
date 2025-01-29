@@ -18,6 +18,7 @@ import (
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/runtime"
 	runtimeoptions "github.com/cosi-project/runtime/pkg/controller/runtime/options"
+	"github.com/cosi-project/runtime/pkg/resource"
 	"github.com/cosi-project/runtime/pkg/resource/protobuf"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
@@ -40,10 +41,12 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/imagefactory"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ip"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machineconfig"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tftp"
+	tls "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
@@ -66,6 +69,8 @@ func New(options Options, logger *zap.Logger) *Provider {
 }
 
 // Run runs the provider.
+//
+//nolint:gocyclo,cyclop
 func (p *Provider) Run(ctx context.Context) error {
 	pxeBootMode, err := pxe.ParseBootMode(p.options.IPMIPXEBootMode)
 	if err != nil {
@@ -103,19 +108,22 @@ func (p *Provider) Run(ctx context.Context) error {
 	omniState := state.WrapCore(cosiRuntime.CachedState())
 
 	if p.options.ClearState {
-		if constants.IsDebugBuild {
-			if err = p.clearState(ctx, omniState); err != nil {
-				return fmt.Errorf("failed to clear state: %w", err)
-			}
-
-			p.logger.Info("state cleared")
-		} else {
-			p.logger.Warn("clear state is requested, but this is not a debug build, skipping")
+		if err = p.clearState(ctx, omniState); err != nil {
+			return fmt.Errorf("failed to clear state: %w", err)
 		}
 	}
 
 	if err = p.ensureProviderStatus(ctx, omniState); err != nil {
 		return err
+	}
+
+	var certs *tls.Certs
+
+	tlsOptions := p.options.TLS
+	if tlsOptions.Enabled {
+		if certs, err = tls.Initialize(ctx, omniState, apiAdvertiseAddress, tlsOptions.CATTL, tlsOptions.CertTTL, p.logger); err != nil {
+			return fmt.Errorf("failed to initialize TLS: %w", err)
+		}
 	}
 
 	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
@@ -126,20 +134,27 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}
 
+	machineConfig, err := machineconfig.Build(ctx, omniState, certs)
+	if err != nil {
+		return fmt.Errorf("failed to build machine config: %w", err)
+	}
+
 	pxeBootEventCh := make(chan controllers.PXEBootEvent)
 
-	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, omniState, pxeBootEventCh, ipxe.HandlerOptions{
+	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, machineConfig, p.options.TLS.Enabled, omniState, pxeBootEventCh, ipxe.HandlerOptions{
 		APIAdvertiseAddress: apiAdvertiseAddress,
 		APIPort:             p.options.APIPort,
+		TLSAPIPort:          p.options.TLS.APIPort,
 		UseLocalBootAssets:  p.options.UseLocalBootAssets,
 		AgentTestMode:       p.options.AgentTestMode,
+		AgentTLSSkipVerify:  p.options.TLS.AgentSkipVerify,
 		BootFromDiskMethod:  p.options.BootFromDiskMethod,
 	}, p.logger.With(zap.String("component", "ipxe_handler")))
 	if err != nil {
 		return fmt.Errorf("failed to create iPXE handler: %w", err)
 	}
 
-	configHandler, err := config.NewHandler(ctx, omniState, p.logger.With(zap.String("component", "config_handler")))
+	configHandler, err := config.NewHandler(machineConfig, p.logger.With(zap.String("component", "config_handler")))
 	if err != nil {
 		return fmt.Errorf("failed to create config handler: %w", err)
 	}
@@ -150,12 +165,12 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	bmcClientFactory := bmc.NewClientFactory(bmc.ClientFactoryOptions{
-		RedfishOptions: p.options.RedfishOptions,
+		RedfishOptions: p.options.Redfish,
 	}, p.logger)
 	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
 	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
 	agentClient := agent.NewClient(agentConnectionEventCh, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
-	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.UseLocalBootAssets, configHandler, ipxeHandler,
+	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, p.options.UseLocalBootAssets, certs, configHandler, ipxeHandler,
 		agentClient.TunnelServiceServer(), p.logger.With(zap.String("component", "server")))
 
 	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID.String(), providercontrollers.ProviderHealthStatusOptions{})
@@ -205,6 +220,7 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 		protobuf.RegisterResource(resources.MachineStatusType(), &resources.MachineStatus{}),
 		protobuf.RegisterResource(resources.PowerOperationType(), &resources.PowerOperation{}),
 		protobuf.RegisterResource(resources.RebootStatusType(), &resources.RebootStatus{}),
+		protobuf.RegisterResource(resources.TLSConfigType(), &resources.TLSConfig{}),
 		protobuf.RegisterResource(resources.WipeStatusType(), &resources.WipeStatus{}),
 	); err != nil {
 		return nil, fmt.Errorf("failed to register resources: %w", err)
@@ -216,6 +232,7 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 			safe.WithResourceCache[*resources.MachineStatus](),
 			safe.WithResourceCache[*resources.PowerOperation](),
 			safe.WithResourceCache[*resources.RebootStatus](),
+			safe.WithResourceCache[*resources.TLSConfig](),
 			safe.WithResourceCache[*resources.WipeStatus](),
 		)
 	}
@@ -333,14 +350,33 @@ func (p *Provider) buildOmniAPIClient(endpoint string, insecureSkipTLSVerify boo
 
 // clearState clears the persistent state of this provider. Useful for debugging purposes.
 func (p *Provider) clearState(ctx context.Context, st state.State) error {
-	list, err := st.List(ctx, resources.NewMachineStatus("").Metadata())
-	if err != nil {
-		return fmt.Errorf("failed to list bare metal machinees: %w", err)
+	if !constants.IsDebugBuild {
+		p.logger.Warn("clear state is requested, but this is not a debug build, skipping")
+
+		return nil
+	}
+
+	var resourcesToDestroy []resource.Resource
+
+	for _, md := range []*resource.Metadata{
+		resources.NewBMCConfiguration("").Metadata(),
+		resources.NewMachineStatus("").Metadata(),
+		resources.NewPowerOperation("").Metadata(),
+		resources.NewRebootStatus("").Metadata(),
+		resources.NewTLSConfig().Metadata(),
+		resources.NewWipeStatus("").Metadata(),
+	} {
+		list, err := st.List(ctx, md)
+		if err != nil {
+			return fmt.Errorf("failed to list bare metal machinees: %w", err)
+		}
+
+		resourcesToDestroy = append(resourcesToDestroy, list.Items...)
 	}
 
 	var errs error
 
-	for _, item := range list.Items {
+	for _, item := range resourcesToDestroy {
 		res, getErr := st.Get(ctx, item.Metadata())
 		if getErr != nil {
 			errs = multierror.Append(errs, getErr)
@@ -355,7 +391,13 @@ func (p *Provider) clearState(ctx context.Context, st state.State) error {
 		}
 	}
 
-	return errs
+	if errs != nil {
+		return fmt.Errorf("failed to clear state: %w", errs)
+	}
+
+	p.logger.Info("state cleared")
+
+	return nil
 }
 
 func (p *Provider) parseLabels() (map[string]string, error) {

@@ -149,17 +149,29 @@ func init() {
 	rootCmd.Flags().BoolVar(&providerOptions.DisableDHCPProxy, "disable-dhcp-proxy", provider.DefaultOptions.DisableDHCPProxy,
 		"Disable the DHCP proxy server.")
 
+	// TLS options
+	rootCmd.Flags().BoolVar(&providerOptions.TLS.Enabled, "tls-enabled", provider.DefaultOptions.TLS.Enabled,
+		"Enable TLS for the API server.")
+	rootCmd.Flags().IntVar(&providerOptions.TLS.APIPort, "tls-api-port", provider.DefaultOptions.TLS.APIPort,
+		"The port to run the API server on when using TLS.")
+	rootCmd.Flags().BoolVar(&providerOptions.TLS.AgentSkipVerify, "tls-agent-skip-verify", provider.DefaultOptions.TLS.AgentSkipVerify,
+		"Make the Talos agent GRPC client skip TLS verification when connecting to the provider.")
+	rootCmd.Flags().DurationVar(&providerOptions.TLS.CATTL, "tls-ca-ttl", provider.DefaultOptions.TLS.CATTL,
+		"CA certificate TTL.")
+	rootCmd.Flags().DurationVar(&providerOptions.TLS.CertTTL, "tls-cert-ttl", provider.DefaultOptions.TLS.CertTTL,
+		"TTL for the generated ephemeral certificates using the CA certificate.")
+
 	// RedFish options
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseAlways, "redfish-use-always", provider.DefaultOptions.RedfishOptions.UseAlways,
+	rootCmd.Flags().BoolVar(&providerOptions.Redfish.UseAlways, "redfish-use-always", provider.DefaultOptions.Redfish.UseAlways,
 		"Always use Redfish for power management.")
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseWhenAvailable, "redfish-use-when-available", provider.DefaultOptions.RedfishOptions.UseWhenAvailable,
+	rootCmd.Flags().BoolVar(&providerOptions.Redfish.UseWhenAvailable, "redfish-use-when-available", provider.DefaultOptions.Redfish.UseWhenAvailable,
 		"Use Redfish for power management when available.")
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.UseHTTPS, "redfish-use-https", provider.DefaultOptions.RedfishOptions.UseHTTPS,
+	rootCmd.Flags().BoolVar(&providerOptions.Redfish.UseHTTPS, "redfish-use-https", provider.DefaultOptions.Redfish.UseHTTPS,
 		"Use HTTPS for Redfish connections.")
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.InsecureSkipTLSVerify, "redfish-insecure-skip-tls-verify", provider.DefaultOptions.RedfishOptions.InsecureSkipTLSVerify,
+	rootCmd.Flags().BoolVar(&providerOptions.Redfish.InsecureSkipTLSVerify, "redfish-insecure-skip-tls-verify", provider.DefaultOptions.Redfish.InsecureSkipTLSVerify,
 		"Skip TLS verification when connecting to Redfish.")
-	rootCmd.Flags().IntVar(&providerOptions.RedfishOptions.Port, "redfish-port", provider.DefaultOptions.RedfishOptions.Port,
+	rootCmd.Flags().IntVar(&providerOptions.Redfish.Port, "redfish-port", provider.DefaultOptions.Redfish.Port,
 		"The port to connect to Redfish.")
-	rootCmd.Flags().BoolVar(&providerOptions.RedfishOptions.SetBootSourceOverrideMode, "redfish-set-boot-source-override-mode", provider.DefaultOptions.RedfishOptions.SetBootSourceOverrideMode,
+	rootCmd.Flags().BoolVar(&providerOptions.Redfish.SetBootSourceOverrideMode, "redfish-set-boot-source-override-mode", provider.DefaultOptions.Redfish.SetBootSourceOverrideMode,
 		"Set the boot source override mode field when using Redfish for power management. Some Redfish implementations require this field to be unset.")
 }

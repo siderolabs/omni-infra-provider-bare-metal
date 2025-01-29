@@ -59,7 +59,7 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 	logger := c.logger.With(zap.String("talos_version", talosVersion), zap.String("arch", arch),
 		zap.Strings("extensions", extensions), zap.Strings("extra_kernel_args", extraKernelArgs))
 
-	logger.Info("generate schematic iPXE URL")
+	logger.Debug("generate schematic iPXE URL")
 
 	var metaValues []schematic.MetaValue
 

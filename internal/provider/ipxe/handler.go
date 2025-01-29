@@ -6,7 +6,9 @@
 package ipxe
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,13 +16,16 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
+	"github.com/klauspost/compress/zstd"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
-	"github.com/siderolabs/talos-metal-agent/pkg/config"
+	agentconfig "github.com/siderolabs/talos-metal-agent/pkg/config"
+	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
@@ -65,8 +70,10 @@ type HandlerOptions struct {
 	APIAdvertiseAddress string
 	BootFromDiskMethod  string
 	APIPort             int
+	TLSAPIPort          int
 	UseLocalBootAssets  bool
 	AgentTestMode       bool
+	AgentTLSSkipVerify  bool
 }
 
 // Handler represents an iPXE handler.
@@ -297,7 +304,9 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(imageFactoryClient ImageFactoryClient, r controller.Reader, pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger) (*Handler, error) {
+func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tlsEnabled bool, r controller.Reader,
+	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
+) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse boot from disk method: %w", err)
@@ -312,19 +321,43 @@ func NewHandler(imageFactoryClient ImageFactoryClient, r controller.Reader, pxeB
 	logger.Info("successfully patched iPXE binaries")
 
 	apiHostPort := net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.APIPort))
-
 	talosConfigURL := fmt.Sprintf("http://%s/config?u=${uuid}", apiHostPort)
 	defaultKernelArgs := []string{
-		"talos.config=" + talosConfigURL,
+		fmt.Sprintf("%s=%s", constants.KernelParamConfig, talosConfigURL),
+	}
+
+	var providerAddress string
+
+	if tlsEnabled {
+		providerAddress = "https://" + net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.TLSAPIPort))
+
+		var inlineConfig string
+
+		inlineConfig, err = compressInlineConfig(machineConfig, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build inline config: %w", err)
+		}
+
+		logger.Debug("built inline config", zap.String("config", inlineConfig), zap.Int("length", len(inlineConfig)))
+
+		defaultKernelArgs = append(defaultKernelArgs, fmt.Sprintf("%s=%s", constants.KernelParamConfigInline, inlineConfig))
+	} else {
+		providerAddress = net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.APIPort))
 	}
 
 	agentExtraKernelArgs := []string{
-		fmt.Sprintf("%s=%s", config.MetalProviderAddressKernelArg, apiHostPort),
+		fmt.Sprintf("%s=%s", agentconfig.MetalProviderAddressKernelArg, providerAddress),
 	}
 
 	if options.AgentTestMode {
 		agentExtraKernelArgs = append(agentExtraKernelArgs,
-			fmt.Sprintf("%s=%s", config.TestModeKernelArg, "1"),
+			fmt.Sprintf("%s=%s", agentconfig.TestModeKernelArg, "1"),
+		)
+	}
+
+	if options.AgentTLSSkipVerify {
+		agentExtraKernelArgs = append(agentExtraKernelArgs,
+			fmt.Sprintf("%s=%s", agentconfig.TLSSkipVerifyKernelArg, "1"),
 		)
 	}
 
@@ -340,4 +373,33 @@ func NewHandler(imageFactoryClient ImageFactoryClient, r controller.Reader, pxeB
 		bootFromDiskMethod: bootFromDiskMethod,
 		logger:             logger,
 	}, nil
+}
+
+func compressInlineConfig(config []byte, logger *zap.Logger) (string, error) {
+	var buf bytes.Buffer
+
+	zstdEncoder, err := zstd.NewWriter(&buf, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	if err != nil {
+		return "", fmt.Errorf("failed to create zstd encoder: %w", err)
+	}
+
+	closeFunc := sync.OnceValue(zstdEncoder.Close)
+
+	defer func() {
+		if closeErr := closeFunc(); closeErr != nil {
+			logger.Error("failed to close zstd encoder", zap.Error(closeErr))
+		}
+	}()
+
+	if _, err = zstdEncoder.Write(config); err != nil {
+		return "", fmt.Errorf("failed to write zstd data: %w", err)
+	}
+
+	if err = closeFunc(); err != nil {
+		return "", fmt.Errorf("failed to close zstd encoder: %w", err)
+	}
+
+	configBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	return configBase64, nil
 }

@@ -37,9 +37,19 @@ type Options struct {
 	WipeWithZeroes        bool
 	DisableDHCPProxy      bool
 
-	RedfishOptions redfish.Options
+	TLS     TLSOptions
+	Redfish redfish.Options
 
 	MinRebootInterval time.Duration
+}
+
+// TLSOptions contains the TLS options.
+type TLSOptions struct {
+	APIPort         int
+	CATTL           time.Duration
+	CertTTL         time.Duration
+	Enabled         bool
+	AgentSkipVerify bool
 }
 
 // DefaultOptions returns the default provider options.
@@ -48,10 +58,17 @@ var DefaultOptions = Options{
 	Description:            "Bare metal infrastructure provider",
 	ImageFactoryBaseURL:    "https://factory.talos.dev",
 	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-	AgentModeTalosVersion:  "v1.9.2",
+	AgentModeTalosVersion:  "v1.9.3",
 	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 	APIPort:                50042,
 	MinRebootInterval:      5 * time.Minute,
-	RedfishOptions:         redfish.DefaultOptions,
+	Redfish:                redfish.DefaultOptions,
+	TLS: TLSOptions{
+		Enabled:         false,
+		APIPort:         50043,
+		AgentSkipVerify: false,
+		CATTL:           30 * 365 * 24 * time.Hour, // 30 years
+		CertTTL:         24 * time.Hour,
+	},
 }

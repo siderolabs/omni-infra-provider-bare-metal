@@ -72,3 +72,8 @@ enum BootMode {
   BOOT_MODE_TALOS_PXE = 2;
   BOOT_MODE_TALOS_DISK = 3;
 }
+
+message TLSConfigSpec {
+  string ca_cert = 1;
+  string ca_key = 2;
+}

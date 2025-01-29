@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-01-15T13:52:34Z by kres 3b3f992.
+# Generated on 2025-02-03T21:02:58Z by kres 987bf4d.
 
 ARG TOOLCHAIN
 
@@ -24,7 +24,6 @@ RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ig
 
 # collects proto specs
 FROM scratch AS proto-specs
-ADD api/provider/provider.proto /api/provider/
 ADD api/specs/specs.proto /api/specs/
 
 # base toolchain image
@@ -92,8 +91,7 @@ RUN mkdir -p internal/version/data && \
 # runs protobuf compiler
 FROM tools AS proto-compile
 COPY --from=proto-specs / /
-RUN protoc -I/api --go_out=paths=source_relative:/api --go-grpc_out=paths=source_relative:/api --go-vtproto_out=paths=source_relative:/api --go-vtproto_opt=features=marshal+unmarshal+size+equal+clone /api/provider/provider.proto /api/specs/specs.proto
-RUN rm /api/provider/provider.proto
+RUN protoc -I/api --go_out=paths=source_relative:/api --go-grpc_out=paths=source_relative:/api --go-vtproto_out=paths=source_relative:/api --go-vtproto_opt=features=marshal+unmarshal+size+equal+clone /api/specs/specs.proto
 RUN rm /api/specs/specs.proto
 RUN goimports -w -local github.com/siderolabs/omni-infra-provider-bare-metal /api
 RUN gofumpt -w /api
@@ -225,7 +223,7 @@ COPY --from=ghcr.io/siderolabs/ipmitool:v1.8.0-16-g71d23b4 / /
 COPY --from=ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 /usr/libexec/zbin /bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
-COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.0-agent-v0.1.0-beta.1 / /assets
+COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.1 / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
 
