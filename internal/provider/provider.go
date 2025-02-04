@@ -100,7 +100,7 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	defer util.LogClose(omniAPIClient, p.logger)
 
-	cosiRuntime, err := p.buildCOSIRuntime(omniAPIClient)
+	cosiRuntime, err := BuildCOSIRuntime(omniAPIClient.Omni().State(), p.options.EnableResourceCache, p.logger.With(zap.String("component", "cosi_runtime")))
 	if err != nil {
 		return fmt.Errorf("failed to build COSI runtime: %w", err)
 	}
@@ -186,7 +186,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		controllers.NewMachineStatusController(bmcClientFactory, agentClient, agentConnectionEventCh, pxeBootEventCh, 30*time.Second),
 		controllers.NewInfraMachineStatusController(parsedMachineLabels),
 		controllers.NewBMCConfigurationController(agentClient, bmcClientFactory, bmcAPIAddressReader, 1*time.Minute),
-		controllers.NewPowerOperationController(bmcClientFactory, p.options.MinRebootInterval),
+		controllers.NewPowerOperationController(time.Now, bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
 		controllers.NewRebootStatusController(bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
 		controllers.NewWipeStatusController(agentClient),
 	} {
@@ -210,9 +210,8 @@ func (p *Provider) Run(ctx context.Context) error {
 	return p.runComponents(ctx, components)
 }
 
-func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runtime, error) {
-	omniState := omniAPIClient.Omni().State()
-
+// BuildCOSIRuntime creates a new COSI runtime wrapping the given state, registering the provider-specific resources.
+func BuildCOSIRuntime(state state.State, enableResourceCache bool, logger *zap.Logger) (*runtime.Runtime, error) {
 	var options []runtimeoptions.Option
 
 	if err := errors.Join(
@@ -226,7 +225,7 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 		return nil, fmt.Errorf("failed to register resources: %w", err)
 	}
 
-	if p.options.EnableResourceCache {
+	if enableResourceCache {
 		options = append(options,
 			safe.WithResourceCache[*resources.BMCConfiguration](),
 			safe.WithResourceCache[*resources.MachineStatus](),
@@ -237,7 +236,7 @@ func (p *Provider) buildCOSIRuntime(omniAPIClient *client.Client) (*runtime.Runt
 		)
 	}
 
-	cosiRuntime, err := runtime.NewRuntime(omniState, p.logger.With(zap.String("component", "cosi_runtime")), options...)
+	cosiRuntime, err := runtime.NewRuntime(state, logger, options...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create runtime: %w", err)
 	}

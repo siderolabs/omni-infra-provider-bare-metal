@@ -99,12 +99,12 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 	}
 
 	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
+	requiresPXEBoot := machine.RequiresPXEBoot(requiredBootMode)
 	lastPXEBootMode := machineStatus.TypedSpec().Value.LastPxeBootMode
 
 	// The machine requires a reboot only if it is not in the desired mode, and either desired or the actual mode is agent mode.
 	// Switching from PXE booted Talos to booting from disk does not require a reboot by the provider, as Omni itself will do the switch.
 	requiresReboot := requiredBootMode != lastPXEBootMode && (lastPXEBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE)
-	requiresPXEBoot := requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_TALOS_PXE
 
 	logger = logger.With(
 		zap.Bool("requires_reboot", requiresReboot),

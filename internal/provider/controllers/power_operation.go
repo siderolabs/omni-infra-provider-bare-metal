@@ -17,23 +17,29 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
+// NowFunc is a function that returns the current time.
+type NowFunc = func() time.Time
+
 // PowerOperationController manages InfraMachine resource lifecycle.
 type PowerOperationController = qtransform.QController[*infra.Machine, *resources.PowerOperation]
 
 // NewPowerOperationController creates a new PowerOperationController.
-func NewPowerOperationController(bmcClientFactory BMCClientFactory, minRebootInterval time.Duration) *PowerOperationController {
+func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode) *PowerOperationController {
 	controllerName := meta.ProviderID.String() + ".PowerOperationController"
 
 	helper := &powerOperationControllerHelper{
+		nowFunc:           nowFunc,
 		controllerName:    controllerName,
 		bmcClientFactory:  bmcClientFactory,
 		minRebootInterval: minRebootInterval,
+		pxeBootMode:       pxeBootMode,
 	}
 
 	return qtransform.NewQController(
@@ -58,11 +64,13 @@ func NewPowerOperationController(bmcClientFactory BMCClientFactory, minRebootInt
 
 type powerOperationControllerHelper struct {
 	bmcClientFactory  BMCClientFactory
+	nowFunc           NowFunc
 	controllerName    string
+	pxeBootMode       pxe.BootMode
 	minRebootInterval time.Duration
 }
 
-//nolint:cyclop
+//nolint:gocyclo,cyclop
 func (helper *powerOperationControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
 	infraMachine *infra.Machine, powerOperation *resources.PowerOperation,
 ) error {
@@ -128,12 +136,19 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 	case !isPoweredOn && (requiresPowerOn || preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_ON):
 		logger.Debug("power on machine")
 
+		requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
+		if machine.RequiresPXEBoot(requiredBootMode) {
+			if err = bmcClient.SetPXEBootOnce(ctx, helper.pxeBootMode); err != nil {
+				return err
+			}
+		}
+
 		if err = bmcClient.PowerOn(ctx); err != nil {
 			return err
 		}
 
 		powerOperation.TypedSpec().Value.LastPowerOperation = specs.PowerState_POWER_STATE_ON
-		powerOperation.TypedSpec().Value.LastPowerOnTimestamp = timestamppb.Now()
+		powerOperation.TypedSpec().Value.LastPowerOnTimestamp = timestamppb.New(helper.nowFunc())
 	case isPoweredOn && (!requiresPowerOn && preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_OFF):
 		timeSinceLastPowerOn := getTimeSinceLastPowerOn(powerOperation, rebootStatus)
 		if timeSinceLastPowerOn < helper.minRebootInterval {

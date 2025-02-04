@@ -84,3 +84,8 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 
 	return requiredBootMode
 }
+
+// RequiresPXEBoot returns true if the machine requires to be PXE booted.
+func RequiresPXEBoot(requiredBootMode specs.BootMode) bool {
+	return requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_TALOS_PXE
+}
