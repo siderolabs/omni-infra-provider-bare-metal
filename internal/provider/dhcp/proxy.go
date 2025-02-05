@@ -253,10 +253,10 @@ func offerDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 		resp.UpdateOption(dhcpv4.OptBootFileName("snp-arm64.efi"))
 	case FirmwareX86HTTP:
 		// This is completely standard HTTP-boot: just load a file from HTTP.
-		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/snp.efi", ipPort)))
+		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/amd64/snp.efi", ipPort)))
 	case FirmwareARMHTTP:
 		// This is completely standard HTTP-boot: just load a file from HTTP.
-		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/snp-arm64.efi", ipPort)))
+		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/arm64/snp.efi", ipPort)))
 	case FirmwareUnsupported:
 		fallthrough
 	default:

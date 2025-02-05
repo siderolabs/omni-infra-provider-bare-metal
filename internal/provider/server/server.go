@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
 	providertls "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
@@ -147,6 +148,7 @@ func newMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serve
 
 	mux.Handle("/config", configHandler)
 	mux.Handle("/ipxe", ipxeHandler)
+	mux.Handle("/tftp/", http.StripPrefix("/tftp/", http.FileServer(http.Dir(constants.IPXEPath+"/"))))
 
 	if serveAssetsDir {
 		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("/assets/"))))
