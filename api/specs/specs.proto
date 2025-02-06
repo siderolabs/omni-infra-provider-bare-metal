@@ -31,6 +31,7 @@ message BMCConfigurationSpec {
 
   IPMI ipmi = 1;
   API api = 2;
+  bool manually_configured = 3;
 }
 
 message MachineStatusSpec {

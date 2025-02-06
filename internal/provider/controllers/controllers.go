@@ -25,7 +25,16 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 )
 
-const ipmiUsername = "talos-agent"
+const (
+	// IPMIUsername is the username used for IPMI.
+	IPMIUsername = "talos-agent"
+
+	// IPMIPasswordLength is the length of the IPMI password.
+	IPMIPasswordLength = 16
+
+	// IPMIDefaultPort is the default port for IPMI.
+	IPMIDefaultPort = 623
+)
 
 // AgentClient is the interface for interacting with the Talos agent over the reverse GRPC tunnel.
 type AgentClient interface {

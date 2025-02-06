@@ -84,6 +84,7 @@ func (m *BMCConfigurationSpec) CloneVT() *BMCConfigurationSpec {
 	r := new(BMCConfigurationSpec)
 	r.Ipmi = m.Ipmi.CloneVT()
 	r.Api = m.Api.CloneVT()
+	r.ManuallyConfigured = m.ManuallyConfigured
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -248,6 +249,9 @@ func (this *BMCConfigurationSpec) EqualVT(that *BMCConfigurationSpec) bool {
 		return false
 	}
 	if !this.Api.EqualVT(that.Api) {
+		return false
+	}
+	if this.ManuallyConfigured != that.ManuallyConfigured {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -530,6 +534,16 @@ func (m *BMCConfigurationSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.ManuallyConfigured {
+		i--
+		if m.ManuallyConfigured {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
 	}
 	if m.Api != nil {
 		size, err := m.Api.MarshalToSizedBufferVT(dAtA[:i])
@@ -828,6 +842,9 @@ func (m *BMCConfigurationSpec) SizeVT() (n int) {
 	if m.Api != nil {
 		l = m.Api.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.ManuallyConfigured {
+		n += 2
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1364,6 +1381,26 @@ func (m *BMCConfigurationSpec) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ManuallyConfigured", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.ManuallyConfigured = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])

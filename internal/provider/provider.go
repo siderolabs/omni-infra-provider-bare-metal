@@ -100,6 +100,17 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	defer util.LogClose(omniAPIClient, p.logger)
 
+	if err = errors.Join(
+		protobuf.RegisterResource(resources.BMCConfigurationType(), &resources.BMCConfiguration{}),
+		protobuf.RegisterResource(resources.MachineStatusType(), &resources.MachineStatus{}),
+		protobuf.RegisterResource(resources.PowerOperationType(), &resources.PowerOperation{}),
+		protobuf.RegisterResource(resources.RebootStatusType(), &resources.RebootStatus{}),
+		protobuf.RegisterResource(resources.TLSConfigType(), &resources.TLSConfig{}),
+		protobuf.RegisterResource(resources.WipeStatusType(), &resources.WipeStatus{}),
+	); err != nil {
+		return fmt.Errorf("failed to register resources: %w", err)
+	}
+
 	cosiRuntime, err := BuildCOSIRuntime(omniAPIClient.Omni().State(), p.options.EnableResourceCache, p.logger.With(zap.String("component", "cosi_runtime")))
 	if err != nil {
 		return fmt.Errorf("failed to build COSI runtime: %w", err)
@@ -185,7 +196,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	for _, qController := range []controller.QController{
 		controllers.NewMachineStatusController(bmcClientFactory, agentClient, agentConnectionEventCh, pxeBootEventCh, 30*time.Second),
 		controllers.NewInfraMachineStatusController(parsedMachineLabels),
-		controllers.NewBMCConfigurationController(agentClient, bmcClientFactory, bmcAPIAddressReader, 1*time.Minute),
+		controllers.NewBMCConfigurationController(agentClient, bmcAPIAddressReader),
 		controllers.NewPowerOperationController(time.Now, bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
 		controllers.NewRebootStatusController(bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
 		controllers.NewWipeStatusController(agentClient),
@@ -214,17 +225,6 @@ func (p *Provider) Run(ctx context.Context) error {
 func BuildCOSIRuntime(state state.State, enableResourceCache bool, logger *zap.Logger) (*runtime.Runtime, error) {
 	var options []runtimeoptions.Option
 
-	if err := errors.Join(
-		protobuf.RegisterResource(resources.BMCConfigurationType(), &resources.BMCConfiguration{}),
-		protobuf.RegisterResource(resources.MachineStatusType(), &resources.MachineStatus{}),
-		protobuf.RegisterResource(resources.PowerOperationType(), &resources.PowerOperation{}),
-		protobuf.RegisterResource(resources.RebootStatusType(), &resources.RebootStatus{}),
-		protobuf.RegisterResource(resources.TLSConfigType(), &resources.TLSConfig{}),
-		protobuf.RegisterResource(resources.WipeStatusType(), &resources.WipeStatus{}),
-	); err != nil {
-		return nil, fmt.Errorf("failed to register resources: %w", err)
-	}
-
 	if enableResourceCache {
 		options = append(options,
 			safe.WithResourceCache[*resources.BMCConfiguration](),
@@ -242,6 +242,18 @@ func BuildCOSIRuntime(state state.State, enableResourceCache bool, logger *zap.L
 	}
 
 	return cosiRuntime, nil
+}
+
+// RegisterResources registers the provider-specific resources' protobuf marshaler/unmarshalers.
+func RegisterResources() error {
+	return errors.Join(
+		protobuf.RegisterResource(resources.BMCConfigurationType(), &resources.BMCConfiguration{}),
+		protobuf.RegisterResource(resources.MachineStatusType(), &resources.MachineStatus{}),
+		protobuf.RegisterResource(resources.PowerOperationType(), &resources.PowerOperation{}),
+		protobuf.RegisterResource(resources.RebootStatusType(), &resources.RebootStatus{}),
+		protobuf.RegisterResource(resources.TLSConfigType(), &resources.TLSConfig{}),
+		protobuf.RegisterResource(resources.WipeStatusType(), &resources.WipeStatus{}),
+	)
 }
 
 func (p *Provider) ensureProviderStatus(ctx context.Context, st state.State) error {

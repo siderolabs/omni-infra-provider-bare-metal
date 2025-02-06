@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
@@ -33,16 +32,12 @@ type BMCAPIAddressReader interface {
 type BMCConfigurationController = qtransform.QController[*infra.Machine, *resources.BMCConfiguration]
 
 // NewBMCConfigurationController creates a new BMCConfigurationController.
-func NewBMCConfigurationController(agentClient AgentClient, bmcClientFactory BMCClientFactory,
-	bmcAPIAddressReader BMCAPIAddressReader, requeueInterval time.Duration,
-) *BMCConfigurationController {
+func NewBMCConfigurationController(agentClient AgentClient, bmcAPIAddressReader BMCAPIAddressReader) *BMCConfigurationController {
 	controllerName := meta.ProviderID.String() + ".BMCConfigurationController"
 
 	helper := &bmcConfigurationControllerHelper{
 		agentClient:         agentClient,
-		bmcClientFactory:    bmcClientFactory,
 		bmcAPIAddressReader: bmcAPIAddressReader,
-		requeueInterval:     requeueInterval,
 		controllerName:      controllerName,
 	}
 
@@ -60,22 +55,26 @@ func NewBMCConfigurationController(agentClient AgentClient, bmcClientFactory BMC
 		},
 		qtransform.WithConcurrency(4),
 		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine]()),
+		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*infra.BMCConfig, *infra.Machine]()),
 		qtransform.WithIgnoreTeardownUntil(), // keep this resource around until all other controllers are done with it
 	)
 }
 
 type bmcConfigurationControllerHelper struct {
 	agentClient         AgentClient
-	bmcClientFactory    BMCClientFactory
 	bmcAPIAddressReader BMCAPIAddressReader
 	controllerName      string
-	requeueInterval     time.Duration
 }
 
 func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
 	infraMachine *infra.Machine, bmcConfiguration *resources.BMCConfiguration,
 ) error {
 	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
+	if err != nil {
+		return err
+	}
+
+	bmcConfig, err := handleInput[*infra.BMCConfig](ctx, r, helper.controllerName, infraMachine)
 	if err != nil {
 		return err
 	}
@@ -90,15 +89,6 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("machine status not found")
 	}
 
-	alreadyInitialized := bmcConfiguration.TypedSpec().Value.Api != nil ||
-		bmcConfiguration.TypedSpec().Value.Ipmi != nil
-
-	if alreadyInitialized {
-		logger.Debug("bmc config already initialized, skip")
-
-		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("bmc config already initialized")
-	}
-
 	if !machineStatus.TypedSpec().Value.AgentAccessible {
 		logger.Info("agent is not accessible, skip")
 
@@ -106,6 +96,19 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 	}
 
 	id := infraMachine.Metadata().ID()
+
+	if bmcConfig != nil {
+		return helper.storeUserProvidedBMCConfig(bmcConfig, bmcConfiguration, logger)
+	}
+
+	alreadyInitialized := !bmcConfiguration.TypedSpec().Value.ManuallyConfigured &&
+		(bmcConfiguration.TypedSpec().Value.Api != nil || bmcConfiguration.TypedSpec().Value.Ipmi != nil)
+
+	if alreadyInitialized {
+		logger.Debug("bmc config already initialized, skip")
+
+		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("bmc config already initialized")
+	}
 
 	powerManagementOnAgent, err := helper.agentClient.GetPowerManagement(ctx, id)
 	if err != nil {
@@ -116,6 +119,8 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 	if err != nil {
 		return fmt.Errorf("failed to ensure power management on agent: %w", err)
 	}
+
+	bmcConfiguration.TypedSpec().Value.ManuallyConfigured = false
 
 	if powerManagementOnAgent.Api != nil {
 		address, addressErr := helper.bmcAPIAddressReader.ReadManagementAddress(id, logger)
@@ -134,11 +139,52 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 		bmcConfiguration.TypedSpec().Value.Ipmi = &specs.BMCConfigurationSpec_IPMI{
 			Address:  powerManagementOnAgent.Ipmi.Address,
 			Port:     powerManagementOnAgent.Ipmi.Port,
-			Username: ipmiUsername,
+			Username: IPMIUsername,
 			Password: ipmiPassword,
 		}
 
-		logger.Debug("ipmi bmc config initialized", zap.String("ipmi_address", powerManagementOnAgent.Ipmi.Address), zap.String("ipmi_username", ipmiUsername))
+		logger.Debug("ipmi bmc config initialized", zap.String("ipmi_address", powerManagementOnAgent.Ipmi.Address), zap.String("ipmi_username", IPMIUsername))
+	}
+
+	return nil
+}
+
+func (helper *bmcConfigurationControllerHelper) storeUserProvidedBMCConfig(userConfig *infra.BMCConfig, bmcConfiguration *resources.BMCConfiguration, logger *zap.Logger) error {
+	config := userConfig.TypedSpec().Value.Config
+	if config == nil {
+		return fmt.Errorf("bmc config is nil")
+	}
+
+	logger.Info("initialize BMC config from user-provided config")
+
+	bmcConfiguration.TypedSpec().Value.ManuallyConfigured = true
+
+	if config.Ipmi != nil {
+		port := config.Ipmi.Port
+		if port == 0 {
+			port = IPMIDefaultPort
+		}
+
+		bmcConfiguration.TypedSpec().Value.Ipmi = &specs.BMCConfigurationSpec_IPMI{
+			Address:  config.Ipmi.Address,
+			Port:     port,
+			Username: config.Ipmi.Username,
+			Password: config.Ipmi.Password,
+		}
+
+		logger.Info("user-provided ipmi config initialized",
+			zap.String("ipmi_address", config.Ipmi.Address),
+			zap.String("ipmi_username", config.Ipmi.Username),
+			zap.Uint32("ipmi_port", port),
+		)
+	}
+
+	if config.Api != nil {
+		bmcConfiguration.TypedSpec().Value.Api = &specs.BMCConfigurationSpec_API{
+			Address: config.Api.Address,
+		}
+
+		logger.Info("user-provided api config initialized", zap.String("api_address", config.Api.Address))
 	}
 
 	return nil
@@ -146,6 +192,10 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 
 func (helper *bmcConfigurationControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, _ *zap.Logger, infraMachine *infra.Machine) error {
 	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
+		return err
+	}
+
+	if _, err := handleInput[*infra.BMCConfig](ctx, r, helper.controllerName, infraMachine); err != nil {
 		return err
 	}
 
@@ -176,7 +226,7 @@ func (helper *bmcConfigurationControllerHelper) ensurePowerManagementOnAgent(ctx
 		}
 
 		ipmi = &agentpb.SetPowerManagementRequest_IPMI{
-			Username: ipmiUsername,
+			Username: IPMIUsername,
 			Password: ipmiPassword,
 		}
 	}
@@ -195,7 +245,7 @@ var runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567
 
 // generateIPMIPassword returns a random password of length 16 for IPMI.
 func generateIPMIPassword() (string, error) {
-	b := make([]rune, 16)
+	b := make([]rune, IPMIPasswordLength)
 	for i := range b {
 		rando, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
 		if err != nil {
