@@ -8,8 +8,9 @@ package ipmi
 import (
 	"context"
 	"fmt"
+	"time"
 
-	goipmi "github.com/pensando/goipmi"
+	"github.com/bougou/go-ipmi"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
@@ -19,72 +20,69 @@ const ipmiUsername = "talos-agent"
 
 // Client is a wrapper around the goipmi client.
 type Client struct {
-	ipmiClient *goipmi.Client
+	ipmiClient *ipmi.Client
 }
 
 // Close implements the power.Client interface.
 func (c *Client) Close() error {
-	return c.ipmiClient.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return c.ipmiClient.Close(ctx)
 }
 
 // Reboot implements the power.Client interface.
-func (c *Client) Reboot(context.Context) error {
-	return c.ipmiClient.Control(goipmi.ControlPowerCycle)
+func (c *Client) Reboot(ctx context.Context) error {
+	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerCycle)
+
+	return err
 }
 
 // PowerOn implements the power.Client interface.
-func (c *Client) PowerOn(context.Context) error {
-	return c.ipmiClient.Control(goipmi.ControlPowerUp)
+func (c *Client) PowerOn(ctx context.Context) error {
+	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerUp)
+
+	return err
 }
 
 // PowerOff implements the power.Client interface.
-func (c *Client) PowerOff(context.Context) error {
-	return c.ipmiClient.Control(goipmi.ControlPowerDown)
+func (c *Client) PowerOff(ctx context.Context) error {
+	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerDown)
+
+	return err
 }
 
 // SetPXEBootOnce implements the power.Client interface.
-func (c *Client) SetPXEBootOnce(_ context.Context, mode pxe.BootMode) error {
+func (c *Client) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error {
+	var bootType ipmi.BIOSBootType
+
 	switch mode {
 	case pxe.BootModeBIOS:
-		return c.ipmiClient.SetBootDevice(goipmi.BootDevicePxe)
+		bootType = ipmi.BIOSBootTypeLegacy
 	case pxe.BootModeUEFI:
-		return c.ipmiClient.SetBootDeviceEFI(goipmi.BootDevicePxe)
+		bootType = ipmi.BIOSBootTypeEFI
 	default:
 		return fmt.Errorf("unsupported mode %q", mode)
 	}
+
+	return c.ipmiClient.SetBootDevice(ctx, ipmi.BootDeviceSelectorForcePXE, bootType, false)
 }
 
 // IsPoweredOn implements the power.Client interface.
-func (c *Client) IsPoweredOn(context.Context) (bool, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionChassis,
-		Command:         goipmi.CommandChassisStatus,
-		Data:            goipmi.ChassisStatusRequest{},
-	}
-
-	res := &goipmi.ChassisStatusResponse{}
-
-	err := c.ipmiClient.Send(req, res)
+func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
+	resp, err := c.ipmiClient.GetChassisStatus(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	return res.IsSystemPowerOn(), nil
+	return resp.PowerIsOn, nil
 }
 
 // NewClient creates a new IPMI client.
 func NewClient(info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
-	conn := &goipmi.Connection{
-		Hostname:  info.Address,
-		Port:      int(info.Port),
-		Username:  ipmiUsername,
-		Password:  info.Password,
-		Interface: "lanplus",
-	}
-
-	client, err := goipmi.NewClient(conn)
+	client, err := ipmi.NewClient(info.Address, int(info.Port), ipmiUsername, info.Password)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create IPMI client: %w", err)
 	}
 
 	return &Client{ipmiClient: client}, nil

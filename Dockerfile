@@ -2,17 +2,17 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-02-03T21:02:58Z by kres 987bf4d.
+# Generated on 2025-02-10T19:35:12Z by kres 5e9dc91.
 
 ARG TOOLCHAIN
 
-FROM ghcr.io/siderolabs/ca-certificates:v1.9.0 AS image-ca-certificates
+FROM ghcr.io/siderolabs/ca-certificates:v1.10.0-alpha.0-35-g85f8901 AS image-ca-certificates
 
-FROM ghcr.io/siderolabs/fhs:v1.9.0 AS image-fhs
+FROM ghcr.io/siderolabs/fhs:v1.10.0-alpha.0-35-g85f8901 AS image-fhs
 
-FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-linux-amd64
+FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 AS ipxe-linux-amd64
 
-FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 AS ipxe-linux-arm64
+FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 AS ipxe-linux-arm64
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.1.43-alpine AS lint-markdown
@@ -216,14 +216,12 @@ ARG TARGETARCH
 COPY --from=provider provider-linux-${TARGETARCH} /provider
 COPY --from=image-fhs / /
 COPY --from=image-ca-certificates / /
-COPY --from=ghcr.io/siderolabs/musl:v1.8.0-16-g71d23b4 / /
-COPY --from=ghcr.io/siderolabs/liblzma:v1.8.0-16-g71d23b4 / /
-COPY --from=ghcr.io/siderolabs/openssl:v1.8.0-16-g71d23b4 / /
-COPY --from=ghcr.io/siderolabs/ipmitool:v1.8.0-16-g71d23b4 / /
-COPY --from=ghcr.io/siderolabs/ipxe:v1.8.0-16-g71d23b4 /usr/libexec/zbin /bin/zbin
+COPY --from=ghcr.io/siderolabs/musl:v1.10.0-alpha.0-35-g85f8901 / /
+COPY --from=ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-35-g85f8901 / /
+COPY --from=ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 /usr/libexec/zbin /bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
-COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.1 / /assets
+COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
 
