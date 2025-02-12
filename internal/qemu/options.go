@@ -20,20 +20,24 @@ type Options struct {
 
 	DiskSize uint64
 	MemSize  int64
+
+	UEFIEnabled bool
 }
 
-// DefaultOptions are the default options for the set of machines.
-var DefaultOptions = Options{
-	Name:         "bare-metal",
-	CIDR:         "172.42.0.0/24",
-	CNIBundleURL: "https://github.com/siderolabs/talos/releases/latest/download/talosctl-cni-bundle-amd64.tar.gz",
-	NumMachines:  4,
-	Nameservers:  []string{"1.1.1.1", "1.0.0.1"},
-	MTU:          1440,
+// DefaultOptions returns the default options for the set of machines.
+func DefaultOptions() Options {
+	return Options{
+		Name:         "bare-metal",
+		CIDR:         "172.42.0.0/24",
+		CNIBundleURL: "https://github.com/siderolabs/talos/releases/latest/download/talosctl-cni-bundle-amd64.tar.gz",
+		NumMachines:  4,
+		Nameservers:  []string{"1.1.1.1", "1.0.0.1"},
+		MTU:          1440,
 
-	CPUs:     "3",
-	DiskSize: 6 * 1024 * 1024 * 1024,
-	MemSize:  3072 * 1024 * 1024,
+		CPUs:     "3",
+		DiskSize: 6 * 1024 * 1024 * 1024,
+		MemSize:  3072 * 1024 * 1024,
 
-	DefaultBootOrder: "cn",
+		DefaultBootOrder: "cn",
+	}
 }

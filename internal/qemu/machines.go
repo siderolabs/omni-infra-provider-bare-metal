@@ -230,8 +230,8 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 	if _, err = qemuProvisioner.Create(ctx, request,
 		provision.WithBootlader(true),
-		provision.WithUEFI(false), // UEFI doesn't work correctly on PXE timeout, as it drops to UEFI shell
 		provision.WithLogWriter(logWriter),
+		provision.WithUEFI(machines.options.UEFIEnabled), // Note: UEFI doesn't work correctly on PXE timeout in QEMU, as it drops to UEFI shell
 	); err != nil {
 		return fmt.Errorf("failed to create machines: %w", err)
 	}

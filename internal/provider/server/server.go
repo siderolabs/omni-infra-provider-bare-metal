@@ -147,7 +147,7 @@ func newMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serve
 	mux := http.NewServeMux()
 
 	mux.Handle("/config", configHandler)
-	mux.Handle("/ipxe", ipxeHandler)
+	mux.Handle(fmt.Sprintf("/%s/{script}", constants.IPXEURLPath), ipxeHandler)
 	mux.Handle("/tftp/", http.StripPrefix("/tftp/", http.FileServer(http.Dir(constants.IPXEPath+"/"))))
 
 	if serveAssetsDir {

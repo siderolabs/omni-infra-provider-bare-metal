@@ -36,6 +36,7 @@ type Options struct {
 	UseLocalBootAssets    bool
 	ClearState            bool
 	DisableDHCPProxy      bool
+	SecureBootEnabled     bool
 
 	TLS         TLSOptions
 	Redfish     redfish.Options

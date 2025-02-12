@@ -35,10 +35,11 @@ type Client struct {
 	logger                *zap.Logger
 	pxeBaseURL            string
 	agentModeTalosVersion string
+	secureBootEnabled     bool
 }
 
 // NewClient creates a new image factory client.
-func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string, logger *zap.Logger) (*Client, error) {
+func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string, secureBootEnabled bool, logger *zap.Logger) (*Client, error) {
 	factoryClient, err := client.New(baseURL)
 	if err != nil {
 		return nil, err
@@ -48,6 +49,7 @@ func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string, logger *zap.Lo
 		pxeBaseURL:            pxeBaseURL,
 		agentModeTalosVersion: agentModeTalosVersion,
 		factoryClient:         factoryClient,
+		secureBootEnabled:     secureBootEnabled,
 		logger:                logger,
 	}, nil
 }
@@ -99,6 +101,9 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 	}
 
 	ipxeURL := fmt.Sprintf("%s/pxe/%s/%s/metal-%s", c.pxeBaseURL, schematicID, talosVersion, arch)
+	if c.secureBootEnabled {
+		ipxeURL += "-secureboot"
+	}
 
 	logger.Debug("generated schematic iPXE URL", zap.String("ipxe_url", ipxeURL))
 

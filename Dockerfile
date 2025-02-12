@@ -2,17 +2,17 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-02-10T19:35:12Z by kres 5e9dc91.
+# Generated on 2025-02-28T10:23:21Z by kres 1281806.
 
 ARG TOOLCHAIN
 
-FROM ghcr.io/siderolabs/ca-certificates:v1.10.0-alpha.0-35-g85f8901 AS image-ca-certificates
+FROM ghcr.io/siderolabs/ca-certificates:v1.10.0-alpha.0-37-g359807b AS image-ca-certificates
 
-FROM ghcr.io/siderolabs/fhs:v1.10.0-alpha.0-35-g85f8901 AS image-fhs
+FROM ghcr.io/siderolabs/fhs:v1.10.0-alpha.0-37-g359807b AS image-fhs
 
-FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 AS ipxe-linux-amd64
+FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-amd64
 
-FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 AS ipxe-linux-arm64
+FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-arm64
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.1.43-alpine AS lint-markdown
@@ -216,9 +216,9 @@ ARG TARGETARCH
 COPY --from=provider provider-linux-${TARGETARCH} /provider
 COPY --from=image-fhs / /
 COPY --from=image-ca-certificates / /
-COPY --from=ghcr.io/siderolabs/musl:v1.10.0-alpha.0-35-g85f8901 / /
-COPY --from=ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-35-g85f8901 / /
-COPY --from=ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901 /usr/libexec/zbin /bin/zbin
+COPY --from=ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b / /
+COPY --from=ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b / /
+COPY --from=ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b /usr/libexec/zbin /usr/bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
 COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 / /assets

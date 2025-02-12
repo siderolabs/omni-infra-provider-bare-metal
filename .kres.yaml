@@ -19,10 +19,10 @@ spec:
     enabled: true
     stages:
       - name: ipxe-linux-amd64
-        from: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901
+        from: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b
         platform: linux/amd64
       - name: ipxe-linux-arm64
-        from: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901
+        from: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b
         platform: linux/arm64
 ---
 kind: auto.CustomSteps
@@ -40,15 +40,15 @@ spec:
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
   copyFrom:
-    - stage: ghcr.io/siderolabs/musl:v1.10.0-alpha.0-35-g85f8901 # required by zbin
+    - stage: ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b # required by zbin
       source: /
       destination: /
-    - stage: ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-35-g85f8901 # required by zbin
+    - stage: ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b # required by zbin
       source: /
       destination: /
-    - stage: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-35-g85f8901
+    - stage: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b
       source: /usr/libexec/zbin
-      destination: /bin/zbin
+      destination: /usr/bin/zbin
     - stage: ipxe-linux-amd64
       source: /usr/libexec/
       destination: /var/lib/ipxe/amd64

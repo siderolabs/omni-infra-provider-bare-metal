@@ -36,7 +36,7 @@ func init() {
 type testFunc func(ctx context.Context, st state.State, rt *runtime.Runtime, logger *zap.Logger)
 
 func withRuntime(t *testing.T, beforeStart, afterStart testFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	t.Cleanup(cancel)
 
 	logger := zaptest.NewLogger(t)

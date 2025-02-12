@@ -11,4 +11,7 @@ const (
 
 	// TFTPPath is the path from which the TFTP server serves files.
 	TFTPPath = "/var/lib/tftp"
+
+	// IPXEURLPath is the path from which the HTTP server serves the iPXE scripts.
+	IPXEURLPath = "ipxe"
 )

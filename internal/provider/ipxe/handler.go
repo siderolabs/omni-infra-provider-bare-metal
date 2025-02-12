@@ -58,6 +58,16 @@ sanboot --no-describe --drive 0x80
 
 	archAmd64 = "amd64"
 	archArm64 = "arm64"
+
+	// initScriptName is the name of the iPXE init script served by the HTTP server.
+	//
+	// Some UEFIs with built-in iPXE require the script URL to be in the form of a filename ending with ".ipxe", hence we serve it under this path.
+	initScriptName = "init.ipxe"
+
+	// bootScriptName is the name of the iPXE boot script served by the HTTP server.
+	//
+	// Some UEFIs with built-in iPXE require the script URL to be in the form of a filename ending with ".ipxe", hence we serve it under this path.
+	bootScriptName = "boot.ipxe"
 )
 
 // ImageFactoryClient represents an image factory client which ensures a schematic exists on image factory, and returns the PXE URL to it.
@@ -85,15 +95,30 @@ type Handler struct {
 	bootFromDiskMethod BootFromDiskMethod
 	defaultKernelArgs  []string
 	agentKernelArgs    []string
+	initScript         []byte
 	options            HandlerOptions
 }
 
 // ServeHTTP serves the iPXE request.
 //
-// URL pattern: http://ip-of-this-provider:50042/ipxe?uuid=${uuid}&mac=${net${idx}/mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial}&arch=${buildarch}
+// URL pattern: http://ip-of-this-provider:50042/ipxe/boot.ipxe?uuid=${uuid}&mac=${net${idx}/mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial}&arch=${buildarch}
 //
 // Implements http.Handler interface.
 func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	switch req.PathValue("script") {
+	default:
+		handler.logger.Error("invalid iPXE script", zap.String("script", req.PathValue("script")))
+
+		w.WriteHeader(http.StatusNotFound)
+
+		return
+	case initScriptName:
+		handler.handleInitScript(w)
+
+		return
+	case bootScriptName:
+	}
+
 	ctx := req.Context()
 	query := req.URL.Query()
 	uuid := query.Get("uuid")
@@ -101,7 +126,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	arch := query.Get("arch")
 	logger := handler.logger.With(zap.String("uuid", uuid), zap.String("mac", mac), zap.String("arch", arch))
 
-	logger.Info("handle iPXE request")
+	logger.Info("handle iPXE boot request")
 
 	decision, err := handler.makeBootDecision(ctx, arch, uuid, logger)
 	if err != nil {
@@ -109,7 +134,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		w.WriteHeader(http.StatusInternalServerError)
 
-		if _, err = w.Write([]byte("failed to make boot decision")); err != nil {
+		if _, err = w.Write([]byte("failed to make boot decision: " + err.Error())); err != nil {
 			handler.logger.Error("failed to write error response", zap.Error(err))
 		}
 
@@ -131,6 +156,14 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (handler *Handler) handleInitScript(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+
+	if _, err := w.Write(handler.initScript); err != nil {
+		handler.logger.Error("failed to write init script", zap.Error(err))
+	}
+}
+
 type bootDecision struct {
 	body       string
 	statusCode int
@@ -139,6 +172,10 @@ type bootDecision struct {
 
 //nolint:gocyclo,cyclop
 func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string, logger *zap.Logger) (bootDecision, error) {
+	if uuid == "" {
+		return bootDecision{statusCode: http.StatusBadRequest}, fmt.Errorf("missing uuid")
+	}
+
 	switch arch { // https://ipxe.org/cfg/buildarch
 	case archArm64:
 		arch = archArm64
@@ -312,9 +349,14 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tls
 		return nil, fmt.Errorf("failed to parse boot from disk method: %w", err)
 	}
 
+	initScript, err := buildInitScript(options.APIAdvertiseAddress, options.APIPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build init script: %w", err)
+	}
+
 	logger.Info("patch iPXE binaries")
 
-	if err = patchBinaries(options.APIAdvertiseAddress, options.APIPort, logger); err != nil {
+	if err = patchBinaries(initScript, logger); err != nil {
 		return nil, err
 	}
 
@@ -371,6 +413,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tls
 		defaultKernelArgs:  defaultKernelArgs,
 		agentKernelArgs:    agentKernelArgs,
 		bootFromDiskMethod: bootFromDiskMethod,
+		initScript:         initScript,
 		logger:             logger,
 	}, nil
 }

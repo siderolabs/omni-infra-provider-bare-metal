@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	qemuOptions qemu.Options
+	qemuOptions = qemu.DefaultOptions()
 	destroy     bool
 	debug       bool
 )
@@ -97,16 +97,17 @@ func init() {
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode & logs.")
 	rootCmd.Flags().BoolVar(&destroy, "destroy", false, "Destroy existing machines and exit.")
 
-	rootCmd.Flags().StringVar(&qemuOptions.Name, "name", qemu.DefaultOptions.Name, "Name of the cluster (the set of machines).")
-	rootCmd.Flags().StringVar(&qemuOptions.CIDR, "cidr", qemu.DefaultOptions.CIDR, "CIDR for the machines' network.")
-	rootCmd.Flags().StringVar(&qemuOptions.CNIBundleURL, "cni-bundle-url", qemu.DefaultOptions.CNIBundleURL, "URL to the CNI bundle.")
-	rootCmd.Flags().StringVar(&qemuOptions.TalosctlPath, "talosctl-path", qemu.DefaultOptions.TalosctlPath,
+	rootCmd.Flags().StringVar(&qemuOptions.Name, "name", qemuOptions.Name, "Name of the cluster (the set of machines).")
+	rootCmd.Flags().StringVar(&qemuOptions.CIDR, "cidr", qemuOptions.CIDR, "CIDR for the machines' network.")
+	rootCmd.Flags().StringVar(&qemuOptions.CNIBundleURL, "cni-bundle-url", qemuOptions.CNIBundleURL, "URL to the CNI bundle.")
+	rootCmd.Flags().StringVar(&qemuOptions.TalosctlPath, "talosctl-path", qemuOptions.TalosctlPath,
 		fmt.Sprintf("Path to the talosctl binary. If not specified, the binary %q will be looked up in the current working dir and in the PATH.", qemu.TalosctlBinary))
-	rootCmd.Flags().StringVar(&qemuOptions.CPUs, "cpus", qemu.DefaultOptions.CPUs, "Number of CPUs for each machine.")
-	rootCmd.Flags().IntVar(&qemuOptions.NumMachines, "num-machines", qemu.DefaultOptions.NumMachines, "Number of machines to bring up.")
-	rootCmd.Flags().IntVar(&qemuOptions.MTU, "mtu", qemu.DefaultOptions.MTU, "MTU for the machines' network.")
-	rootCmd.Flags().Uint64Var(&qemuOptions.DiskSize, "disk-size", qemu.DefaultOptions.DiskSize, "Disk size for each machine.")
-	rootCmd.Flags().Int64Var(&qemuOptions.MemSize, "mem-size", qemu.DefaultOptions.MemSize, "Memory size for each machine.")
-	rootCmd.Flags().StringSliceVar(&qemuOptions.Nameservers, "nameservers", qemu.DefaultOptions.Nameservers, "Nameservers for the machines' network.")
-	rootCmd.Flags().StringVar(&qemuOptions.DefaultBootOrder, "default-boot-order", qemu.DefaultOptions.DefaultBootOrder, "Default boot order for the machines.")
+	rootCmd.Flags().StringVar(&qemuOptions.CPUs, "cpus", qemuOptions.CPUs, "Number of CPUs for each machine.")
+	rootCmd.Flags().IntVar(&qemuOptions.NumMachines, "num-machines", qemuOptions.NumMachines, "Number of machines to bring up.")
+	rootCmd.Flags().IntVar(&qemuOptions.MTU, "mtu", qemuOptions.MTU, "MTU for the machines' network.")
+	rootCmd.Flags().Uint64Var(&qemuOptions.DiskSize, "disk-size", qemuOptions.DiskSize, "Disk size for each machine.")
+	rootCmd.Flags().Int64Var(&qemuOptions.MemSize, "mem-size", qemuOptions.MemSize, "Memory size for each machine.")
+	rootCmd.Flags().StringSliceVar(&qemuOptions.Nameservers, "nameservers", qemuOptions.Nameservers, "Nameservers for the machines' network.")
+	rootCmd.Flags().StringVar(&qemuOptions.DefaultBootOrder, "default-boot-order", qemuOptions.DefaultBootOrder, "Default boot order for the machines.")
+	rootCmd.Flags().BoolVar(&qemuOptions.UEFIEnabled, "uefi-enabled", qemuOptions.UEFIEnabled, "Enable UEFI for the machines.")
 }

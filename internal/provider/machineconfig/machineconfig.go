@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	siderolinkAddress      = "fdae:41e4:649b:9303::1"
-	siderolinkEventSinPort = "8090"
-	siderolinkLogPort      = "8092"
+	siderolinkAddress       = "fdae:41e4:649b:9303::1"
+	siderolinkEventSinkPort = "8090"
+	siderolinkLogPort       = "8092"
 )
 
 // Build builds the machine configuration for the bare-metal provider.
@@ -52,7 +52,7 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, 
 	}
 
 	eventSinkConfig := runtime.NewEventSinkV1Alpha1()
-	eventSinkConfig.Endpoint = net.JoinHostPort(siderolinkAddress, siderolinkEventSinPort)
+	eventSinkConfig.Endpoint = net.JoinHostPort(siderolinkAddress, siderolinkEventSinkPort)
 
 	kmsgLogURL, err := url.Parse("tcp://" + net.JoinHostPort(siderolinkAddress, siderolinkLogPort))
 	if err != nil {

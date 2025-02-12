@@ -21,7 +21,7 @@ import (
 
 // bootTemplate is embedded into iPXE binary when that binary is sent to the node.
 //
-//nolint:dupword
+//nolint:dupword,lll
 var bootTemplate = template.Must(template.New("iPXE embedded").Parse(`#!ipxe
 prompt --key 0x02 --timeout 2000 Press Ctrl-B for the iPXE command line... && shell ||
 
@@ -52,7 +52,7 @@ set x:int32 0
 		{{/* attempt boot, if fails try next iface */}}
 		route
 
-		chain --replace http://{{ .Endpoint }}:{{ .Port }}/ipxe?uuid=${uuid}&mac=${net${idx}/mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial}&arch=${buildarch} || goto next_iface
+		chain --replace http://{{ .Endpoint }}:{{ .Port }}/{{ .ScriptPath }}?uuid=${uuid}&mac=${net${idx}/mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial}&arch=${buildarch} || goto next_iface
 
 :exhausted
 	echo
@@ -76,15 +76,17 @@ set x:int32 0
 	reboot
 `))
 
-func buildBootScript(endpoint string, port int) ([]byte, error) {
+func buildInitScript(endpoint string, port int) ([]byte, error) {
 	var buf bytes.Buffer
 
 	if err := bootTemplate.Execute(&buf, struct {
-		Endpoint string
-		Port     int
+		Endpoint   string
+		ScriptPath string
+		Port       int
 	}{
-		Endpoint: endpoint,
-		Port:     port,
+		Endpoint:   endpoint,
+		ScriptPath: constants.IPXEURLPath + "/" + bootScriptName,
+		Port:       port,
 	}); err != nil {
 		return nil, err
 	}
@@ -98,39 +100,36 @@ func buildBootScript(endpoint string, port int) ([]byte, error) {
 // EFI iPXE binaries are uncompressed, so these are patched directly.
 // BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back using zbin.
 // (zbin is built with iPXE).
-func patchBinaries(apiAdvertiseAddress string, apiPort int, logger *zap.Logger) error {
-	bootScript, err := buildBootScript(apiAdvertiseAddress, apiPort)
-	if err != nil {
-		return fmt.Errorf("failed to build boot script: %w", err)
-	}
-
+func patchBinaries(initScript []byte, logger *zap.Logger) error {
 	for _, name := range []string{"ipxe", "snp"} {
-		if err = patchScript(
+		if err := patchScript(
 			fmt.Sprintf(constants.IPXEPath+"/amd64/%s.efi", name),
 			fmt.Sprintf(constants.TFTPPath+"/%s.efi", name),
-			bootScript,
+			initScript,
 		); err != nil {
 			return fmt.Errorf("failed to patch %q: %w", name, err)
 		}
 
-		if err = patchScript(
+		if err := patchScript(
 			fmt.Sprintf(constants.IPXEPath+"/arm64/%s.efi", name),
 			fmt.Sprintf(constants.TFTPPath+"/%s-arm64.efi", name),
-			bootScript,
+			initScript,
 		); err != nil {
 			return fmt.Errorf("failed to patch %q: %w", name, err)
 		}
 	}
 
-	if err = patchScript(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", bootScript); err != nil {
+	if err := patchScript(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", initScript); err != nil {
 		return fmt.Errorf("failed to patch undionly.kpxe.bin: %w", err)
 	}
 
-	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe", logger); err != nil {
+	if err := compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
+		constants.TFTPPath+"/undionly.kpxe", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe: %w", err)
 	}
 
-	if err = compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo", constants.TFTPPath+"/undionly.kpxe.0", logger); err != nil {
+	if err := compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
+		constants.TFTPPath+"/undionly.kpxe.0", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe.0: %w", err)
 	}
 

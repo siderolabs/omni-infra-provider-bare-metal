@@ -77,6 +77,16 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to parse IPMI PXE boot mode: %w", err)
 	}
 
+	if p.options.SecureBootEnabled {
+		if pxeBootMode != pxe.BootModeUEFI {
+			return errors.New("secure boot is only supported with UEFI boot mode")
+		}
+
+		if p.options.UseLocalBootAssets {
+			return errors.New("local boot assets cannot be used with secure boot")
+		}
+	}
+
 	apiAdvertiseAddress, err := p.determineAPIAdvertiseAddress()
 	if err != nil {
 		return fmt.Errorf("failed to determine API advertise address: %w", err)
@@ -140,7 +150,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
 
 	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL,
-		p.options.AgentModeTalosVersion, p.logger.With(zap.String("component", "image_factory_client")))
+		p.options.AgentModeTalosVersion, p.options.SecureBootEnabled, p.logger.With(zap.String("component", "image_factory_client")))
 	if err != nil {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}

@@ -91,7 +91,11 @@ func runCmd() error {
 }
 
 func init() {
-	const apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
+	const (
+		apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
+		ipmiPXEBootModeFlag      = "ipmi-pxe-boot-mode"
+		useLocalBootAssetsFlag   = "use-local-boot-assets"
+	)
 
 	rootCmd.Flags().Var(&meta.ProviderID, "id", "The id of the infra provider, it is used to match the resources with the infra provider label.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode & logs.")
@@ -105,7 +109,7 @@ func init() {
 		"The endpoint of the Omni API, if not set, defaults to OMNI_ENDPOINT env var.")
 	rootCmd.Flags().StringVar(&providerOptions.Name, "provider-name", providerOptions.Name, "Provider name as it appears in Omni")
 	rootCmd.Flags().StringVar(&providerOptions.Description, "provider-description", providerOptions.Description, "Provider description as it appears in Omni")
-	rootCmd.Flags().BoolVar(&providerOptions.UseLocalBootAssets, "use-local-boot-assets", providerOptions.UseLocalBootAssets,
+	rootCmd.Flags().BoolVar(&providerOptions.UseLocalBootAssets, useLocalBootAssetsFlag, providerOptions.UseLocalBootAssets,
 		"Use local boot assets for iPXE booting. If set, the iPXE server will use the kernel and initramfs from the local assets "+
 			"instead of forwarding the request to the image factory to boot into agent mode.")
 	rootCmd.Flags().StringVar(&providerOptions.DHCPProxyIfaceOrIP, "dhcp-proxy-iface-or-ip", providerOptions.DHCPProxyIfaceOrIP,
@@ -128,7 +132,7 @@ func init() {
 	rootCmd.Flags().StringVar(&providerOptions.BootFromDiskMethod, "boot-from-disk-method", providerOptions.BootFromDiskMethod,
 		fmt.Sprintf("Default method to use to boot server from disk if it hits iPXE endpoint after install. Valid values are: %v",
 			[]ipxe.BootFromDiskMethod{ipxe.BootIPXEExit, ipxe.Boot404, ipxe.BootSANDisk}))
-	rootCmd.Flags().StringVar(&providerOptions.IPMIPXEBootMode, "ipmi-pxe-boot-mode", providerOptions.IPMIPXEBootMode,
+	rootCmd.Flags().StringVar(&providerOptions.IPMIPXEBootMode, ipmiPXEBootModeFlag, providerOptions.IPMIPXEBootMode,
 		fmt.Sprintf("Default boot mode to use when PXE booting a machine via IPMI. Valid values are: %v",
 			[]pxe.BootMode{pxe.BootModeBIOS, pxe.BootModeUEFI}))
 	rootCmd.Flags().StringSliceVar(&providerOptions.MachineLabels, "machine-labels", providerOptions.MachineLabels,
@@ -137,6 +141,11 @@ func init() {
 		"Skip TLS verification when connecting to the Omni API.")
 	rootCmd.Flags().DurationVar(&providerOptions.MinRebootInterval, "min-reboot-interval", providerOptions.MinRebootInterval,
 		"the minimum interval between reboots of the machine issued by the provider. This is to prevent the provider from issuing reboots too frequently.")
+	rootCmd.Flags().BoolVar(&providerOptions.SecureBootEnabled, "secure-boot-enabled", providerOptions.SecureBootEnabled,
+		fmt.Sprintf("Serve secure boot UKI from the iPXE endpoint. The UKI can be used to boot a machine without secure boot, "+
+			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false`,
+			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),
+	)
 
 	if constants.IsDebugBuild {
 		rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", providerOptions.ClearState, "Clear the state of the provider on startup.")
