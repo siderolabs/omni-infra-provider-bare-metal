@@ -178,7 +178,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	bmcClientFactory := bmc.NewClientFactory(bmc.ClientFactoryOptions{
 		RedfishOptions: p.options.Redfish,
 	}, p.logger)
-	tftpServer := tftp.NewServer(p.logger.With(zap.String("component", "tftp_server")))
+	tftpServer := tftp.NewServer(p.options.APIListenAddress, p.logger.With(zap.String("component", "tftp_server")))
 	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
 	agentClient := agent.NewClient(agentConnectionEventCh, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, p.options.UseLocalBootAssets, certs, configHandler, ipxeHandler,

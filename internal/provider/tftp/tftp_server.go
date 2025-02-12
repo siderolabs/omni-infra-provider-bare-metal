@@ -8,6 +8,7 @@ package tftp
 import (
 	"context"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -23,12 +24,15 @@ import (
 // Server represents the TFTP server serving iPXE binaries.
 type Server struct {
 	logger *zap.Logger
+
+	listenAddress string
 }
 
 // NewServer creates a new TFTP server.
-func NewServer(logger *zap.Logger) *Server {
+func NewServer(listenAddress string, logger *zap.Logger) *Server {
 	return &Server{
-		logger: logger,
+		listenAddress: listenAddress,
+		logger:        logger,
 	}
 }
 
@@ -56,7 +60,7 @@ func (s *Server) Run(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		return srv.ListenAndServe(":69")
+		return srv.ListenAndServe(net.JoinHostPort(s.listenAddress, "69"))
 	})
 
 	eg.Go(func() error {
