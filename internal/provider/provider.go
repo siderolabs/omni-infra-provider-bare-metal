@@ -180,7 +180,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	}, p.logger)
 	tftpServer := tftp.NewServer(p.options.APIListenAddress, p.logger.With(zap.String("component", "tftp_server")))
 	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
-	agentClient := agent.NewClient(agentConnectionEventCh, p.options.WipeWithZeroes, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
+	agentClient := agent.NewClient(agentConnectionEventCh, p.options.AgentClient, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
 	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, p.options.UseLocalBootAssets, certs, configHandler, ipxeHandler,
 		agentClient.TunnelServiceServer(), p.logger.With(zap.String("component", "server")))
 

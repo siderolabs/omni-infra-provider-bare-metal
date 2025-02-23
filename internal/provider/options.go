@@ -7,6 +7,7 @@ package provider
 import (
 	"time"
 
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/agent"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/redfish"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
@@ -34,11 +35,11 @@ type Options struct {
 	InsecureSkipTLSVerify bool
 	UseLocalBootAssets    bool
 	ClearState            bool
-	WipeWithZeroes        bool
 	DisableDHCPProxy      bool
 
-	TLS     TLSOptions
-	Redfish redfish.Options
+	TLS         TLSOptions
+	Redfish     redfish.Options
+	AgentClient agent.ClientOptions
 
 	MinRebootInterval time.Duration
 }
@@ -53,22 +54,25 @@ type TLSOptions struct {
 }
 
 // DefaultOptions returns the default provider options.
-var DefaultOptions = Options{
-	Name:                   "Bare Metal",
-	Description:            "Bare metal infrastructure provider",
-	ImageFactoryBaseURL:    "https://factory.talos.dev",
-	ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-	AgentModeTalosVersion:  "v1.9.3",
-	BootFromDiskMethod:     string(ipxe.BootIPXEExit),
-	IPMIPXEBootMode:        string(pxe.BootModeUEFI),
-	APIPort:                50042,
-	MinRebootInterval:      5 * time.Minute,
-	Redfish:                redfish.DefaultOptions,
-	TLS: TLSOptions{
-		Enabled:         false,
-		APIPort:         50043,
-		AgentSkipVerify: false,
-		CATTL:           30 * 365 * 24 * time.Hour, // 30 years
-		CertTTL:         24 * time.Hour,
-	},
+func DefaultOptions() Options {
+	return Options{
+		Name:                   "Bare Metal",
+		Description:            "Bare metal infrastructure provider",
+		ImageFactoryBaseURL:    "https://factory.talos.dev",
+		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
+		AgentModeTalosVersion:  "v1.9.3",
+		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
+		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
+		APIPort:                50042,
+		MinRebootInterval:      5 * time.Minute,
+		Redfish:                redfish.DefaultOptions(),
+		TLS: TLSOptions{
+			Enabled:         false,
+			APIPort:         50043,
+			AgentSkipVerify: false,
+			CATTL:           30 * 365 * 24 * time.Hour, // 30 years
+			CertTTL:         24 * time.Hour,
+		},
+		AgentClient: agent.DefaultClientOptions(),
+	}
 }

@@ -15,11 +15,13 @@ type Options struct {
 }
 
 // DefaultOptions is the default RedFish configuration options.
-var DefaultOptions = Options{
-	UseAlways:                 false,
-	UseWhenAvailable:          true,
-	UseHTTPS:                  true,
-	InsecureSkipTLSVerify:     true,
-	Port:                      443,
-	SetBootSourceOverrideMode: true,
+func DefaultOptions() Options {
+	return Options{
+		UseAlways:                 false,
+		UseWhenAvailable:          true,
+		UseHTTPS:                  true,
+		InsecureSkipTLSVerify:     true,
+		Port:                      443,
+		SetBootSourceOverrideMode: true,
+	}
 }

@@ -6,7 +6,6 @@ package agent
 
 import (
 	"context"
-	"time"
 
 	"github.com/jhump/grpctunnel"
 	"github.com/jhump/grpctunnel/tunnelpb"
@@ -20,21 +19,16 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 )
 
-const (
-	timeout           = 30 * time.Second
-	zeroesWipeTimeout = 24 * time.Hour
-)
-
 // Client controls servers by establishing a reverse GRPC tunnel with them and by sending them commands.
 type Client struct {
 	logger        *zap.Logger
 	tunnelHandler *grpctunnel.TunnelServiceHandler
 
-	wipeWithZeroes bool
+	options ClientOptions
 }
 
 // NewClient creates a new agent service.
-func NewClient(agentConnectionEventCh chan<- controllers.AgentConnectionEvent, wipeWithZeroes bool, logger *zap.Logger) *Client {
+func NewClient(agentConnectionEventCh chan<- controllers.AgentConnectionEvent, options ClientOptions, logger *zap.Logger) *Client {
 	tunnelHandler := grpctunnel.NewTunnelServiceHandler(
 		grpctunnel.TunnelServiceHandlerOptions{
 			OnReverseTunnelOpen: func(channel grpctunnel.TunnelChannel) {
@@ -55,9 +49,9 @@ func NewClient(agentConnectionEventCh chan<- controllers.AgentConnectionEvent, w
 	)
 
 	return &Client{
-		logger:         logger,
-		tunnelHandler:  tunnelHandler,
-		wipeWithZeroes: wipeWithZeroes,
+		logger:        logger,
+		tunnelHandler: tunnelHandler,
+		options:       options,
 	}
 }
 
@@ -68,7 +62,7 @@ func (c *Client) TunnelServiceServer() tunnelpb.TunnelServiceServer {
 
 // IsAccessible checks if the agent with the given ID is accessible.
 func (c *Client) IsAccessible(ctx context.Context, id string) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.options.CallTimeout)
 	defer cancel()
 
 	channel := c.tunnelHandler.KeyAsChannel(id)
@@ -88,7 +82,7 @@ func (c *Client) IsAccessible(ctx context.Context, id string) (bool, error) {
 
 // GetPowerManagement retrieves the IPMI information from the server with the given ID.
 func (c *Client) GetPowerManagement(ctx context.Context, id string) (*agentpb.GetPowerManagementResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.options.CallTimeout)
 	defer cancel()
 
 	channel := c.tunnelHandler.KeyAsChannel(id)
@@ -99,7 +93,7 @@ func (c *Client) GetPowerManagement(ctx context.Context, id string) (*agentpb.Ge
 
 // SetPowerManagement sets the IPMI information on the server with the given ID.
 func (c *Client) SetPowerManagement(ctx context.Context, id string, req *agentpb.SetPowerManagementRequest) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.options.CallTimeout)
 	defer cancel()
 
 	channel := c.tunnelHandler.KeyAsChannel(id)
@@ -115,16 +109,16 @@ func (c *Client) WipeDisks(ctx context.Context, id string) error {
 	channel := c.tunnelHandler.KeyAsChannel(id)
 	cli := agentpb.NewAgentServiceClient(channel)
 
-	wipeTimeout := timeout
-	if c.wipeWithZeroes {
-		wipeTimeout = zeroesWipeTimeout
+	wipeTimeout := c.options.FastWipeTimeout
+	if c.options.WipeWithZeroes {
+		wipeTimeout = c.options.ZeroesWipeTimeout
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, wipeTimeout)
 	defer cancel()
 
 	_, err := cli.WipeDisks(ctx, &agentpb.WipeDisksRequest{
-		Zeroes: c.wipeWithZeroes,
+		Zeroes: c.options.WipeWithZeroes,
 	})
 
 	return err
