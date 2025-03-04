@@ -36,7 +36,6 @@ type AgentConnectionEvent struct {
 // PXEBootEvent represents a PXE boot event for a machine served by the provider.
 type PXEBootEvent struct {
 	MachineID resource.ID
-	Mode      specs.BootMode
 }
 
 // MachineStatusController manages machine status.
@@ -286,7 +285,7 @@ func (ctrl *MachineStatusController) pollSingle(ctx context.Context, id resource
 }
 
 func (ctrl *MachineStatusController) getPowerState(ctx context.Context, bmcConfiguration *resources.BMCConfiguration, logger *zap.Logger) (specs.PowerState, error) {
-	bmcClient, err := ctrl.bmcClientFactory.GetClient(ctx, bmcConfiguration)
+	bmcClient, err := ctrl.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
 	if err != nil {
 		return specs.PowerState_POWER_STATE_UNKNOWN, err
 	}
@@ -339,11 +338,8 @@ func (ctrl *MachineStatusController) handlePXEBootEvent(ctx context.Context, r c
 			return nil
 		}
 
-		if res.TypedSpec().Value.LastPxeBootMode == specs.BootMode_BOOT_MODE_UNKNOWN {
-			initial = true
-		}
-
-		res.TypedSpec().Value.LastPxeBootMode = pxeBootEvent.Mode
+		initial = !res.TypedSpec().Value.Initialized
+		res.TypedSpec().Value.Initialized = true
 
 		return nil
 	}); err != nil {

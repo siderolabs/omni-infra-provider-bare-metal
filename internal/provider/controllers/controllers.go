@@ -47,7 +47,7 @@ type AgentClient interface {
 
 // BMCClientFactory is the interface for creating BMC clients.
 type BMCClientFactory interface {
-	GetClient(ctx context.Context, bmcConfiguration *resources.BMCConfiguration) (bmc.Client, error)
+	GetClient(ctx context.Context, bmcConfiguration *resources.BMCConfiguration, logger *zap.Logger) (bmc.Client, error)
 }
 
 // handleInput reads the additional input resource and automatically manages finalizers.

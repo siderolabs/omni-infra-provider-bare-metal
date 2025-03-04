@@ -33,7 +33,6 @@ type Client interface {
 
 // ClientFactory is a factory to create BMC clients.
 type ClientFactory struct {
-	logger                         *zap.Logger
 	addressToRedfishAvailability   map[string]bool
 	options                        ClientFactoryOptions
 	addressToRedfishAvailabilityMu sync.Mutex
@@ -45,16 +44,15 @@ type ClientFactoryOptions struct {
 }
 
 // NewClientFactory creates a new BMC client factory.
-func NewClientFactory(options ClientFactoryOptions, logger *zap.Logger) *ClientFactory {
+func NewClientFactory(options ClientFactoryOptions) *ClientFactory {
 	return &ClientFactory{
 		options:                      options,
-		logger:                       logger,
 		addressToRedfishAvailability: map[string]bool{},
 	}
 }
 
 // GetClient returns a BMC client for the given bare metal machine.
-func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.BMCConfiguration) (Client, error) {
+func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.BMCConfiguration, logger *zap.Logger) (Client, error) {
 	if config == nil {
 		return nil, fmt.Errorf("BMC config is nil")
 	}
@@ -71,13 +69,13 @@ func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.B
 			return nil, err
 		}
 
-		return &loggingClient{client: apiClient, logger: factory.logger.With(zap.String("bmc_client", "api"))}, nil
+		return &loggingClient{client: apiClient, logger: logger.With(zap.String("bmc_client", "api"))}, nil
 	}
 
-	useRedfish := factory.options.RedfishOptions.UseAlways || (factory.options.RedfishOptions.UseWhenAvailable && factory.redfishAvailable(ctx, spec.Ipmi))
+	useRedfish := factory.options.RedfishOptions.UseAlways || (factory.options.RedfishOptions.UseWhenAvailable && factory.redfishAvailable(ctx, spec.Ipmi, logger))
 
 	if useRedfish {
-		logger := factory.logger.With(zap.String("bmc_client", "redfish"))
+		logger = logger.With(zap.String("bmc_client", "redfish"))
 		redfishClient := redfish.NewClient(factory.options.RedfishOptions, spec.Ipmi.Address, spec.Ipmi.Username, spec.Ipmi.Password, logger)
 
 		return &loggingClient{client: redfishClient, logger: logger}, nil
@@ -88,10 +86,10 @@ func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.B
 		return nil, err
 	}
 
-	return &loggingClient{client: ipmiClient, logger: factory.logger.With(zap.String("bmc_client", "ipmi"))}, nil
+	return &loggingClient{client: ipmiClient, logger: logger.With(zap.String("bmc_client", "ipmi"))}, nil
 }
 
-func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *specs.BMCConfigurationSpec_IPMI) bool {
+func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *specs.BMCConfigurationSpec_IPMI, logger *zap.Logger) bool {
 	factory.addressToRedfishAvailabilityMu.Lock()
 	defer factory.addressToRedfishAvailabilityMu.Unlock()
 
@@ -102,19 +100,19 @@ func (factory *ClientFactory) redfishAvailable(ctx context.Context, ipmiInfo *sp
 		return available
 	}
 
-	factory.logger.Debug("probe redfish availability", zap.String("address", address))
+	logger.Debug("probe redfish availability", zap.String("address", address))
 
-	redfishClient := redfish.NewClient(factory.options.RedfishOptions, address, ipmiInfo.Username, ipmiInfo.Password, factory.logger)
+	redfishClient := redfish.NewClient(factory.options.RedfishOptions, address, ipmiInfo.Username, ipmiInfo.Password, logger)
 
 	if _, err := redfishClient.IsPoweredOn(ctx); err != nil {
-		factory.logger.Debug("redfish is not available on address", zap.String("address", address), zap.Error(err))
+		logger.Debug("redfish is not available on address", zap.String("address", address), zap.Error(err))
 
 		factory.addressToRedfishAvailability[address] = false
 
 		return false
 	}
 
-	factory.logger.Debug("redfish is available on address", zap.String("address", address))
+	logger.Debug("redfish is available on address", zap.String("address", address))
 
 	factory.addressToRedfishAvailability[address] = true
 
