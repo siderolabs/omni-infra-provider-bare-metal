@@ -19,7 +19,7 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/image-factory v0.6.7
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v0.47.0
+	github.com/siderolabs/omni/client v0.0.0-20250303165458-b264a412c22e
 	github.com/siderolabs/talos v1.10.0-alpha.1.0.20250203100439-e2aa7c98cceb
 	github.com/siderolabs/talos-metal-agent v0.1.2
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.1.0.20250203100439-e2aa7c98cceb
