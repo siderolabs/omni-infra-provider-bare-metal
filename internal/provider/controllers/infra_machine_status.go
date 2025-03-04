@@ -124,6 +124,10 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 	infraMachineStatus.TypedSpec().Value.Installed = installed
 	infraMachineStatus.TypedSpec().Value.ReadyToUse = bmcConfigurationConfigured && !requiresWipe
 
+	if wipeStatus != nil {
+		infraMachineStatus.TypedSpec().Value.WipedNodeUniqueToken = wipeStatus.TypedSpec().Value.WipedNodeUniqueToken
+	}
+
 	logger.Debug("machine status",
 		zap.Bool("installed", infraMachineStatus.TypedSpec().Value.Installed),
 		zap.Bool("ready_to_use", infraMachineStatus.TypedSpec().Value.ReadyToUse))

@@ -2,7 +2,7 @@
 
 set -eou pipefail
 
-TALOS_VERSION=1.9.3
+TALOS_VERSION=1.9.4
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
@@ -154,6 +154,7 @@ docker run -d --network host \
   --embedded-discovery-service-snapshots-enabled=false \
   --create-initial-service-account \
   --initial-service-account-key-path=/artifacts/key \
+  --join-tokens-mode=strict \
   "${REGISTRY_MIRROR_FLAGS[@]}"
 
 docker logs -f omni &

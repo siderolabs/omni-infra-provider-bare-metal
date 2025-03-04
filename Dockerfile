@@ -1,26 +1,34 @@
-# syntax = docker/dockerfile-upstream:1.12.1-labs
+# syntax = docker/dockerfile-upstream:1.14.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-02-28T10:23:21Z by kres 1281806.
+# Generated on 2025-03-06T09:23:47Z by kres e2c7efe.
 
 ARG TOOLCHAIN
+
+FROM ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 AS assets
 
 FROM ghcr.io/siderolabs/ca-certificates:v1.10.0-alpha.0-37-g359807b AS image-ca-certificates
 
 FROM ghcr.io/siderolabs/fhs:v1.10.0-alpha.0-37-g359807b AS image-fhs
 
+FROM ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe
+
 FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-amd64
 
 FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-arm64
 
+FROM ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b AS liblzma
+
 # runs markdownlint
-FROM docker.io/oven/bun:1.1.43-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.4-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.3.0
+RUN bun i markdownlint-cli@0.44.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
+
+FROM ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b AS musl
 
 # collects proto specs
 FROM scratch AS proto-specs
@@ -216,12 +224,12 @@ ARG TARGETARCH
 COPY --from=provider provider-linux-${TARGETARCH} /provider
 COPY --from=image-fhs / /
 COPY --from=image-ca-certificates / /
-COPY --from=ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b / /
-COPY --from=ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b / /
-COPY --from=ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b /usr/libexec/zbin /usr/bin/zbin
+COPY --from=musl / /
+COPY --from=liblzma / /
+COPY --from=ipxe /usr/libexec/zbin /usr/bin/zbin
 COPY --from=ipxe-linux-amd64 /usr/libexec/ /var/lib/ipxe/amd64
 COPY --from=ipxe-linux-arm64 /usr/libexec/ /var/lib/ipxe/arm64
-COPY --from=ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 / /assets
+COPY --from=assets / /assets
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/omni-infra-provider-bare-metal
 ENTRYPOINT ["/provider"]
 

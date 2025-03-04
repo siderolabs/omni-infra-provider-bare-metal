@@ -43,23 +43,29 @@ spec:
     - stage: ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b # required by zbin
       source: /
       destination: /
+      name: musl
     - stage: ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b # required by zbin
       source: /
       destination: /
+      name: liblzma
     - stage: ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b
       source: /usr/libexec/zbin
       destination: /usr/bin/zbin
+      name: ipxe
     - stage: ipxe-linux-amd64
       source: /usr/libexec/
       destination: /var/lib/ipxe/amd64
+      name: ipxe-linux-amd64
     - stage: ipxe-linux-arm64
       source: /usr/libexec/
       destination: /var/lib/ipxe/arm64
+      name: ipxe-linux-arm64
     -
       stage: ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 # to be used with --use-local-boot-assets for local development
       # stage: 127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v0.0.1-local # for local development, to be replaced with the line above and rekres-ed
       source: /
       destination: /assets
+      name: assets
 ---
 kind: golang.Build
 spec:
