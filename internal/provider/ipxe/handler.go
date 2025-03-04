@@ -28,7 +28,6 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
@@ -152,7 +151,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	select {
 	case <-ctx.Done():
 		handler.logger.Error("failed to send PXE boot event", zap.String("uuid", uuid))
-	case handler.pxeBootEventCh <- controllers.PXEBootEvent{MachineID: uuid, Mode: decision.mode}:
+	case handler.pxeBootEventCh <- controllers.PXEBootEvent{MachineID: uuid}:
 	}
 }
 
@@ -167,7 +166,6 @@ func (handler *Handler) handleInitScript(w http.ResponseWriter) {
 type bootDecision struct {
 	body       string
 	statusCode int
-	mode       specs.BootMode
 }
 
 //nolint:gocyclo,cyclop
@@ -229,7 +227,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 	}
 
 	switch requiredBootMode {
-	case specs.BootMode_BOOT_MODE_AGENT_PXE:
+	case machine.BootModeAgentPXE:
 		logger.Info("boot machine: Talos agent mode")
 
 		body, statusCode, agentErr := handler.bootIntoAgentMode(ctx, arch, userExtraKernelArgs)
@@ -238,11 +236,10 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		}
 
 		return bootDecision{
-			mode:       requiredBootMode,
 			body:       body,
 			statusCode: statusCode,
 		}, nil
-	case specs.BootMode_BOOT_MODE_TALOS_PXE:
+	case machine.BootModeTalosPXE:
 		logger.Info("boot machine: Talos over iPXE")
 
 		consoleKernelArgs := handler.consoleKernelArgs(arch)
@@ -260,11 +257,10 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		ipxeScript := fmt.Sprintf(ipxeScriptTemplateFormat, ipxeURL)
 
 		return bootDecision{
-			mode:       requiredBootMode,
 			body:       ipxeScript,
 			statusCode: http.StatusOK,
 		}, nil
-	case specs.BootMode_BOOT_MODE_TALOS_DISK:
+	case machine.BootModeTalosDisk:
 		logger.Info("boot machine: from the disk")
 
 		switch handler.bootFromDiskMethod {
@@ -276,13 +272,10 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 			fallthrough
 		default:
 			return bootDecision{
-				mode:       requiredBootMode,
 				body:       ipxeBootFromDiskExit,
 				statusCode: http.StatusOK,
 			}, nil
 		}
-	case specs.BootMode_BOOT_MODE_UNKNOWN:
-		fallthrough
 	default:
 		return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("unknown boot mode: %s", requiredBootMode)
 	}

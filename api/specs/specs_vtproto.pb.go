@@ -103,7 +103,7 @@ func (m *MachineStatusSpec) CloneVT() *MachineStatusSpec {
 	r := new(MachineStatusSpec)
 	r.AgentAccessible = m.AgentAccessible
 	r.PowerState = m.PowerState
-	r.LastPxeBootMode = m.LastPxeBootMode
+	r.Initialized = m.Initialized
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -276,7 +276,7 @@ func (this *MachineStatusSpec) EqualVT(that *MachineStatusSpec) bool {
 	if this.PowerState != that.PowerState {
 		return false
 	}
-	if this.LastPxeBootMode != that.LastPxeBootMode {
+	if this.Initialized != that.Initialized {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -598,10 +598,15 @@ func (m *MachineStatusSpec) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.LastPxeBootMode != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.LastPxeBootMode))
+	if m.Initialized {
 		i--
-		dAtA[i] = 0x18
+		if m.Initialized {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x20
 	}
 	if m.PowerState != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PowerState))
@@ -862,8 +867,8 @@ func (m *MachineStatusSpec) SizeVT() (n int) {
 	if m.PowerState != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.PowerState))
 	}
-	if m.LastPxeBootMode != 0 {
-		n += 1 + protohelpers.SizeOfVarint(uint64(m.LastPxeBootMode))
+	if m.Initialized {
+		n += 2
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1491,11 +1496,11 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
-		case 3:
+		case 4:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LastPxeBootMode", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Initialized", wireType)
 			}
-			m.LastPxeBootMode = 0
+			var v int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -1505,11 +1510,12 @@ func (m *MachineStatusSpec) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.LastPxeBootMode |= BootMode(b&0x7F) << shift
+				v |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			m.Initialized = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])

@@ -11,8 +11,19 @@ import (
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+)
+
+// BootMode represents the boot mode of a machine.
+type BootMode string
+
+const (
+	// BootModeAgentPXE is the boot mode for agent PXE boot.
+	BootModeAgentPXE BootMode = "agent-pxe"
+	// BootModeTalosPXE is the boot mode for Talos PXE boot.
+	BootModeTalosPXE BootMode = "talos-pxe"
+	// BootModeTalosDisk is the boot mode for Talos disk boot.
+	BootModeTalosDisk BootMode = "talos-disk"
 )
 
 // IsInstalled returns true if the machine is installed.
@@ -42,7 +53,7 @@ func RequiresWipe(infraMachine *infra.Machine, wipeStatus *resources.WipeStatus)
 }
 
 // RequiredBootMode returns the required boot mode for the machine.
-func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.BMCConfiguration, wipeStatus *resources.WipeStatus, logger *zap.Logger) specs.BootMode {
+func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.BMCConfiguration, wipeStatus *resources.WipeStatus, logger *zap.Logger) BootMode {
 	installed := IsInstalled(infraMachine, wipeStatus)
 	requiresWipe := RequiresWipe(infraMachine, wipeStatus)
 	acceptanceStatus := omnispecs.InfraMachineConfigSpec_PENDING
@@ -61,17 +72,17 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 
 	bootIntoAgentMode := infraMachineTearingDown || acceptancePending || !allocated || requiresPowerMgmtConfig || requiresWipe
 
-	var requiredBootMode specs.BootMode
+	var requiredBootMode BootMode
 
 	switch {
 	case rejected:
-		requiredBootMode = specs.BootMode_BOOT_MODE_TALOS_DISK
+		requiredBootMode = BootModeTalosDisk
 	case bootIntoAgentMode:
-		requiredBootMode = specs.BootMode_BOOT_MODE_AGENT_PXE
+		requiredBootMode = BootModeAgentPXE
 	case installed:
-		requiredBootMode = specs.BootMode_BOOT_MODE_TALOS_DISK
+		requiredBootMode = BootModeTalosDisk
 	default:
-		requiredBootMode = specs.BootMode_BOOT_MODE_TALOS_PXE
+		requiredBootMode = BootModeTalosPXE
 	}
 
 	logger.With(
@@ -79,13 +90,13 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 		zap.Bool("requires_power_mgmt_config", requiresPowerMgmtConfig),
 		zap.Bool("installed", installed),
 		zap.Stringer("acceptance_status", acceptanceStatus),
-		zap.Stringer("required_boot_mode", requiredBootMode),
+		zap.String("required_boot_mode", string(requiredBootMode)),
 	).Debug("determined boot mode")
 
 	return requiredBootMode
 }
 
 // RequiresPXEBoot returns true if the machine requires to be PXE booted.
-func RequiresPXEBoot(requiredBootMode specs.BootMode) bool {
-	return requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_TALOS_PXE
+func RequiresPXEBoot(requiredBootMode BootMode) bool {
+	return requiredBootMode == BootModeAgentPXE || requiredBootMode == BootModeTalosPXE
 }

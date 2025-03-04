@@ -18,7 +18,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
@@ -100,17 +99,19 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 
 	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
 	requiresPXEBoot := machine.RequiresPXEBoot(requiredBootMode)
-	lastPXEBootMode := machineStatus.TypedSpec().Value.LastPxeBootMode
 
-	// The machine requires a reboot only if it is not in the desired mode, and either desired or the actual mode is agent mode.
-	// Switching from PXE booted Talos to booting from disk does not require a reboot by the provider, as Omni itself will do the switch.
-	requiresReboot := requiredBootMode != lastPXEBootMode && (lastPXEBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE || requiredBootMode == specs.BootMode_BOOT_MODE_AGENT_PXE)
+	// We decide if a reboot is required or not by checking if any of the following is true:
+	// 1. If the machine is required to be in agent mode and the agent is not accessible.
+	// 2. If the machine is required to be PXE booted Talos, but the agent is still accessible.
+	//
+	// If the machine, however, is required to be booted from the disk, we never issue a reboot here due to necessity, as it is Omni's responsibility.
+	requiresReboot := (requiredBootMode == machine.BootModeAgentPXE && !machineStatus.TypedSpec().Value.AgentAccessible) ||
+		(requiredBootMode == machine.BootModeTalosPXE && machineStatus.TypedSpec().Value.AgentAccessible)
 
 	logger = logger.With(
 		zap.Bool("requires_reboot", requiresReboot),
 		zap.Bool("requires_pxe_boot", requiresPXEBoot),
-		zap.Stringer("required_boot_mode", requiredBootMode),
-		zap.Stringer("last_pxe_boot_mode", lastPXEBootMode),
+		zap.String("required_boot_mode", string(requiredBootMode)),
 	)
 
 	if requiresReboot {
@@ -205,7 +206,7 @@ func (helper *rebootStatusControllerHelper) reboot(ctx context.Context,
 		return controller.NewRequeueInterval(helper.minRebootInterval - timeSinceLastPowerOn + time.Second)
 	}
 
-	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration)
+	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
 	if err != nil {
 		return err
 	}

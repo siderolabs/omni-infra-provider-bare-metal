@@ -64,7 +64,7 @@ type bmcClientFactoryMock struct {
 	bmcClient bmc.Client
 }
 
-func (b *bmcClientFactoryMock) GetClient(context.Context, *resources.BMCConfiguration) (bmc.Client, error) {
+func (b *bmcClientFactoryMock) GetClient(context.Context, *resources.BMCConfiguration, *zap.Logger) (bmc.Client, error) {
 	return b.bmcClient, nil
 }
 

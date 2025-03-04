@@ -37,7 +37,8 @@ message BMCConfigurationSpec {
 message MachineStatusSpec {
   bool agent_accessible = 1;
   PowerState power_state = 2;
-  BootMode last_pxe_boot_mode = 3;
+  reserved 3;
+  bool initialized = 4;
 }
 
 message WipeStatusSpec {
@@ -65,13 +66,6 @@ message RebootStatusSpec {
   //
   // It is used to track the last reboot time of the machine, and to enforce the MinRebootInterval.
   google.protobuf.Timestamp last_reboot_timestamp = 2;
-}
-
-enum BootMode {
-  BOOT_MODE_UNKNOWN = 0;
-  BOOT_MODE_AGENT_PXE = 1;
-  BOOT_MODE_TALOS_PXE = 2;
-  BOOT_MODE_TALOS_DISK = 3;
 }
 
 message TLSConfigSpec {

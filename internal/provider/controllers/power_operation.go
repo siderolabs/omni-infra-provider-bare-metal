@@ -116,7 +116,7 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		zap.Bool("requires_power_on", requiresPowerOn),
 	)
 
-	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration)
+	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
 	if err != nil {
 		return err
 	}
