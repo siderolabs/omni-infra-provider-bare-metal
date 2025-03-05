@@ -96,6 +96,7 @@ func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r contr
 	wipeStatus.TypedSpec().Value.InitialWipeDone = true
 	wipeStatus.TypedSpec().Value.LastWipeId = infraMachine.TypedSpec().Value.WipeId
 	wipeStatus.TypedSpec().Value.LastWipeInstallEventId = infraMachine.TypedSpec().Value.InstallEventId
+	wipeStatus.TypedSpec().Value.WipedNodeUniqueToken = infraMachine.TypedSpec().Value.NodeUniqueToken
 
 	logger.Info("wiped disks on the machine", zap.String("wipe_id", wipeStatus.TypedSpec().Value.LastWipeId),
 		zap.Bool("was_initial_wipe", wasInitialWipe), zap.Uint64("install_event_id", infraMachine.TypedSpec().Value.InstallEventId))

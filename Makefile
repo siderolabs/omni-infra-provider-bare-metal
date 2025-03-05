@@ -74,7 +74,7 @@ TOOLCHAIN ?= docker.io/golang:1.24-alpine
 # extra variables
 
 TEMP_REGISTRY ?= 127.0.0.1:5005
-OMNI_IMAGE ?= ghcr.io/siderolabs/omni:latest
+OMNI_IMAGE ?= ghcr.io/unix4ever/omni:v0.47.1-bm-test
 OMNI_INTEGRATION_TEST_IMAGE ?= ghcr.io/siderolabs/omni-integration-test:latest
 SKIP_CLEANUP ?= false
 

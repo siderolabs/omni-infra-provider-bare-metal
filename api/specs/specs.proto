@@ -57,6 +57,9 @@ message WipeStatusSpec {
   uint64 last_wipe_install_event_id = 2;
 
   bool initial_wipe_done = 3;
+
+  // WipedNodeUniqueToken contains the value of the node unique token used during the last node wipe.
+  string wiped_node_unique_token = 4;
 }
 
 message RebootStatusSpec {
