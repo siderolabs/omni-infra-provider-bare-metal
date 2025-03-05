@@ -54,7 +54,7 @@ func NewClientFactory(options ClientFactoryOptions) *ClientFactory {
 // GetClient returns a BMC client for the given bare metal machine.
 func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.BMCConfiguration, logger *zap.Logger) (Client, error) {
 	if config == nil {
-		return nil, fmt.Errorf("BMC config is nil")
+		return nil, fmt.Errorf("cannot get BMC client: config is nil")
 	}
 
 	spec := config.TypedSpec().Value

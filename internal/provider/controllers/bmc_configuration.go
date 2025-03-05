@@ -152,7 +152,7 @@ func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r
 func (helper *bmcConfigurationControllerHelper) storeUserProvidedBMCConfig(userConfig *infra.BMCConfig, bmcConfiguration *resources.BMCConfiguration, logger *zap.Logger) error {
 	config := userConfig.TypedSpec().Value.Config
 	if config == nil {
-		return fmt.Errorf("bmc config is nil")
+		return fmt.Errorf("user provided BMC config is nil")
 	}
 
 	logger.Info("initialize BMC config from user-provided config")

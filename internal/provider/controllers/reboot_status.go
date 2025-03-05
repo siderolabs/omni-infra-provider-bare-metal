@@ -91,6 +91,12 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 		return err
 	}
 
+	if bmcConfiguration == nil {
+		logger.Debug("bmc configuration not found, skip")
+
+		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("bmc configuration not found")
+	}
+
 	if machineStatus == nil {
 		logger.Debug("machine status not found, skip")
 
@@ -157,7 +163,7 @@ func (helper *rebootStatusControllerHelper) finalizerRemoval(ctx context.Context
 	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
 	if err != nil {
 		if state.IsNotFoundError(err) {
-			logger.Error("bmc configuration does not exist, probably was removed too early - we cannot reboot")
+			logger.Info("bmc configuration does not exist, skip reboot")
 
 			return nil
 		}
