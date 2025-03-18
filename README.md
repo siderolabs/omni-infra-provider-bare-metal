@@ -1,6 +1,7 @@
 # omni-infra-provider-bare-metal
 
 This repo contains the code for the Omni Bare Metal Infra Provider.
+If you would like to deploy the provider in your environment please [see the official documentation](https://omni.siderolabs.com/tutorials/setting-up-the-bare-metal-infrastructure-provider).
 
 ## Requirements
 
