@@ -167,11 +167,11 @@ func validateDHCP(m *dhcpv4.DHCPv4) (fwtype Firmware, err error) {
 			fwtype = FirmwareX86PC
 		case iana.EFI_IA32, iana.EFI_X86_64, iana.EFI_BC:
 			fwtype = FirmwareX86EFI
-		case iana.EFI_ARM64:
+		case iana.EFI_ARM64, iana.UBOOT_ARM64:
 			fwtype = FirmwareARMEFI
 		case iana.EFI_X86_HTTP, iana.EFI_X86_64_HTTP:
 			fwtype = FirmwareX86HTTP
-		case iana.EFI_ARM64_HTTP:
+		case iana.EFI_ARM64_HTTP, iana.UBOOT_ARM64_HTTP:
 			fwtype = FirmwareARMHTTP
 		}
 	}
