@@ -2,7 +2,7 @@
 
 set -eou pipefail
 
-TALOS_VERSION=1.9.4
+TALOS_VERSION=1.9.6
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
@@ -12,8 +12,8 @@ echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"
 
-TEST_LOGS_DIR=/tmp/test-logs
-mkdir -p $TEST_LOGS_DIR
+TEST_OUTPUTS_DIR=/tmp/integration-test
+mkdir -p $TEST_OUTPUTS_DIR
 
 docker pull "$OMNI_IMAGE"
 docker pull "$OMNI_INTEGRATION_TEST_IMAGE"
@@ -51,11 +51,11 @@ function cleanup() {
   docker stop omni provider vault-dev || true
 
   echo "Gather container logs"
-  docker logs omni &>$TEST_LOGS_DIR/omni.log
-  docker logs provider &>$TEST_LOGS_DIR/provider.log
+  docker logs omni &>$TEST_OUTPUTS_DIR/omni.log
+  docker logs provider &>$TEST_OUTPUTS_DIR/provider.log
 
   echo "Gather machine logs"
-  machine_logs_dir=$TEST_LOGS_DIR/machines/
+  machine_logs_dir=$TEST_OUTPUTS_DIR/machines/
   mkdir -p $machine_logs_dir
   find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} $machine_logs_dir \;
 
@@ -79,7 +79,7 @@ pkill -f talosctl || true
 
 echo "Bring up some QEMU machines..."
 
-${QEMU_UP} 2>&1 | tee $TEST_LOGS_DIR/qemu-up.log
+${QEMU_UP} 2>&1 | tee $TEST_OUTPUTS_DIR/qemu-up.log
 
 echo "Wait for IP address $GATEWAY_IP to appear..."
 timeout 60s bash -c "until ip a | grep -q '${GATEWAY_IP}'; do echo 'Waiting for IP address...'; sleep 5; done"
@@ -178,10 +178,9 @@ echo "Download omnictl..."
 curl -k -o ./omnictl "${BASE_URL}/omnictl/omnictl-linux-amd64"
 chmod +x ./omnictl
 
-echo "Create InfraProvider service account..."
+echo "Create infra provider..."
 
-PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify serviceaccount create --use-user-role=false \
-  --role=InfraProvider infra-provider:bare-metal | grep 'OMNI_SERVICE_ACCOUNT_KEY=' | cut -d'=' -f2-)
+PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify infraprovider create bare-metal | grep 'OMNI_SERVICE_ACCOUNT_KEY=' | cut -d'=' -f2-)
 
 echo "Launch infra provider in the background..."
 

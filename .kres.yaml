@@ -125,11 +125,11 @@ spec:
       extraPaths:
         - "!_out/omni/"
       additional:
-        - name: logs
+        - name: integration-test
           always: true
           continueOnError: true
           paths:
-            - "/tmp/test-logs"
+            - "/tmp/integration-test"
 ---
 kind: common.SOPS
 spec:
