@@ -100,3 +100,12 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 func RequiresPXEBoot(requiredBootMode BootMode) bool {
 	return requiredBootMode == BootModeAgentPXE || requiredBootMode == BootModeTalosPXE
 }
+
+// RequiresPowerOn returns true if the machine requires to be powered on.
+func RequiresPowerOn(infraMachine *infra.Machine, wipeStatus *resources.WipeStatus) bool {
+	allocated := infraMachine.TypedSpec().Value.ClusterTalosVersion != ""
+	installed := IsInstalled(infraMachine, wipeStatus)
+	requiresWipe := RequiresWipe(infraMachine, wipeStatus)
+
+	return allocated || installed || requiresWipe
+}

@@ -6,6 +6,7 @@ package controllers_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/siderolabs/gen/containers"
 	"github.com/siderolabs/gen/pair"
 	agentpb "github.com/siderolabs/talos-metal-agent/api/agent"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -70,6 +72,7 @@ func (b *bmcClientFactoryMock) GetClient(context.Context, *resources.BMCConfigur
 
 type bmcClientMock struct {
 	powerOnCh        chan<- struct{}
+	rebootCh         chan<- struct{}
 	setPXEBootOnceCh chan<- pxe.BootMode
 	poweredOn        bool
 }
@@ -78,7 +81,13 @@ func (b *bmcClientMock) Close() error {
 	return nil
 }
 
-func (b *bmcClientMock) Reboot(context.Context) error {
+func (b *bmcClientMock) Reboot(ctx context.Context) error {
+	select {
+	case b.rebootCh <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
 	return nil
 }
 
@@ -141,4 +150,51 @@ func (a *agentClientMock) AllConnectedMachines() map[string]struct{} {
 
 func (a *agentClientMock) IsAccessible(context.Context, string) (bool, error) {
 	return false, nil
+}
+
+func requireChReceive[T any](ctx context.Context, t *testing.T, ch chan T) T {
+	select {
+	case val := <-ch:
+		return val
+	case <-ctx.Done():
+		require.Fail(t, "timeout waiting for channel receive")
+
+		return *new(T) // unreachable
+	}
+}
+
+type reconcileAsserter struct {
+	t             *testing.T
+	numReconciles atomic.Uint32
+}
+
+func (r *reconcileAsserter) incrementReconcile() {
+	r.numReconciles.Add(1)
+}
+
+func (r *reconcileAsserter) requireNotZero(ctx context.Context) uint32 {
+	var numReconciles uint32
+
+	require.EventuallyWithT(r.t, func(c *assert.CollectT) {
+		require.NoError(c, ctx.Err())
+
+		numReconciles = r.numReconciles.Load()
+
+		assert.NotZero(c, numReconciles, "expected at least one reconcile to be called")
+	}, 5*time.Second, 100*time.Millisecond, "expected at least one reconcile to be called")
+
+	r.t.Logf("numReconciles: %d", numReconciles)
+
+	return numReconciles
+}
+
+func (r *reconcileAsserter) requireReconcile(ctx context.Context, before uint32) {
+	require.EventuallyWithT(r.t, func(c *assert.CollectT) {
+		require.NoError(c, ctx.Err())
+
+		numReconciles := r.numReconciles.Load()
+		if assert.Greater(c, numReconciles, before, "expected at least one reconcile to be called") {
+			r.t.Logf("numReconciles = %d", numReconciles)
+		}
+	}, 5*time.Second, 100*time.Millisecond, "expected at least one reconcile to be called")
 }

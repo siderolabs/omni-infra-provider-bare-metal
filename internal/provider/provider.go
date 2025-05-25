@@ -208,7 +208,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		controllers.NewInfraMachineStatusController(parsedMachineLabels),
 		controllers.NewBMCConfigurationController(agentClient, bmcAPIAddressReader),
 		controllers.NewPowerOperationController(time.Now, bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
-		controllers.NewRebootStatusController(bmcClientFactory, p.options.MinRebootInterval, pxeBootMode),
+		controllers.NewRebootStatusController(bmcClientFactory, p.options.MinRebootInterval, pxeBootMode, controllers.RebootStatusControllerOptions{}),
 		controllers.NewWipeStatusController(agentClient),
 	} {
 		if err = cosiRuntime.RegisterQController(qController); err != nil {

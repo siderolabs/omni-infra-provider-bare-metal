@@ -25,11 +25,16 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
+// RebootStatusControllerOptions defines options for the RebootStatusController.
+type RebootStatusControllerOptions struct {
+	PostTransformFunc func()
+}
+
 // RebootStatusController manages machine power management.
 type RebootStatusController = qtransform.QController[*infra.Machine, *resources.RebootStatus]
 
 // NewRebootStatusController creates a new RebootStatusController.
-func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode) *RebootStatusController {
+func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode, options RebootStatusControllerOptions) *RebootStatusController {
 	controllerName := meta.ProviderID.String() + ".RebootStatusController"
 
 	helper := &rebootStatusControllerHelper{
@@ -37,6 +42,7 @@ func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInter
 		minRebootInterval: minRebootInterval,
 		pxeBootMode:       pxeBootMode,
 		controllerName:    controllerName,
+		options:           options,
 	}
 
 	return qtransform.NewQController(
@@ -61,12 +67,17 @@ func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInter
 
 type rebootStatusControllerHelper struct {
 	bmcClientFactory  BMCClientFactory
+	options           RebootStatusControllerOptions
 	pxeBootMode       pxe.BootMode
 	controllerName    string
 	minRebootInterval time.Duration
 }
 
 func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger, infraMachine *infra.Machine, rebootStatus *resources.RebootStatus) error {
+	if helper.options.PostTransformFunc != nil {
+		defer helper.options.PostTransformFunc()
+	}
+
 	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
 	if err != nil {
 		return err
@@ -105,19 +116,27 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 
 	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
 	requiresPXEBoot := machine.RequiresPXEBoot(requiredBootMode)
+	requiresPowerOn := machine.RequiresPowerOn(infraMachine, wipeStatus)
+	agentAccessible := machineStatus.TypedSpec().Value.AgentAccessible
 
 	// We decide if a reboot is required or not by checking if any of the following is true:
 	// 1. If the machine is required to be in agent mode and the agent is not accessible.
 	// 2. If the machine is required to be PXE booted Talos, but the agent is still accessible.
 	//
 	// If the machine, however, is required to be booted from the disk, we never issue a reboot here due to necessity, as it is Omni's responsibility.
-	requiresReboot := (requiredBootMode == machine.BootModeAgentPXE && !machineStatus.TypedSpec().Value.AgentAccessible) ||
-		(requiredBootMode == machine.BootModeTalosPXE && machineStatus.TypedSpec().Value.AgentAccessible)
+	modeMismatch := (requiredBootMode == machine.BootModeAgentPXE && !agentAccessible) ||
+		(requiredBootMode == machine.BootModeTalosPXE && agentAccessible)
+
+	// if the machine does not need to be powered on, we should not reboot it,so we avoid reboot loops.
+	requiresReboot := requiresPowerOn && modeMismatch
 
 	logger = logger.With(
 		zap.Bool("requires_reboot", requiresReboot),
 		zap.Bool("requires_pxe_boot", requiresPXEBoot),
 		zap.String("required_boot_mode", string(requiredBootMode)),
+		zap.Bool("required_power_on", requiresPowerOn),
+		zap.Bool("agent_accessible", agentAccessible),
+		zap.Bool("mode_mismatch", modeMismatch),
 	)
 
 	if requiresReboot {

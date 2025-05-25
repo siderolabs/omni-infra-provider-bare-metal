@@ -92,13 +92,7 @@ func TestBMCConfiguration(t *testing.T) {
 
 			rtestutils.Destroy[*infra.BMCConfig](ctx, t, st, []string{bmcConfig.Metadata().ID()})
 
-			var setPowerMgmtRequest pair.Pair[string, *agentpb.SetPowerManagementRequest]
-
-			select {
-			case <-ctx.Done():
-				require.Fail(t, "timeout waiting for SetPowerManagement")
-			case setPowerMgmtRequest = <-setPowerMgmtRequestCh:
-			}
+			setPowerMgmtRequest := requireChReceive(ctx, t, setPowerMgmtRequestCh)
 
 			assert.Equal(t, "test-machine", setPowerMgmtRequest.F1)
 			assert.Equal(t, controllers.IPMIUsername, setPowerMgmtRequest.F2.Ipmi.Username)

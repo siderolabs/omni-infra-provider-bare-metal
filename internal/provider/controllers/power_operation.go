@@ -104,15 +104,12 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("machine has no power management configuration")
 	}
 
-	installed := machine.IsInstalled(infraMachine, wipeStatus)
-	allocated := infraMachine.TypedSpec().Value.ClusterTalosVersion != ""
-	requiresWipe := machine.RequiresWipe(infraMachine, wipeStatus)
-	requiresPowerOn := allocated || installed || requiresWipe
+	requiresPowerOn := machine.RequiresPowerOn(infraMachine, wipeStatus)
 
 	logger.Info("power operation",
-		zap.Bool("installed", installed),
-		zap.Bool("allocated", allocated),
-		zap.Bool("requires_wipe", requiresWipe),
+		zap.Bool("installed", machine.IsInstalled(infraMachine, wipeStatus)),
+		zap.Bool("allocated", infraMachine.TypedSpec().Value.ClusterTalosVersion != ""),
+		zap.Bool("requires_wipe", machine.RequiresWipe(infraMachine, wipeStatus)),
 		zap.Bool("requires_power_on", requiresPowerOn),
 	)
 

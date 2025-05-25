@@ -60,18 +60,12 @@ func TestPowerOn(t *testing.T) {
 
 			require.NoError(t, st.Create(ctx, infraMachine))
 
-			select { // expect a SetPXEBootOnce call
-			case mode := <-setPXEBootOnceCh:
-				require.Equal(t, pxeBootMode, mode)
-			case <-ctx.Done():
-				require.Fail(t, "timeout waiting for SetPXEBootOnce")
-			}
+			// expect a SetPXEBootOnce call
+			mode := requireChReceive(ctx, t, setPXEBootOnceCh)
+			require.Equal(t, pxeBootMode, mode)
 
-			select { // expect a PowerOn call
-			case <-powerOnCh:
-			case <-ctx.Done():
-				require.Fail(t, "timeout waiting for PowerOn")
-			}
+			// expect a PowerOn call
+			requireChReceive(ctx, t, powerOnCh)
 
 			rtestutils.AssertResource(ctx, t, st, infraMachine.Metadata().ID(), func(res *resources.PowerOperation, assertion *assert.Assertions) {
 				assertion.Equal(specs.PowerState_POWER_STATE_ON, res.TypedSpec().Value.LastPowerOperation)
