@@ -6,19 +6,19 @@
 
 ARG TOOLCHAIN
 
-FROM ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.3-agent-v0.1.2-1-g5cad8b8 AS assets
+FROM ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.6-agent-v0.1.3 AS assets
 
 FROM ghcr.io/siderolabs/ca-certificates:v1.10.0 AS image-ca-certificates
 
 FROM ghcr.io/siderolabs/fhs:v1.10.0 AS image-fhs
 
-FROM ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe
+FROM ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe
 
-FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-amd64
+FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe-linux-amd64
 
-FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.10.0-alpha.0-37-g359807b AS ipxe-linux-arm64
+FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe-linux-arm64
 
-FROM ghcr.io/siderolabs/liblzma:v1.10.0-alpha.0-37-g359807b AS liblzma
+FROM ghcr.io/siderolabs/liblzma:v1.11.0-alpha.0-25-g8c4603e AS liblzma
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.2.13-alpine AS lint-markdown
@@ -28,7 +28,7 @@ COPY .markdownlint.json .
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
 
-FROM ghcr.io/siderolabs/musl:v1.10.0-alpha.0-37-g359807b AS musl
+FROM ghcr.io/siderolabs/musl:v1.11.0-alpha.0-25-g8c4603e AS musl
 
 # collects proto specs
 FROM scratch AS proto-specs
