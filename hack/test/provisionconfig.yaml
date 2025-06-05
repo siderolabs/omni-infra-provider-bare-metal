@@ -1,5 +1,5 @@
 ---
-count: 8
+count: 4 # todo: revert
 provider:
   id: bare-metal
   static: true

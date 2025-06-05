@@ -65,7 +65,7 @@ func DefaultOptions() Options {
 		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 		APIPort:                50042,
-		MinRebootInterval:      5 * time.Minute,
+		MinRebootInterval:      15 * time.Minute,
 		Redfish:                redfish.DefaultOptions(),
 		TLS: TLSOptions{
 			Enabled:         false,

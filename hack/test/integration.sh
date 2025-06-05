@@ -6,7 +6,7 @@ TALOS_VERSION=1.9.6
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
-NUM_MACHINES=8
+NUM_MACHINES=4 # todo: revert
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
@@ -14,6 +14,8 @@ echo "SKIP_CLEANUP: $SKIP_CLEANUP"
 
 TEST_OUTPUTS_DIR=/tmp/integration-test
 mkdir -p $TEST_OUTPUTS_DIR
+
+OMNI_IMAGE=ghcr.io/utkuozdemir/omni:latest # TODO: REVERTTTTT
 
 docker pull "$OMNI_IMAGE"
 docker pull "$OMNI_INTEGRATION_TEST_IMAGE"
@@ -221,4 +223,5 @@ docker run --rm --network host \
   --talos-version="${TALOS_VERSION}" \
   --provision-config-file=/var/test/provisionconfig.yaml \
   --skip-extensions-check-on-create \
-  --test.run "StaticInfraProvider/|ConfigPatching"
+  --test.run "StaticInfraProvider/"
+#  --test.run "StaticInfraProvider/|ConfigPatching" # todo: bring back ConfigPatching

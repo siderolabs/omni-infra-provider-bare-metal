@@ -81,7 +81,7 @@ func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.B
 		return &loggingClient{client: redfishClient, logger: logger}, nil
 	}
 
-	ipmiClient, err := ipmi.NewClient(spec.Ipmi)
+	ipmiClient, err := ipmi.NewClient(ctx, spec.Ipmi)
 	if err != nil {
 		return nil, err
 	}
