@@ -8,11 +8,11 @@ If you would like to deploy the provider in your environment please [see the off
 To run the provider, you need:
 
 - A running Omni instance
-- An Omni infra provider service account matching the ID you'll use with this provider (`bare-metal` by default).
+- An infra provider created in Omni, matching the ID you'll use with this provider (`bare-metal` by default).
   To create it, run:
 
   ```bash
-  omnictl serviceaccount create --use-user-role=false --role=InfraProvider infra-provider:bare-metal
+  omnictl infraprovider create bare-metal
   ```
 
   Replace `bare-metal` with your desired provider ID.
@@ -59,7 +59,7 @@ For local development using Talos running on QEMU, follow these steps:
    docker pull 127.0.0.1:5005/siderolabs/omni-infra-provider-bare-metal:local-dev
    ```
 
-6. Start the provider with your Omni API address and service account credentials:
+6. Start the provider with your Omni API address and the infra provider service account credentials:
 
    ```bash
    export OMNI_ENDPOINT=<your-omni-api-address>

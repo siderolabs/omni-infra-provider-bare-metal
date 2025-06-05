@@ -25,7 +25,7 @@ type Client struct {
 
 // Close implements the power.Client interface.
 func (c *Client) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(ipmi.DefaultExchangeTimeoutSec)*time.Second)
 	defer cancel()
 
 	return c.ipmiClient.Close(ctx)
@@ -78,12 +78,20 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 	return resp.PowerIsOn, nil
 }
 
-// NewClient creates a new IPMI client.
-func NewClient(info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
+// NewClient creates a new IPMI client and connects to the BMC using the provided configuration.
+//
+// It needs to be closed after use to release resources.
+func NewClient(ctx context.Context, info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
 	client, err := ipmi.NewClient(info.Address, int(info.Port), ipmiUsername, info.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create IPMI client: %w", err)
 	}
 
-	return &Client{ipmiClient: client}, nil
+	if err = client.Connect(ctx); err != nil {
+		return nil, fmt.Errorf("failed to connect IPMI client: %w", err)
+	}
+
+	return &Client{
+		ipmiClient: client,
+	}, nil
 }

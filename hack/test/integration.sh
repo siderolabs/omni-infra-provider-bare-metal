@@ -154,8 +154,8 @@ docker run -d --network host \
   --embedded-discovery-service-snapshots-enabled=false \
   --create-initial-service-account \
   --initial-service-account-key-path=/artifacts/key \
-  --join-tokens-mode=strict \
   "${REGISTRY_MIRROR_FLAGS[@]}"
+#  --join-tokens-mode=strict \ # todo: bring back
 
 docker logs -f omni &
 
