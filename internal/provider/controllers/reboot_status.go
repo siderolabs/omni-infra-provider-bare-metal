@@ -140,8 +140,6 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 	)
 
 	if requiresReboot {
-		logger.Info("reboot machine to switch boot mode")
-
 		return helper.reboot(ctx, infraMachine, bmcConfiguration, powerOperation, requiresPXEBoot, rebootStatus, logger)
 	}
 
@@ -230,6 +228,8 @@ func (helper *rebootStatusControllerHelper) reboot(ctx context.Context,
 
 		return controller.NewRequeueInterval(helper.minRebootInterval - timeSinceLastPowerOn + time.Second)
 	}
+
+	logger.Info("reboot machine to switch boot mode")
 
 	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
 	if err != nil {
