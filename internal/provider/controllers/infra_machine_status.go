@@ -101,6 +101,14 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 		infraMachineStatus.Metadata().Labels().Set(k, v)
 	}
 
+	for _, k := range []string{omni.LabelCluster, omni.LabelMachineSet, omni.LabelControlPlaneRole, omni.LabelWorkerRole} {
+		if val, ok := infraMachine.Metadata().Labels().Get(k); ok {
+			infraMachineStatus.Metadata().Labels().Set(k, val)
+		} else {
+			infraMachineStatus.Metadata().Labels().Delete(k)
+		}
+	}
+
 	if machineStatus != nil {
 		switch machineStatus.TypedSpec().Value.PowerState {
 		case specs.PowerState_POWER_STATE_UNKNOWN:

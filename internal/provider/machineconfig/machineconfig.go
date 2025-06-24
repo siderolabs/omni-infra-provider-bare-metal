@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
@@ -28,15 +29,16 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
-const (
-	siderolinkAddress       = "fdae:41e4:649b:9303::1"
-	siderolinkEventSinkPort = "8090"
-	siderolinkLogPort       = "8092"
-)
+const siderolinkAddress = "fdae:41e4:649b:9303::1"
 
 // Build builds the machine configuration for the bare-metal provider.
 func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, error) {
-	siderolinkAPIURL, err := getSiderolinkAPIURL(ctx, r)
+	connectionParams, err := safe.ReaderGetByID[*siderolinkres.ConnectionParams](ctx, r, siderolinkres.ConfigID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection params: %w", err)
+	}
+
+	siderolinkAPIURL, err := getSiderolinkAPIURL(connectionParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get siderolink API URL: %w", err)
 	}
@@ -52,9 +54,9 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, 
 	}
 
 	eventSinkConfig := runtime.NewEventSinkV1Alpha1()
-	eventSinkConfig.Endpoint = net.JoinHostPort(siderolinkAddress, siderolinkEventSinkPort)
+	eventSinkConfig.Endpoint = net.JoinHostPort(siderolinkAddress, strconv.Itoa(int(connectionParams.TypedSpec().Value.EventsPort)))
 
-	kmsgLogURL, err := url.Parse("tcp://" + net.JoinHostPort(siderolinkAddress, siderolinkLogPort))
+	kmsgLogURL, err := url.Parse("tcp://" + net.JoinHostPort(siderolinkAddress, strconv.Itoa(int(connectionParams.TypedSpec().Value.LogsPort))))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse kmsg log URL: %w", err)
 	}
@@ -87,12 +89,7 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, 
 	return configContainer.EncodeBytes(encoder.WithComments(encoder.CommentsDisabled))
 }
 
-func getSiderolinkAPIURL(ctx context.Context, r controller.Reader) (string, error) {
-	connectionParams, err := safe.ReaderGetByID[*siderolinkres.ConnectionParams](ctx, r, siderolinkres.ConfigID)
-	if err != nil {
-		return "", fmt.Errorf("failed to get connection params: %w", err)
-	}
-
+func getSiderolinkAPIURL(connectionParams *siderolinkres.ConnectionParams) (string, error) {
 	token, err := jointoken.NewWithExtraData(connectionParams.TypedSpec().Value.JoinToken, map[string]string{
 		omni.LabelInfraProviderID: providermeta.ProviderID.String(), // go to omni, don't do the check of MachineReqStatus
 	})

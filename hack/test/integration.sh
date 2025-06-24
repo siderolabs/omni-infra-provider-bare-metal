@@ -154,8 +154,8 @@ docker run -d --network host \
   --embedded-discovery-service-snapshots-enabled=false \
   --create-initial-service-account \
   --initial-service-account-key-path=/artifacts/key \
+  --join-tokens-mode=strict \
   "${REGISTRY_MIRROR_FLAGS[@]}"
-#  --join-tokens-mode=strict \ # todo: bring back
 
 docker logs -f omni &
 
@@ -214,11 +214,14 @@ docker run --rm --network host \
   --name omni-integration-test \
   -v "$(pwd)/hack/certs:/etc/ssl/certs" \
   -v "$(pwd)/hack/test:/var/test" \
+  -v "$TEST_OUTPUTS_DIR:$TEST_OUTPUTS_DIR" \
   -e SSL_CERT_DIR=/etc/ssl/certs \
   -e OMNI_SERVICE_ACCOUNT_KEY="$ADMIN_SERVICE_ACCOUNT_KEY" \
   "$OMNI_INTEGRATION_TEST_IMAGE" \
-  --endpoint=${BASE_URL} \
-  --talos-version="${TALOS_VERSION}" \
-  --provision-config-file=/var/test/provisionconfig.yaml \
-  --skip-extensions-check-on-create \
-  --test.run "StaticInfraProvider/|ConfigPatching"
+  --omni.endpoint=${BASE_URL} \
+  --omni.talos-version="${TALOS_VERSION}" \
+  --omni.provision-config-file=/var/test/provisionconfig.yaml \
+  --omni.skip-extensions-check-on-create \
+  --test.failfast \
+  --test.v \
+  --test.run "TestIntegration/Suites/(StaticInfraProvider|ConfigPatching)$"
