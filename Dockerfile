@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.15.1-labs
+# syntax = docker/dockerfile-upstream:1.16.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-05-23T10:17:37Z by kres 9f64b0d.
+# Generated on 2025-06-25T07:26:01Z by kres 5128bc1.
 
 ARG TOOLCHAIN
 
@@ -21,7 +21,7 @@ FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e 
 FROM ghcr.io/siderolabs/liblzma:v1.11.0-alpha.0-25-g8c4603e AS liblzma
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.2.13-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.15-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .

@@ -76,26 +76,42 @@ func processConfigFile(configPath, machineID string, logger *zap.Logger) (addr s
 		return "", nil
 	}
 
-	if len(conf.GatewayAddrs) == 0 {
+	gatewayAddrs := conf.GatewayAddrs
+	if len(conf.Network.GatewayAddrs) > 0 { // if the config is in the new format in the Talos machinery, use that
+		gatewayAddrs = conf.Network.GatewayAddrs
+	}
+
+	if len(gatewayAddrs) == 0 {
 		return "", fmt.Errorf("no gateway address found in matching machine launch config: %s", configPath)
 	}
 
-	gatewayAddr := conf.GatewayAddrs[0].String()
+	gatewayAddr := gatewayAddrs[0].String()
 
-	if len(conf.GatewayAddrs) > 1 {
+	if len(gatewayAddrs) > 1 {
 		logger.Warn("multiple gateway addresses found in machine launch config, using the first one",
 			zap.String("gateway_addr", gatewayAddr),
 			zap.String("file", configPath))
 	}
 
-	addr = net.JoinHostPort(gatewayAddr, strconv.Itoa(conf.APIPort))
+	apiPort := conf.APIPort
+	if conf.APIBindAddress != nil { // if the config is in the new format in the Talos machinery, use that
+		apiPort = conf.APIBindAddress.Port
+	}
+
+	if apiPort == 0 {
+		return "", fmt.Errorf("api port is not found in the machine launch config: %s", configPath)
+	}
+
+	addr = net.JoinHostPort(gatewayAddr, strconv.Itoa(apiPort))
 
 	return addr, nil
 }
 
 // launchConfig is the JSON structure of the machine launch config, containing only the fields needed by this provisioner.
 type launchConfig struct {
-	NodeUUID     string
-	GatewayAddrs []netip.Addr
-	APIPort      int
+	APIBindAddress *net.TCPAddr
+	NodeUUID       string
+	GatewayAddrs   []netip.Addr
+	Network        struct{ GatewayAddrs []netip.Addr }
+	APIPort        int
 }

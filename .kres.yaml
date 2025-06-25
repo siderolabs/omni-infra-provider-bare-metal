@@ -19,10 +19,10 @@ spec:
     enabled: true
     stages:
       - name: ipxe-linux-amd64
-        from: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e
+        from: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-37-gfadf1e2
         platform: linux/amd64
       - name: ipxe-linux-arm64
-        from: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e
+        from: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-37-gfadf1e2
         platform: linux/arm64
 ---
 kind: auto.CustomSteps
@@ -40,15 +40,15 @@ spec:
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
   copyFrom:
-    - stage: ghcr.io/siderolabs/musl:v1.11.0-alpha.0-25-g8c4603e # required by zbin
+    - stage: ghcr.io/siderolabs/musl:v1.11.0-alpha.0-37-gfadf1e2 # required by zbin
       source: /
       destination: /
       name: musl
-    - stage: ghcr.io/siderolabs/liblzma:v1.11.0-alpha.0-25-g8c4603e # required by zbin
+    - stage: ghcr.io/siderolabs/liblzma:v1.11.0-alpha.0-37-gfadf1e2 # required by zbin
       source: /
       destination: /
       name: liblzma
-    - stage: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e
+    - stage: ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-37-gfadf1e2
       source: /usr/libexec/zbin
       destination: /usr/bin/zbin
       name: ipxe

@@ -2,6 +2,7 @@
 
 set -eou pipefail
 
+TALOSCTL_VERSION=1.11.0-alpha.1 # needs to match the Talos machinery version in go.mod
 TALOS_VERSION=1.9.6
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
@@ -26,11 +27,11 @@ PROVIDER_IMAGE="$TEMP_REGISTRY/siderolabs/omni-infra-provider-bare-metal:test"
 
 docker pull "$PROVIDER_IMAGE"
 
-echo "Download talosctl..."
+echo "Download talosctl v${TALOSCTL_VERSION}..."
 
 mkdir -p ${ARTIFACTS}
 
-[ -f ${ARTIFACTS}/talosctl ] || (crane export ghcr.io/siderolabs/talosctl:v${TALOS_VERSION} | tar x -C ${ARTIFACTS})
+[ -f ${ARTIFACTS}/talosctl ] || (crane export ghcr.io/siderolabs/talosctl:v${TALOSCTL_VERSION} | tar x -C ${ARTIFACTS})
 
 TALOSCTL=$(realpath "${ARTIFACTS}/talosctl")
 QEMU_UP="${ARTIFACTS}/qemu-up-linux-amd64 --talosctl-path=${TALOSCTL} --cidr $SUBNET_CIDR --num-machines=$NUM_MACHINES"
