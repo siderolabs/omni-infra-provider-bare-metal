@@ -2,12 +2,13 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.11.0-alpha.1 # needs to match the Talos machinery version in go.mod
-TALOS_VERSION=1.9.6
+TALOSCTL_VERSION=1.11.0-beta.0 # needs to match the Talos machinery version in go.mod
+TALOS_VERSION=1.10.5
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
 NUM_MACHINES=8
+USE_LOCAL_BOOT_ASSETS=false
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
@@ -195,7 +196,7 @@ docker run -d --network host \
   "$PROVIDER_IMAGE" \
   --insecure-skip-tls-verify \
   --api-advertise-address="$GATEWAY_IP" \
-  --use-local-boot-assets \
+  --use-local-boot-assets=$USE_LOCAL_BOOT_ASSETS \
   --agent-test-mode \
   --api-power-mgmt-state-dir=/api-power-mgmt-state \
   --ipmi-pxe-boot-mode=bios \

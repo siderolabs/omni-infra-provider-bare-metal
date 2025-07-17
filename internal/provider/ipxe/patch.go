@@ -195,7 +195,6 @@ func compressKPXE(binFile, infoFile, outFile string, logger *zap.Logger) error {
 	err = cmd.Run()
 	if err != nil {
 		var exitErr *exec.ExitError
-
 		if errors.As(err, &exitErr) {
 			return fmt.Errorf("zbin failed with exit code %d, stderr: %v", exitErr.ExitCode(), string(exitErr.Stderr))
 		}

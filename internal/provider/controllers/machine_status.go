@@ -315,7 +315,6 @@ func (ctrl *MachineStatusController) agentConnected(ctx context.Context, connect
 	accessible, err := ctrl.agentClient.IsAccessible(ctx, machineID)
 	if err != nil {
 		errCode := grpcstatus.Code(err)
-
 		if errCode == codes.Canceled || errCode == codes.DeadlineExceeded || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return false, nil
 		}

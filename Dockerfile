@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.16.0-labs
+# syntax = docker/dockerfile-upstream:1.17.1-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-06-25T07:26:01Z by kres 5128bc1.
+# Generated on 2025-07-17T21:25:02Z by kres b869533.
 
 ARG TOOLCHAIN
 
@@ -12,23 +12,23 @@ FROM ghcr.io/siderolabs/ca-certificates:v1.10.0 AS image-ca-certificates
 
 FROM ghcr.io/siderolabs/fhs:v1.10.0 AS image-fhs
 
-FROM ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe
+FROM ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe
 
-FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe-linux-amd64
+FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe-linux-amd64
 
-FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0-alpha.0-25-g8c4603e AS ipxe-linux-arm64
+FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe-linux-arm64
 
-FROM ghcr.io/siderolabs/liblzma:v1.11.0-alpha.0-25-g8c4603e AS liblzma
+FROM ghcr.io/siderolabs/liblzma:v1.11.0 AS liblzma
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.2.15-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.18-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
 
-FROM ghcr.io/siderolabs/musl:v1.11.0-alpha.0-25-g8c4603e AS musl
+FROM ghcr.io/siderolabs/musl:v1.11.0 AS musl
 
 # collects proto specs
 FROM scratch AS proto-specs
@@ -127,13 +127,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=omni-infra-provider-bare-
 FROM base AS unit-tests-race
 WORKDIR /src
 ARG TESTPKGS
-RUN --mount=type=cache,target=/root/.cache/go-build,id=omni-infra-provider-bare-metal/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=omni-infra-provider-bare-metal/go/pkg --mount=type=cache,target=/tmp,id=omni-infra-provider-bare-metal/tmp CGO_ENABLED=1 go test -v -race -count 1 ${TESTPKGS}
+RUN --mount=type=cache,target=/root/.cache/go-build,id=omni-infra-provider-bare-metal/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=omni-infra-provider-bare-metal/go/pkg --mount=type=cache,target=/tmp,id=omni-infra-provider-bare-metal/tmp CGO_ENABLED=1 go test -race ${TESTPKGS}
 
 # runs unit-tests
 FROM base AS unit-tests-run
 WORKDIR /src
 ARG TESTPKGS
-RUN --mount=type=cache,target=/root/.cache/go-build,id=omni-infra-provider-bare-metal/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=omni-infra-provider-bare-metal/go/pkg --mount=type=cache,target=/tmp,id=omni-infra-provider-bare-metal/tmp go test -v -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} -count 1 ${TESTPKGS}
+RUN --mount=type=cache,target=/root/.cache/go-build,id=omni-infra-provider-bare-metal/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=omni-infra-provider-bare-metal/go/pkg --mount=type=cache,target=/tmp,id=omni-infra-provider-bare-metal/tmp go test -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} ${TESTPKGS}
 
 FROM embed-generate AS embed-abbrev-generate
 WORKDIR /src

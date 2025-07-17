@@ -1,14 +1,14 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-11-26T10:24:08Z by kres 232fe63.
+# Generated on 2025-07-17T21:25:02Z by kres b869533.
 
-name: slack-notify
 "on":
   workflow_run:
     workflows:
       - default
     types:
       - completed
+name: slack-notify
 jobs:
   slack-notify:
     runs-on:
