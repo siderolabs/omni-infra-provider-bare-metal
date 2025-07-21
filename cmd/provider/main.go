@@ -152,6 +152,9 @@ func init() {
 			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false.`,
 			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),
 	)
+	rootCmd.Flags().StringVar(&providerOptions.ExtraMachineConfigPath, "extra-machine-config-path", providerOptions.ExtraMachineConfigPath,
+		"Path to the extra machine config file to be used by the provider. The contents of this file will be appended to the machine config provided to the booted Talos machines. "+
+			"This can be used to provide additional configuration documents to the machines, such as an additional TrustedRootsConfig document to make Talos trust a self-signed CA.")
 
 	if constants.IsDebugBuild {
 		rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", providerOptions.ClearState, "Clear the state of the provider on startup.")

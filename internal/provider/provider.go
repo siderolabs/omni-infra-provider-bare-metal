@@ -154,7 +154,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}
 
-	machineConfig, err := machineconfig.Build(ctx, omniState, certs)
+	machineConfig, err := machineconfig.Build(ctx, omniState, certs, p.options.ExtraMachineConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to build machine config: %w", err)
 	}

@@ -28,6 +28,7 @@ type Options struct {
 	Name                   string
 	Description            string
 	BootFromDiskMethod     string
+	ExtraMachineConfigPath string
 
 	MachineLabels []string
 
