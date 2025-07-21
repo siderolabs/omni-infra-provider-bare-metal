@@ -27,6 +27,7 @@ type Options struct {
 	DHCPProxyIfaceOrIP     string
 	BootFromDiskMethod     string
 	IPMIPXEBootMode        string
+	ExtraMachineConfigPath string
 	MachineLabels          []string
 	APIPort                int
 
