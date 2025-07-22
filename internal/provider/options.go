@@ -11,6 +11,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/redfish"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
 // Options contains the provider options.
@@ -28,7 +29,12 @@ type Options struct {
 	BootFromDiskMethod     string
 	IPMIPXEBootMode        string
 	MachineLabels          []string
-	APIPort                int
+
+	TLS               tls.Options
+	AgentClient       agent.ClientOptions
+	Redfish           redfish.Options
+	APIPort           int
+	MinRebootInterval time.Duration
 
 	EnableResourceCache   bool
 	AgentTestMode         bool
@@ -37,21 +43,6 @@ type Options struct {
 	ClearState            bool
 	DisableDHCPProxy      bool
 	SecureBootEnabled     bool
-
-	TLS         TLSOptions
-	Redfish     redfish.Options
-	AgentClient agent.ClientOptions
-
-	MinRebootInterval time.Duration
-}
-
-// TLSOptions contains the TLS options.
-type TLSOptions struct {
-	APIPort         int
-	CATTL           time.Duration
-	CertTTL         time.Duration
-	Enabled         bool
-	AgentSkipVerify bool
 }
 
 // DefaultOptions returns the default provider options.
@@ -67,7 +58,7 @@ func DefaultOptions() Options {
 		APIPort:                50042,
 		MinRebootInterval:      15 * time.Minute,
 		Redfish:                redfish.DefaultOptions(),
-		TLS: TLSOptions{
+		TLS: tls.Options{
 			Enabled:         false,
 			APIPort:         50043,
 			AgentSkipVerify: false,

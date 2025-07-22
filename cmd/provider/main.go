@@ -95,6 +95,10 @@ func init() {
 		apiPowerMgmtStateDirFlag = "api-power-mgmt-state-dir"
 		ipmiPXEBootModeFlag      = "ipmi-pxe-boot-mode"
 		useLocalBootAssetsFlag   = "use-local-boot-assets"
+		apiAdvertiseAddressFlag  = "api-advertise-address"
+		caCertFileFlag           = "ca-cert-file"
+		certFileFlag             = "cert-file"
+		keyFileFlag              = "key-file"
 	)
 
 	rootCmd.Flags().Var(&meta.ProviderID, "id", "The id of the infra provider, it is used to match the resources with the infra provider label.")
@@ -102,7 +106,7 @@ func init() {
 
 	rootCmd.Flags().StringVar(&providerOptions.APIListenAddress, "api-listen-address", providerOptions.APIListenAddress,
 		"The IP address to listen on. If not specified, the server will listen on all interfaces.")
-	rootCmd.Flags().StringVar(&providerOptions.APIAdvertiseAddress, "api-advertise-address", providerOptions.APIAdvertiseAddress,
+	rootCmd.Flags().StringVar(&providerOptions.APIAdvertiseAddress, apiAdvertiseAddressFlag, providerOptions.APIAdvertiseAddress,
 		"The IP address to advertise. Required if the server has more than a single routable IP address. If not specified, the single routable IP address will be used.")
 	rootCmd.Flags().IntVar(&providerOptions.APIPort, "api-port", providerOptions.APIPort, "The port to run the api server on.")
 	rootCmd.Flags().StringVar(&providerOptions.OmniAPIEndpoint, "omni-api-endpoint", os.Getenv("OMNI_ENDPOINT"),
@@ -143,7 +147,7 @@ func init() {
 		"the minimum interval between reboots of the machine issued by the provider. This is to prevent the provider from issuing reboots too frequently.")
 	rootCmd.Flags().BoolVar(&providerOptions.SecureBootEnabled, "secure-boot-enabled", providerOptions.SecureBootEnabled,
 		fmt.Sprintf("Serve secure boot UKI from the iPXE endpoint. The UKI can be used to boot a machine without secure boot, "+
-			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false`,
+			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false.`,
 			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),
 	)
 
@@ -164,9 +168,22 @@ func init() {
 	rootCmd.Flags().BoolVar(&providerOptions.TLS.AgentSkipVerify, "tls-agent-skip-verify", providerOptions.TLS.AgentSkipVerify,
 		"Make the Talos agent GRPC client skip TLS verification when connecting to the provider.")
 	rootCmd.Flags().DurationVar(&providerOptions.TLS.CATTL, "tls-ca-ttl", providerOptions.TLS.CATTL,
-		"CA certificate TTL.")
+		fmt.Sprintf("CA certificate TTL. Ignored if --%s, --%s or --%s is set.", caCertFileFlag, certFileFlag, keyFileFlag))
 	rootCmd.Flags().DurationVar(&providerOptions.TLS.CertTTL, "tls-cert-ttl", providerOptions.TLS.CertTTL,
-		"TTL for the generated ephemeral certificates using the CA certificate.")
+		fmt.Sprintf("TTL for the generated ephemeral certificates using the CA certificate. Ignored if --%s, --%s or --%s is set.", caCertFileFlag, certFileFlag, keyFileFlag))
+
+	rootCmd.Flags().StringVar(&providerOptions.TLS.CACertFile, "tls-ca-cert-file", providerOptions.TLS.CACertFile,
+		fmt.Sprintf("The CA certificate file. "+
+			"If specified, the provider will not generate a CA certificate to issue ephemeral, short-lived TLS certificates, and this will be used instead."+
+			"When set, --%s and --%s must also be set.", certFileFlag, keyFileFlag))
+	rootCmd.Flags().StringVar(&providerOptions.TLS.CertFile, "tls-cert-file", providerOptions.TLS.CertFile,
+		fmt.Sprintf("The TLS certificate file. It MUST to be valid for the host specified in --%s via SAN DNS names or IP addresses. "+
+			"If specified, the provider will not generate a CA certificate to issue ephemeral, short-lived TLS certificates, and this will be used instead. "+
+			"When set, --%s is also required. Required if --%s is set.", apiAdvertiseAddressFlag, keyFileFlag, caCertFileFlag))
+	rootCmd.Flags().StringVar(&providerOptions.TLS.KeyFile, "tls-key-file", providerOptions.TLS.KeyFile,
+		fmt.Sprintf("The TLS key file. "+
+			"If specified, the provider will not generate a CA certificate to issue ephemeral, short-lived TLS certificates, and this will be used instead. "+
+			"When set, --%s is also required. Required if --%s is set.", certFileFlag, caCertFileFlag))
 
 	// RedFish options
 	rootCmd.Flags().BoolVar(&providerOptions.Redfish.UseAlways, "redfish-use-always", providerOptions.Redfish.UseAlways,

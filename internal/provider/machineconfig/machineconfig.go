@@ -29,7 +29,7 @@ import (
 func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, error) {
 	var extraDocs []config.Document
 
-	if certs != nil {
+	if certs != nil && certs.CACertPEM != "" {
 		trustedRootsConfig := security.NewTrustedRootsConfigV1Alpha1()
 		trustedRootsConfig.MetaName = "infra-provider-ca"
 		trustedRootsConfig.Certificates = certs.CACertPEM

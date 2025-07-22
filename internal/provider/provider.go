@@ -140,9 +140,8 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	var certs *tls.Certs
 
-	tlsOptions := p.options.TLS
-	if tlsOptions.Enabled {
-		if certs, err = tls.Initialize(ctx, omniState, apiAdvertiseAddress, tlsOptions.CATTL, tlsOptions.CertTTL, p.logger); err != nil {
+	if p.options.TLS.Enabled {
+		if certs, err = tls.Initialize(ctx, omniState, apiAdvertiseAddress, p.options.TLS, p.logger); err != nil {
 			return fmt.Errorf("failed to initialize TLS: %w", err)
 		}
 	}

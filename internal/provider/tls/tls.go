@@ -9,8 +9,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -24,6 +26,18 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 )
 
+// Options contains the TLS options.
+type Options struct {
+	CACertFile      string
+	CertFile        string
+	KeyFile         string
+	APIPort         int
+	CATTL           time.Duration
+	CertTTL         time.Duration
+	Enabled         bool
+	AgentSkipVerify bool
+}
+
 // Certs contains the CA certificate and the function to get a new valid certificate signed by the CA.
 type Certs struct {
 	GetCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error)
@@ -31,13 +45,25 @@ type Certs struct {
 }
 
 // Initialize initializes the TLS configuration.
-func Initialize(ctx context.Context, st state.State, host string, caTTL, certTTL time.Duration, logger *zap.Logger) (*Certs, error) {
-	ca, err := initCA(ctx, st, caTTL, logger)
+func Initialize(ctx context.Context, st state.State, host string, options Options, logger *zap.Logger) (*Certs, error) {
+	if options.CACertFile != "" || options.CertFile != "" || options.KeyFile != "" {
+		logger.Info("loading TLS certificates from files", zap.String("cert_file", options.CertFile),
+			zap.String("key_file", options.KeyFile), zap.String("ca_cert_file", options.CACertFile))
+
+		certs, err := loadCerts(host, options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load TLS certificates: %w", err)
+		}
+
+		return certs, nil
+	}
+
+	ca, err := initCA(ctx, st, options.CATTL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize CA: %w", err)
 	}
 
-	provider, err := newRenewingCertificateProvider(ca, host, certTTL, logger)
+	provider, err := newRenewingCertificateProvider(ca, host, options.CertTTL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create certificate provider: %w", err)
 	}
@@ -45,6 +71,52 @@ func Initialize(ctx context.Context, st state.State, host string, caTTL, certTTL
 	return &Certs{
 		GetCertificate: provider.GetCertificate,
 		CACertPEM:      string(ca.CrtPEM),
+	}, nil
+}
+
+func loadCerts(host string, options Options) (*Certs, error) {
+	certPEMBytes, err := os.ReadFile(options.CertFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate file %q: %w", options.CertFile, err)
+	}
+
+	keyPEMBytes, err := os.ReadFile(options.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key file %q: %w", options.KeyFile, err)
+	}
+
+	var caCertPEMBytes []byte
+
+	if options.CACertFile != "" {
+		if caCertPEMBytes, err = os.ReadFile(options.CACertFile); err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate file %q: %w", options.CACertFile, err)
+		}
+	}
+
+	cert, err := tls.X509KeyPair(certPEMBytes, keyPEMBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load X509 key pair: %w", err)
+	}
+
+	block, _ := pem.Decode(certPEMBytes)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("no certificate PEM found")
+	}
+
+	x509Cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	if err = x509Cert.VerifyHostname(host); err != nil {
+		return nil, fmt.Errorf("loaded certificate is not valid for host %q: %w", host, err)
+	}
+
+	return &Certs{
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &cert, nil
+		},
+		CACertPEM: string(caCertPEMBytes),
 	}, nil
 }
 
