@@ -8,104 +8,69 @@ package machineconfig
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
+	"strings"
 
 	"github.com/cosi-project/runtime/pkg/controller"
+	"github.com/cosi-project/runtime/pkg/resource/meta"
 	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/omni/client/pkg/jointoken"
-	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
+	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	siderolinkres "github.com/siderolabs/omni/client/pkg/omni/resources/siderolink"
+	"github.com/siderolabs/omni/client/pkg/siderolink"
 	"github.com/siderolabs/talos/pkg/machinery/config/config"
-	"github.com/siderolabs/talos/pkg/machinery/config/container"
-	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/meta"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/runtime"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/security"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/siderolink"
 
 	providermeta "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
-const siderolinkAddress = "fdae:41e4:649b:9303::1"
-
 // Build builds the machine configuration for the bare-metal provider.
 func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, error) {
-	connectionParams, err := safe.ReaderGetByID[*siderolinkres.ConnectionParams](ctx, r, siderolinkres.ConfigID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get connection params: %w", err)
-	}
-
-	siderolinkAPIURL, err := getSiderolinkAPIURL(connectionParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get siderolink API URL: %w", err)
-	}
-
-	apiURL, err := url.Parse(siderolinkAPIURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse API URL: %w", err)
-	}
-
-	siderolinkConfig := siderolink.NewConfigV1Alpha1()
-	siderolinkConfig.APIUrlConfig = meta.URL{
-		URL: apiURL,
-	}
-
-	eventSinkConfig := runtime.NewEventSinkV1Alpha1()
-	eventSinkConfig.Endpoint = net.JoinHostPort(siderolinkAddress, strconv.Itoa(int(connectionParams.TypedSpec().Value.EventsPort)))
-
-	kmsgLogURL, err := url.Parse("tcp://" + net.JoinHostPort(siderolinkAddress, strconv.Itoa(int(connectionParams.TypedSpec().Value.LogsPort))))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse kmsg log URL: %w", err)
-	}
-
-	kmsgLogConfig := runtime.NewKmsgLogV1Alpha1()
-	kmsgLogConfig.MetaName = "omni-kmsg"
-	kmsgLogConfig.KmsgLogURL = meta.URL{
-		URL: kmsgLogURL,
-	}
-
-	documents := []config.Document{
-		siderolinkConfig,
-		eventSinkConfig,
-		kmsgLogConfig,
-	}
+	var extraDocs []config.Document
 
 	if certs != nil {
 		trustedRootsConfig := security.NewTrustedRootsConfigV1Alpha1()
 		trustedRootsConfig.MetaName = "infra-provider-ca"
 		trustedRootsConfig.Certificates = certs.CACertPEM
 
-		documents = append(documents, trustedRootsConfig)
+		extraDocs = append(extraDocs, trustedRootsConfig)
 	}
 
-	configContainer, err := container.New(documents...)
+	providerJoinConfigRD, err := safe.ReaderGetByID[*meta.ResourceDefinition](ctx, r, strings.ToLower(siderolinkres.ProviderJoinConfigType))
+	if err != nil && !state.IsNotFoundError(err) {
+		return nil, err
+	}
+
+	// V2 flow
+	if providerJoinConfigRD != nil {
+		var providerJoinConfig *siderolinkres.ProviderJoinConfig
+
+		providerJoinConfig, err = safe.ReaderGetByID[*siderolinkres.ProviderJoinConfig](ctx, r, providermeta.ProviderID.String())
+		if err != nil {
+			return nil, err
+		}
+
+		return []byte(providerJoinConfig.TypedSpec().Value.Config.Config), nil
+	}
+
+	// keeping this code for compatibility with the older Omni versions
+	connectionParams, err := safe.ReaderGetByID[*siderolinkres.ConnectionParams](ctx, r, siderolinkres.ConfigID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create config container: %w", err)
+		return nil, fmt.Errorf("failed to get connection params: %w", err)
 	}
 
-	return configContainer.EncodeBytes(encoder.WithComments(encoder.CommentsDisabled))
-}
-
-func getSiderolinkAPIURL(connectionParams *siderolinkres.ConnectionParams) (string, error) {
-	token, err := jointoken.NewWithExtraData(connectionParams.TypedSpec().Value.JoinToken, map[string]string{
-		omni.LabelInfraProviderID: providermeta.ProviderID.String(), // go to omni, don't do the check of MachineReqStatus
-	})
+	opts, err := siderolink.NewJoinOptions(
+		siderolink.WithJoinToken(connectionParams.TypedSpec().Value.JoinToken),
+		siderolink.WithMachineAPIURL(connectionParams.TypedSpec().Value.ApiEndpoint),
+		siderolink.WithEventSinkPort(int(connectionParams.TypedSpec().Value.EventsPort)),
+		siderolink.WithLogServerPort(int(connectionParams.TypedSpec().Value.LogsPort)),
+		siderolink.WithProvider(infra.NewProvider(providermeta.ProviderID.String())),
+		siderolink.WithJoinTokenVersion(jointoken.Version1),
+	)
 	if err != nil {
-		return "", fmt.Errorf("failed to create siderolink token: %w", err)
+		return nil, err
 	}
 
-	tokenString, err := token.Encode()
-	if err != nil {
-		return "", fmt.Errorf("failed to encode the siderolink token: %w", err)
-	}
-
-	apiURL, err := siderolinkres.APIURL(connectionParams, siderolinkres.WithJoinToken(tokenString))
-	if err != nil {
-		return "", fmt.Errorf("failed to build API URL: %w", err)
-	}
-
-	return apiURL, nil
+	return opts.RenderJoinConfig(extraDocs...)
 }
