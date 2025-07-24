@@ -14,25 +14,32 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/hashicorp/go-multierror"
 	"github.com/siderolabs/omni/client/pkg/jointoken"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
 	siderolinkres "github.com/siderolabs/omni/client/pkg/omni/resources/siderolink"
 	"github.com/siderolabs/talos/pkg/machinery/config/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/container"
 	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/meta"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/runtime"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/security"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/siderolink"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
 
 	providermeta "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
-const siderolinkAddress = "fdae:41e4:649b:9303::1"
+const (
+	siderolinkAddress   = "fdae:41e4:649b:9303::1"
+	kmsgLogName         = "omni-kmsg"
+	infraProviderCAName = "infra-provider-ca"
+)
 
 // Build builds the machine configuration for the bare-metal provider.
-func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, error) {
+func Build(ctx context.Context, r controller.Reader, certs *tls.Certs, extraMachineConfigPath string) ([]byte, error) {
 	connectionParams, err := safe.ReaderGetByID[*siderolinkres.ConnectionParams](ctx, r, siderolinkres.ConfigID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection params: %w", err)
@@ -62,7 +69,7 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, 
 	}
 
 	kmsgLogConfig := runtime.NewKmsgLogV1Alpha1()
-	kmsgLogConfig.MetaName = "omni-kmsg"
+	kmsgLogConfig.MetaName = kmsgLogName
 	kmsgLogConfig.KmsgLogURL = meta.URL{
 		URL: kmsgLogURL,
 	}
@@ -79,6 +86,16 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs) ([]byte, 
 		trustedRootsConfig.Certificates = certs.CACertPEM
 
 		documents = append(documents, trustedRootsConfig)
+	}
+
+	if extraMachineConfigPath != "" {
+		var additionalDocuments []config.Document
+
+		if additionalDocuments, err = parseAdditionalDocuments(extraMachineConfigPath); err != nil {
+			return nil, fmt.Errorf("failed to load extra machine config: %w", err)
+		}
+
+		documents = append(documents, additionalDocuments...)
 	}
 
 	configContainer, err := container.New(documents...)
@@ -108,4 +125,48 @@ func getSiderolinkAPIURL(connectionParams *siderolinkres.ConnectionParams) (stri
 	}
 
 	return apiURL, nil
+}
+
+func parseAdditionalDocuments(extraMachineConfigPath string) ([]config.Document, error) {
+	loadedConfig, err := configloader.NewFromFile(extraMachineConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load extra machine config: %w", err)
+	}
+
+	var errs error
+
+	for _, document := range loadedConfig.Documents() {
+		switch document.Kind() {
+		case v1alpha1.Version, siderolink.Kind, runtime.EventSinkKind:
+			errs = multierror.Append(errs, fmt.Errorf("extra machine config must not contain %s documents", document.Kind()))
+		case runtime.KmsgLogKind:
+			kmsgLogConfig, ok := document.(*runtime.KmsgLogV1Alpha1)
+			if !ok {
+				errs = multierror.Append(errs, fmt.Errorf("expected %s document, got %T", runtime.KmsgLogKind, document))
+
+				continue
+			}
+
+			if kmsgLogConfig.MetaName == kmsgLogName {
+				errs = multierror.Append(errs, fmt.Errorf("extra machine config must not contain %s document with name %q", runtime.KmsgLogKind, kmsgLogName))
+			}
+		case security.TrustedRootsConfig:
+			trustedRootsConfig, ok := document.(*security.TrustedRootsConfigV1Alpha1)
+			if !ok {
+				errs = multierror.Append(errs, fmt.Errorf("expected %s document, got %T", security.TrustedRootsConfig, document))
+
+				continue
+			}
+
+			if trustedRootsConfig.MetaName == infraProviderCAName {
+				errs = multierror.Append(errs, fmt.Errorf("extra machine config must not contain %s document with name %q", security.TrustedRootsConfig, infraProviderCAName))
+			}
+		}
+	}
+
+	if errs != nil {
+		return nil, fmt.Errorf("invalid extra machine config: %w", errs)
+	}
+
+	return loadedConfig.Documents(), nil
 }
