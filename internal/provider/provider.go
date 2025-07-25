@@ -161,13 +161,12 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	pxeBootEventCh := make(chan controllers.PXEBootEvent)
 
-	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, machineConfig, p.options.TLS.Enabled, omniState, pxeBootEventCh, ipxe.HandlerOptions{
+	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, machineConfig, omniState, pxeBootEventCh, ipxe.HandlerOptions{
 		APIAdvertiseAddress: apiAdvertiseAddress,
 		APIPort:             p.options.APIPort,
-		TLSAPIPort:          p.options.TLS.APIPort,
+		TLS:                 p.options.TLS,
 		UseLocalBootAssets:  p.options.UseLocalBootAssets,
 		AgentTestMode:       p.options.AgentTestMode,
-		AgentTLSSkipVerify:  p.options.TLS.AgentSkipVerify,
 		BootFromDiskMethod:  p.options.BootFromDiskMethod,
 	}, p.logger.With(zap.String("component", "ipxe_handler")))
 	if err != nil {

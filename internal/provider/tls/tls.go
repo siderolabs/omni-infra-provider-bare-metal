@@ -28,14 +28,15 @@ import (
 
 // Options contains the TLS options.
 type Options struct {
-	CACertFile      string
-	CertFile        string
-	KeyFile         string
-	APIPort         int
-	CATTL           time.Duration
-	CertTTL         time.Duration
-	Enabled         bool
-	AgentSkipVerify bool
+	CACertFile           string
+	CertFile             string
+	KeyFile              string
+	CustomIPXECACertFile string
+	APIPort              int
+	CATTL                time.Duration
+	CertTTL              time.Duration
+	Enabled              bool
+	AgentSkipVerify      bool
 }
 
 // Certs contains the CA certificate and the function to get a new valid certificate signed by the CA.

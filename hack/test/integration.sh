@@ -9,6 +9,8 @@ GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
 NUM_MACHINES=8
 USE_LOCAL_BOOT_ASSETS=false
+IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
+IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
@@ -107,7 +109,7 @@ echo "Build registry mirror args..."
 if [[ "${CI:-false}" == "true" ]]; then
   REGISTRY_MIRROR_FLAGS=()
 
-  for registry in docker.io k8s.gcr.io quay.io gcr.io ghcr.io registry.k8s.io factory.talos.dev; do
+  for registry in docker.io k8s.gcr.io quay.io gcr.io ghcr.io registry.k8s.io $IMAGE_FACTORY_BASE_DOMAIN; do
     service="registry-${registry//./-}.ci.svc"
     addr=$(python3 -c "import socket; print(socket.gethostbyname('${service}'))")
 
@@ -157,6 +159,8 @@ docker run -d --network host \
   --create-initial-service-account \
   --initial-service-account-key-path=/artifacts/key \
   --join-tokens-mode=strict \
+  --image-factory-address="https://${IMAGE_FACTORY_BASE_DOMAIN}" \
+  --image-factory-pxe-address="https://${IMAGE_FACTORY_PXE_DOMAIN}" \
   "${REGISTRY_MIRROR_FLAGS[@]}"
 
 docker logs -f omni &
@@ -184,6 +188,9 @@ echo "Create infra provider..."
 
 PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify infraprovider create bare-metal | grep 'OMNI_SERVICE_ACCOUNT_KEY=' | cut -d'=' -f2-)
 
+# Get image factory leaf certificate PEM
+openssl s_client -showcerts -connect $IMAGE_FACTORY_PXE_DOMAIN:443 < /dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/ { print; if (/END CERTIFICATE/) exit }' > factory.crt
+
 echo "Launch infra provider in the background..."
 
 # We run the provider in a container, as its container image contains everything needed by the provider,
@@ -191,6 +198,7 @@ echo "Launch infra provider in the background..."
 docker run -d --network host \
   --name provider \
   -v "$HOME/.talos/clusters/bare-metal:/api-power-mgmt-state:ro" \
+  -v ./factory.crt:/factory.crt:ro \
   -e OMNI_ENDPOINT \
   -e OMNI_SERVICE_ACCOUNT_KEY="${PROVIDER_SERVICE_ACCOUNT_KEY}" \
   "$PROVIDER_IMAGE" \
@@ -202,6 +210,9 @@ docker run -d --network host \
   --ipmi-pxe-boot-mode=bios \
   --min-reboot-interval=1m \
   --machine-labels=a=b,c \
+  --image-factory-base-url="https://$IMAGE_FACTORY_BASE_DOMAIN" \
+  --image-factory-pxe-base-url="https://$IMAGE_FACTORY_PXE_DOMAIN" \
+  --tls-custom-ipxe-ca-cert-file=/factory.crt \
   --debug
 
 docker logs -f provider &

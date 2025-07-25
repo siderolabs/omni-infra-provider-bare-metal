@@ -184,6 +184,9 @@ func init() {
 		fmt.Sprintf("The TLS key file. "+
 			"If specified, the provider will not generate a CA certificate to issue ephemeral, short-lived TLS certificates, and this will be used instead. "+
 			"When set, --%s is also required. Required if --%s is set.", certFileFlag, caCertFileFlag))
+	rootCmd.Flags().StringVar(&providerOptions.TLS.CustomIPXECACertFile, "tls-custom-ipxe-ca-cert-file", providerOptions.TLS.CustomIPXECACertFile,
+		"Patch iPXE binaries to replace the iPXE root CA with the provided one. "+
+			"It allows users to make iPXE trust their self-hosted image factory instances with self-signed certificates.")
 
 	// RedFish options
 	rootCmd.Flags().BoolVar(&providerOptions.Redfish.UseAlways, "redfish-use-always", providerOptions.Redfish.UseAlways,

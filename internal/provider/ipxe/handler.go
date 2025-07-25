@@ -31,6 +31,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 )
 
 const (
@@ -78,11 +79,10 @@ type ImageFactoryClient interface {
 type HandlerOptions struct {
 	APIAdvertiseAddress string
 	BootFromDiskMethod  string
+	TLS                 tls.Options
 	APIPort             int
-	TLSAPIPort          int
 	UseLocalBootAssets  bool
 	AgentTestMode       bool
-	AgentTLSSkipVerify  bool
 }
 
 // Handler represents an iPXE handler.
@@ -334,7 +334,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tlsEnabled bool, r controller.Reader,
+func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
 ) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
@@ -349,7 +349,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tls
 
 	logger.Info("patch iPXE binaries")
 
-	if err = patchBinaries(initScript, logger); err != nil {
+	if err = patchBinaries(initScript, options.TLS.CustomIPXECACertFile, logger); err != nil {
 		return nil, err
 	}
 
@@ -363,8 +363,8 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tls
 
 	var providerAddress string
 
-	if tlsEnabled {
-		providerAddress = "https://" + net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.TLSAPIPort))
+	if options.TLS.Enabled {
+		providerAddress = "https://" + net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.TLS.APIPort))
 
 		var inlineConfig string
 
@@ -390,7 +390,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, tls
 		)
 	}
 
-	if options.AgentTLSSkipVerify {
+	if options.TLS.AgentSkipVerify {
 		agentExtraKernelArgs = append(agentExtraKernelArgs,
 			fmt.Sprintf("%s=%s", agentconfig.TLSSkipVerifyKernelArg, "1"),
 		)
