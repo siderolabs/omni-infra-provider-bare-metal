@@ -123,6 +123,14 @@ spec:
           continueOnError: true
           paths:
             - "/tmp/integration-test"
+    jobs:
+      - name: e2e
+        crons:
+          - "30 1 * * *"
+        runnerLabels:
+          - generic
+        triggerLabels:
+          - integration/e2e
 ---
 kind: common.SOPS
 spec:

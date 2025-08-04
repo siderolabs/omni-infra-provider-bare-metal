@@ -66,7 +66,7 @@ For local development using Talos running on QEMU, follow these steps:
    export OMNI_SERVICE_ACCOUNT_KEY=<your-omni-service-account-key>
 
    docker run --name=omni-bare-metal-provider --network host --rm -it \
-     -v "$HOME/.talos/clusters/talos-default:/api-power-mgmt-state:ro" \
+     -v "$HOME/.talos/clusters/bare-metal:/api-power-mgmt-state:ro" \
      -e OMNI_ENDPOINT -e OMNI_SERVICE_ACCOUNT_KEY \
      127.0.0.1:5005/siderolabs/omni-infra-provider-bare-metal:local-dev \
      --insecure-skip-tls-verify \
