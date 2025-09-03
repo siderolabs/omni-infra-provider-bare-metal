@@ -34,6 +34,8 @@ type RebootStatusControllerOptions struct {
 type RebootStatusController = qtransform.QController[*infra.Machine, *resources.RebootStatus]
 
 // NewRebootStatusController creates a new RebootStatusController.
+//
+//nolint:dupl
 func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode, options RebootStatusControllerOptions) *RebootStatusController {
 	controllerName := meta.ProviderID.String() + ".RebootStatusController"
 
@@ -57,10 +59,10 @@ func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInter
 			TransformExtraOutputFunc:        helper.transform,
 			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
 		},
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.BMCConfiguration, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.WipeStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.PowerOperation, *infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.BMCConfiguration](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.WipeStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.PowerOperation](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithConcurrency(4),
 	)
 }

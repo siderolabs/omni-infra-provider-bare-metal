@@ -54,8 +54,8 @@ func NewBMCConfigurationController(agentClient AgentClient, bmcAPIAddressReader 
 			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
 		},
 		qtransform.WithConcurrency(4),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*infra.BMCConfig, *infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*infra.BMCConfig](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithIgnoreTeardownUntil(), // keep this resource around until all other controllers are done with it
 	)
 }

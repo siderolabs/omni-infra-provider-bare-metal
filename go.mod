@@ -1,6 +1,6 @@
 module github.com/siderolabs/omni-infra-provider-bare-metal
 
-go 1.24.5
+go 1.25.0
 
 replace (
 	github.com/pin/tftp/v3 => github.com/utkuozdemir/pin-tftp/v3 v3.0.0-20241021135417-0dd7dba351ad
@@ -12,7 +12,7 @@ replace (
 
 require (
 	github.com/bougou/go-ipmi v0.7.7
-	github.com/cosi-project/runtime v1.10.7
+	github.com/cosi-project/runtime v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/hashicorp/go-multierror v1.1.1
@@ -23,20 +23,20 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20241121165744-79df5c4772f2
 	github.com/siderolabs/crypto v0.6.3
 	github.com/siderolabs/gen v0.8.5
-	github.com/siderolabs/image-factory v0.7.5
+	github.com/siderolabs/image-factory v0.8.1
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v0.51.0-beta.1.0.20250723120932-da3f28f6b1f0
+	github.com/siderolabs/omni/client v0.51.0-beta.1.0.20250903122553-faf5432552c3
 	github.com/siderolabs/talos v1.11.0-beta.0
 	github.com/siderolabs/talos-metal-agent v0.1.3
-	github.com/siderolabs/talos/pkg/machinery v1.11.0-beta.0
+	github.com/siderolabs/talos/pkg/machinery v1.11.0-rc.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stmcginnis/gofish v0.20.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.42.0
+	golang.org/x/net v0.43.0
 	golang.org/x/sync v0.16.0
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/grpc v1.75.0
+	google.golang.org/protobuf v1.36.8
 )
 
 require (
@@ -50,6 +50,7 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
+	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
@@ -84,7 +85,7 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter/v2 v2.2.3 // indirect
@@ -123,7 +124,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
-	github.com/siderolabs/go-api-signature v0.3.6 // indirect
+	github.com/siderolabs/go-api-signature v0.3.7 // indirect
 	github.com/siderolabs/go-blockdevice/v2 v2.0.18 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-kubernetes v0.2.25 // indirect
@@ -132,7 +133,7 @@ require (
 	github.com/siderolabs/go-retry v0.3.3 // indirect
 	github.com/siderolabs/go-talos-support v0.1.2 // indirect
 	github.com/siderolabs/proto-codec v0.1.2 // indirect
-	github.com/siderolabs/protoenc v0.2.2 // indirect
+	github.com/siderolabs/protoenc v0.2.3 // indirect
 	github.com/siderolabs/siderolink v0.3.15 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
@@ -153,31 +154,30 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250717185816-542afb5b7346 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/term v0.33.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20250505131008-436f7fdc1670 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250715232539-7130f93afb79 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.3 // indirect
-	gotest.tools/v3 v3.5.1 // indirect
-	k8s.io/api v0.34.0-beta.0 // indirect
-	k8s.io/apimachinery v0.34.0-beta.0 // indirect
-	k8s.io/client-go v0.34.0-beta.0 // indirect
+	k8s.io/api v0.35.0-alpha.0 // indirect
+	k8s.io/apimachinery v0.35.0-alpha.0 // indirect
+	k8s.io/client-go v0.35.0-alpha.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
-	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/knftables v0.0.18 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
-	sigs.k8s.io/yaml v1.5.0 // indirect
+	sigs.k8s.io/yaml v1.6.0 // indirect
 )

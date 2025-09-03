@@ -334,7 +334,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
+func NewHandler(ctx context.Context, imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
 ) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
@@ -349,7 +349,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r c
 
 	logger.Info("patch iPXE binaries")
 
-	if err = patchBinaries(initScript, options.TLS.CustomIPXECACertFile, logger); err != nil {
+	if err = patchBinaries(ctx, initScript, options.TLS.CustomIPXECACertFile, logger); err != nil {
 		return nil, err
 	}
 

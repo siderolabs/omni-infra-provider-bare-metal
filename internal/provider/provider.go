@@ -161,14 +161,17 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	pxeBootEventCh := make(chan controllers.PXEBootEvent)
 
-	ipxeHandler, err := ipxe.NewHandler(imageFactoryClient, machineConfig, omniState, pxeBootEventCh, ipxe.HandlerOptions{
-		APIAdvertiseAddress: apiAdvertiseAddress,
-		APIPort:             p.options.APIPort,
-		TLS:                 p.options.TLS,
-		UseLocalBootAssets:  p.options.UseLocalBootAssets,
-		AgentTestMode:       p.options.AgentTestMode,
-		BootFromDiskMethod:  p.options.BootFromDiskMethod,
-	}, p.logger.With(zap.String("component", "ipxe_handler")))
+	ipxeHandler, err := ipxe.NewHandler(ctx, imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
+		ipxe.HandlerOptions{
+			APIAdvertiseAddress: apiAdvertiseAddress,
+			APIPort:             p.options.APIPort,
+			TLS:                 p.options.TLS,
+			UseLocalBootAssets:  p.options.UseLocalBootAssets,
+			AgentTestMode:       p.options.AgentTestMode,
+			BootFromDiskMethod:  p.options.BootFromDiskMethod,
+		},
+		p.logger.With(zap.String("component", "ipxe_handler")),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create iPXE handler: %w", err)
 	}

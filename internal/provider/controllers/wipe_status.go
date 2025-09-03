@@ -43,8 +43,8 @@ func NewWipeStatusController(agentClient AgentClient) *WipeStatusController {
 			TransformExtraOutputFunc:        helper.transform,
 			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
 		},
-		qtransform.WithExtraMappedInput(
-			qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine](),
+		qtransform.WithExtraMappedInput[*resources.MachineStatus](
+			qtransform.MapperSameID[*infra.Machine](),
 		),
 		qtransform.WithConcurrency(4),
 	)

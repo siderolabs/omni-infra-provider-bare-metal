@@ -45,10 +45,10 @@ func NewInfraMachineStatusController(machineLabels map[string]string) *InfraMach
 			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
 		},
 		qtransform.WithConcurrency(4),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.RebootStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.WipeStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.BMCConfiguration, *infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.RebootStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.WipeStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.BMCConfiguration](qtransform.MapperSameID[*infra.Machine]()),
 	)
 }
 

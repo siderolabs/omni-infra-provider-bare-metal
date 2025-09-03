@@ -6,6 +6,7 @@ package ipxe
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/pem"
 	"errors"
@@ -102,7 +103,7 @@ func buildInitScript(endpoint string, port int) ([]byte, error) {
 // EFI iPXE binaries are uncompressed, so these are patched directly.
 // BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back using zbin.
 // (zbin is built with iPXE).
-func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) error {
+func patchBinaries(ctx context.Context, initScript []byte, customCAFile string, logger *zap.Logger) error {
 	var customCAHash []byte
 
 	if customCAFile != "" {
@@ -142,12 +143,12 @@ func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) e
 		return fmt.Errorf("failed to patch undionly.kpxe.bin: %w", err)
 	}
 
-	if err := compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
+	if err := compressKPXE(ctx, constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
 		constants.TFTPPath+"/undionly.kpxe", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe: %w", err)
 	}
 
-	if err := compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
+	if err := compressKPXE(ctx, constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
 		constants.TFTPPath+"/undionly.kpxe.0", logger); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe.0: %w", err)
 	}
@@ -274,7 +275,7 @@ func replaceCA(fileContents, customCAHash []byte, logger *zap.Logger) error {
 }
 
 // compressKPXE is equivalent to: ./util/zbin bin/undionly.kpxe.bin bin/undionly.kpxe.zinfo > bin/undionly.kpxe.zbin.
-func compressKPXE(binFile, infoFile, outFile string, logger *zap.Logger) error {
+func compressKPXE(ctx context.Context, binFile, infoFile, outFile string, logger *zap.Logger) error {
 	out, err := os.Create(outFile)
 	if err != nil {
 		return err
@@ -282,7 +283,7 @@ func compressKPXE(binFile, infoFile, outFile string, logger *zap.Logger) error {
 
 	defer util.LogClose(out, logger)
 
-	cmd := exec.Command("/bin/zbin", binFile, infoFile)
+	cmd := exec.CommandContext(ctx, "/bin/zbin", binFile, infoFile)
 	cmd.Stdout = out
 
 	err = cmd.Run()

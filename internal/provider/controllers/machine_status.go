@@ -165,7 +165,7 @@ func (ctrl *MachineStatusController) reconcileRunning(ctx context.Context, r con
 }
 
 // MapInput implements the controller.QController interface.
-func (ctrl *MachineStatusController) MapInput(_ context.Context, _ *zap.Logger, _ controller.QRuntime, ptr resource.Pointer) ([]resource.Pointer, error) {
+func (ctrl *MachineStatusController) MapInput(_ context.Context, _ *zap.Logger, _ controller.QRuntime, ptr controller.ReducedResourceMetadata) ([]resource.Pointer, error) {
 	switch ptr.Type() {
 	case resources.BMCConfigurationType(), infra.InfraMachineType:
 		return []resource.Pointer{infra.NewMachine(ptr.ID()).Metadata()}, nil

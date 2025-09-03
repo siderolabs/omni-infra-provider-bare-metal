@@ -31,6 +31,8 @@ type NowFunc = func() time.Time
 type PowerOperationController = qtransform.QController[*infra.Machine, *resources.PowerOperation]
 
 // NewPowerOperationController creates a new PowerOperationController.
+//
+//nolint:dupl
 func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode) *PowerOperationController {
 	controllerName := meta.ProviderID.String() + ".PowerOperationController"
 
@@ -54,10 +56,10 @@ func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFact
 			TransformExtraOutputFunc:        helper.transform,
 			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
 		},
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.BMCConfiguration, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.WipeStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.RebootStatus, *infra.Machine]()),
-		qtransform.WithExtraMappedInput(qtransform.MapperSameID[*resources.MachineStatus, *infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.BMCConfiguration](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.WipeStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.RebootStatus](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithConcurrency(4),
 	)
 }
