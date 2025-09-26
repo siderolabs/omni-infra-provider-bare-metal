@@ -122,10 +122,6 @@ func (ctrl *MachineStatusController) Reconcile(ctx context.Context, _ *zap.Logge
 		infraMachine.Metadata().SetPhase(resource.PhaseTearingDown)
 	}
 
-	if _, err = handleInput[*resources.BMCConfiguration](ctx, r, ctrl.Name(), infraMachine); err != nil {
-		return err
-	}
-
 	if infraMachine.Metadata().Phase() == resource.PhaseTearingDown {
 		return ctrl.reconcileTearingDown(ctx, r, infraMachine)
 	}
@@ -134,26 +130,47 @@ func (ctrl *MachineStatusController) Reconcile(ctx context.Context, _ *zap.Logge
 }
 
 func (ctrl *MachineStatusController) reconcileTearingDown(ctx context.Context, r controller.QRuntime, infraMachine *infra.Machine) error {
-	md := resources.NewMachineStatus(infraMachine.Metadata().ID()).Metadata()
+	remove := func() (done bool, err error) {
+		md := resources.NewMachineStatus(infraMachine.Metadata().ID()).Metadata()
 
-	ready, err := r.Teardown(ctx, md)
-	if err != nil {
-		if state.IsNotFoundError(err) {
-			return r.RemoveFinalizer(ctx, infraMachine.Metadata(), ctrl.Name())
+		ready, err := r.Teardown(ctx, md)
+		if err != nil {
+			if state.IsNotFoundError(err) {
+				return true, nil
+			}
+
+			return false, err
 		}
 
+		if !ready {
+			return false, nil
+		}
+
+		if err = r.Destroy(ctx, md); err != nil {
+			if state.IsNotFoundError(err) {
+				return true, nil
+			}
+
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	removed, err := remove()
+	if err != nil {
 		return err
 	}
 
-	if !ready {
+	if !removed {
 		return nil
 	}
 
-	if err = r.Destroy(ctx, md); err != nil {
+	if err = r.RemoveFinalizer(ctx, infraMachine.Metadata(), ctrl.Name()); err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	return r.RemoveFinalizer(ctx, infraMachine.Metadata(), ctrl.Name())
+	return nil
 }
 
 func (ctrl *MachineStatusController) reconcileRunning(ctx context.Context, r controller.QRuntime, infraMachine *infra.Machine) error {

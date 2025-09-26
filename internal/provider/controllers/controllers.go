@@ -9,12 +9,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/cosi-project/runtime/pkg/controller"
-	"github.com/cosi-project/runtime/pkg/controller/generic"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
-	"github.com/cosi-project/runtime/pkg/resource"
-	"github.com/cosi-project/runtime/pkg/safe"
-	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/gen/xerrors"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
@@ -48,40 +43,6 @@ type AgentClient interface {
 // BMCClientFactory is the interface for creating BMC clients.
 type BMCClientFactory interface {
 	GetClient(ctx context.Context, bmcConfiguration *resources.BMCConfiguration, logger *zap.Logger) (bmc.Client, error)
-}
-
-// handleInput reads the additional input resource and automatically manages finalizers.
-func handleInput[T generic.ResourceWithRD, S generic.ResourceWithRD](ctx context.Context, r controller.ReaderWriter, finalizer string, main S) (T, error) {
-	var zero T
-
-	res, err := safe.ReaderGetByID[T](ctx, r, main.Metadata().ID())
-	if err != nil {
-		if state.IsNotFoundError(err) {
-			return zero, nil
-		}
-
-		return zero, err
-	}
-
-	if res.Metadata().Phase() == resource.PhaseTearingDown || main.Metadata().Phase() == resource.PhaseTearingDown {
-		if err = r.RemoveFinalizer(ctx, res.Metadata(), finalizer); err != nil && !state.IsNotFoundError(err) {
-			return zero, err
-		}
-
-		if res.Metadata().Phase() == resource.PhaseTearingDown {
-			return zero, nil
-		}
-
-		return res, nil
-	}
-
-	if !res.Metadata().Finalizers().Has(finalizer) {
-		if err = r.AddFinalizer(ctx, res.Metadata(), finalizer); err != nil {
-			return zero, err
-		}
-	}
-
-	return res, nil
 }
 
 func validateInfraMachine(infraMachine *infra.Machine, logger *zap.Logger) error {

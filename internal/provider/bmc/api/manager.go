@@ -34,10 +34,14 @@ func (manager *AddressReader) ReadManagementAddress(machineID string, logger *za
 		return "", fmt.Errorf("failed to read directory %s: %w", manager.stateDir, err)
 	}
 
+	numConfigFiles := 0
+
 	for _, file := range files {
 		if !strings.HasSuffix(file.Name(), ".config") {
 			continue
 		}
+
+		numConfigFiles++
 
 		configPath := filepath.Join(manager.stateDir, file.Name())
 
@@ -51,13 +55,15 @@ func (manager *AddressReader) ReadManagementAddress(machineID string, logger *za
 		}
 
 		if addr == "" {
+			logger.Warn("address is empty in config file", zap.String("file", file.Name()), zap.String("machine_id", machineID))
+
 			continue
 		}
 
 		return addr, nil
 	}
 
-	return "", fmt.Errorf("no matching config file found for machine ID: %s", machineID)
+	return "", fmt.Errorf("no management address found in %d config files: machine ID: %q, total files: %d, state dir: %q", numConfigFiles, machineID, len(files), manager.stateDir)
 }
 
 func processConfigFile(configPath, machineID string, logger *zap.Logger) (addr string, err error) {

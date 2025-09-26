@@ -13,6 +13,8 @@ import (
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
 	"github.com/cosi-project/runtime/pkg/resource"
+	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	agentpb "github.com/siderolabs/talos-metal-agent/api/agent"
@@ -33,25 +35,21 @@ type BMCConfigurationController = qtransform.QController[*infra.Machine, *resour
 
 // NewBMCConfigurationController creates a new BMCConfigurationController.
 func NewBMCConfigurationController(agentClient AgentClient, bmcAPIAddressReader BMCAPIAddressReader) *BMCConfigurationController {
-	controllerName := meta.ProviderID.String() + ".BMCConfigurationController"
-
 	helper := &bmcConfigurationControllerHelper{
 		agentClient:         agentClient,
 		bmcAPIAddressReader: bmcAPIAddressReader,
-		controllerName:      controllerName,
 	}
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *resources.BMCConfiguration]{
-			Name: controllerName,
+			Name: meta.ProviderID.String() + ".BMCConfigurationController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *resources.BMCConfiguration {
 				return resources.NewBMCConfiguration(infraMachine.Metadata().ID())
 			},
 			UnmapMetadataFunc: func(bmcConfiguration *resources.BMCConfiguration) *infra.Machine {
 				return infra.NewMachine(bmcConfiguration.Metadata().ID())
 			},
-			TransformExtraOutputFunc:        helper.transform,
-			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
+			TransformFunc: helper.transform,
 		},
 		qtransform.WithConcurrency(4),
 		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
@@ -63,19 +61,18 @@ func NewBMCConfigurationController(agentClient AgentClient, bmcAPIAddressReader 
 type bmcConfigurationControllerHelper struct {
 	agentClient         AgentClient
 	bmcAPIAddressReader BMCAPIAddressReader
-	controllerName      string
 }
 
-func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
+func (helper *bmcConfigurationControllerHelper) transform(ctx context.Context, r controller.Reader, logger *zap.Logger,
 	infraMachine *infra.Machine, bmcConfiguration *resources.BMCConfiguration,
 ) error {
-	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	machineStatus, err := safe.ReaderGetByID[*resources.MachineStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	bmcConfig, err := handleInput[*infra.BMCConfig](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	bmcConfig, err := safe.ReaderGetByID[*infra.BMCConfig](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -185,18 +182,6 @@ func (helper *bmcConfigurationControllerHelper) storeUserProvidedBMCConfig(userC
 		}
 
 		logger.Info("user-provided api config initialized", zap.String("api_address", config.Api.Address))
-	}
-
-	return nil
-}
-
-func (helper *bmcConfigurationControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, _ *zap.Logger, infraMachine *infra.Machine) error {
-	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*infra.BMCConfig](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
 	}
 
 	return nil

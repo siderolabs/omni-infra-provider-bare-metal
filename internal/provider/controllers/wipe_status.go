@@ -10,6 +10,8 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
+	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	"go.uber.org/zap"
@@ -24,24 +26,20 @@ type WipeStatusController = qtransform.QController[*infra.Machine, *resources.Wi
 
 // NewWipeStatusController creates a new WipeStatusController.
 func NewWipeStatusController(agentClient AgentClient) *WipeStatusController {
-	controllerName := meta.ProviderID.String() + ".WipeStatusController"
-
 	helper := &wipeStatusControllerHelper{
-		agentClient:    agentClient,
-		controllerName: controllerName,
+		agentClient: agentClient,
 	}
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *resources.WipeStatus]{
-			Name: controllerName,
+			Name: meta.ProviderID.String() + ".WipeStatusController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *resources.WipeStatus {
 				return resources.NewWipeStatus(infraMachine.Metadata().ID())
 			},
 			UnmapMetadataFunc: func(wipeStatus *resources.WipeStatus) *infra.Machine {
 				return infra.NewMachine(wipeStatus.Metadata().ID())
 			},
-			TransformExtraOutputFunc:        helper.transform,
-			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
+			TransformFunc: helper.transform,
 		},
 		qtransform.WithExtraMappedInput[*resources.MachineStatus](
 			qtransform.MapperSameID[*infra.Machine](),
@@ -51,13 +49,12 @@ func NewWipeStatusController(agentClient AgentClient) *WipeStatusController {
 }
 
 type wipeStatusControllerHelper struct {
-	agentClient    AgentClient
-	controllerName string
+	agentClient AgentClient
 }
 
-func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger, infraMachine *infra.Machine, wipeStatus *resources.WipeStatus) error {
-	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r controller.Reader, logger *zap.Logger, infraMachine *infra.Machine, wipeStatus *resources.WipeStatus) error {
+	machineStatus, err := safe.ReaderGetByID[*resources.MachineStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -100,14 +97,6 @@ func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r contr
 
 	logger.Info("wiped disks on the machine", zap.String("wipe_id", wipeStatus.TypedSpec().Value.LastWipeId),
 		zap.Bool("was_initial_wipe", wasInitialWipe), zap.Uint64("install_event_id", infraMachine.TypedSpec().Value.InstallEventId))
-
-	return nil
-}
-
-func (helper *wipeStatusControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, _ *zap.Logger, infraMachine *infra.Machine) error {
-	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
 
 	return nil
 }

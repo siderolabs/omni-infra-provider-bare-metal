@@ -83,6 +83,10 @@ kind: service.CodeCov
 spec:
   enabled: false
 ---
+kind: common.GHWorkflow
+spec:
+  customRunnerGroup: large  # we need large runners for QEMU/KVM to work
+---
 kind: custom.Step
 name: run-integration-test
 spec:
@@ -127,8 +131,7 @@ spec:
       - name: e2e
         crons:
           - "30 1 * * *"
-        runnerLabels:
-          - generic
+        runnerGroup: large # we need large runners for QEMU/KVM to work
         triggerLabels:
           - integration/e2e
 ---

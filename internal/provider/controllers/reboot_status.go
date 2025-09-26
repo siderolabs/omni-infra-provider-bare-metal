@@ -6,7 +6,7 @@ package controllers
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cosi-project/runtime/pkg/controller"
@@ -35,7 +35,7 @@ type RebootStatusController = qtransform.QController[*infra.Machine, *resources.
 
 // NewRebootStatusController creates a new RebootStatusController.
 //
-//nolint:dupl
+//nolint:dupl,cyclop
 func NewRebootStatusController(bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode, options RebootStatusControllerOptions) *RebootStatusController {
 	controllerName := meta.ProviderID.String() + ".RebootStatusController"
 
@@ -75,28 +75,41 @@ type rebootStatusControllerHelper struct {
 	minRebootInterval time.Duration
 }
 
+//nolint:gocyclo,cyclop
 func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger, infraMachine *infra.Machine, rebootStatus *resources.RebootStatus) error {
 	if helper.options.PostTransformFunc != nil {
 		defer helper.options.PostTransformFunc()
 	}
 
-	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	machineStatus, err := safe.ReaderGetByID[*resources.MachineStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	bmcConfiguration, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	if machineStatus != nil && !machineStatus.Metadata().Finalizers().Has(helper.controllerName) {
+		if err = r.AddFinalizer(ctx, machineStatus.Metadata(), helper.controllerName); err != nil {
+			return fmt.Errorf("failed to add finalizer to machine status: %w", err)
+		}
+	}
+
+	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	wipeStatus, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	if bmcConfiguration != nil && !bmcConfiguration.Metadata().Finalizers().Has(helper.controllerName) {
+		if err = r.AddFinalizer(ctx, bmcConfiguration.Metadata(), helper.controllerName); err != nil {
+			return fmt.Errorf("failed to add finalizer to bmc configuration: %w", err)
+		}
+	}
+
+	wipeStatus, err := safe.ReaderGetByID[*resources.WipeStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	powerOperation, err := handleInput[*resources.PowerOperation](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	powerOperation, err := safe.ReaderGetByID[*resources.PowerOperation](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -154,69 +167,65 @@ func (helper *rebootStatusControllerHelper) transform(ctx context.Context, r con
 	return nil
 }
 
-func (helper *rebootStatusControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger, infraMachine *infra.Machine) (retErr error) {
-	defer func() {
-		retErr = errors.Join(retErr, helper.removeFinalizers(ctx, r, infraMachine))
-	}()
-
-	logger.Info("attempt to reboot the removed infra machine")
-
+func (helper *rebootStatusControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger, infraMachine *infra.Machine) error {
 	// machine is removed, we try our best to get into the agent mode
 	machineStatus, err := safe.ReaderGetByID[*resources.MachineStatus](ctx, r, infraMachine.Metadata().ID())
-	if err != nil {
-		if state.IsNotFoundError(err) {
-			logger.Debug("machine status not found, skip")
-
-			return nil
-		}
-
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
-	}
-
-	if machineStatus.TypedSpec().Value.AgentAccessible {
-		logger.Info("agent is accessible, no need to reboot")
-
-		return nil
 	}
 
 	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
-	if err != nil {
-		if state.IsNotFoundError(err) {
-			logger.Info("bmc configuration does not exist, skip reboot")
-
-			return nil
-		}
-
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	if err = helper.reboot(ctx, infraMachine, bmcConfiguration, nil, true, nil, logger); err != nil {
-		logger.Error("failed to reboot the removed machine", zap.Error(err))
-	} else {
-		logger.Info("rebooted the removed infra machine")
+	helper.attemptRebootOnRemoval(ctx, machineStatus, bmcConfiguration, infraMachine, logger)
+
+	if machineStatus != nil && machineStatus.Metadata().Finalizers().Has(helper.controllerName) {
+		if err = r.RemoveFinalizer(ctx, machineStatus.Metadata(), helper.controllerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer from machine status: %w", err)
+		}
+	}
+
+	if bmcConfiguration != nil && bmcConfiguration.Metadata().Finalizers().Has(helper.controllerName) {
+		if err = r.RemoveFinalizer(ctx, bmcConfiguration.Metadata(), helper.controllerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer from bmc configuration: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func (helper *rebootStatusControllerHelper) removeFinalizers(ctx context.Context, r controller.ReaderWriter, infraMachine *infra.Machine) error {
-	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
+func (helper *rebootStatusControllerHelper) attemptRebootOnRemoval(ctx context.Context, machineStatus *resources.MachineStatus, bmcConfiguration *resources.BMCConfiguration,
+	infraMachine *infra.Machine, logger *zap.Logger,
+) {
+	logger.Info("attempt to reboot the removed infra machine")
+
+	if bmcConfiguration == nil {
+		logger.Warn("bmc configuration does not exist, skip reboot")
+
+		return
 	}
 
-	if _, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
+	if machineStatus == nil {
+		logger.Warn("machine status does not exist, skip reboot")
+
+		return
 	}
 
-	if _, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
+	if machineStatus.TypedSpec().Value.AgentAccessible {
+		logger.Info("agent is accessible, no need to reboot")
+
+		return
 	}
 
-	if _, err := handleInput[*resources.PowerOperation](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
+	if err := helper.reboot(ctx, infraMachine, bmcConfiguration, nil, true, nil, logger); err != nil {
+		logger.Error("failed to reboot the removed infra machine", zap.Error(err))
+
+		return
 	}
 
-	return nil
+	logger.Info("rebooted the removed infra machine")
 }
 
 func (helper *rebootStatusControllerHelper) reboot(ctx context.Context,

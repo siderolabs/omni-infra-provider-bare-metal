@@ -10,6 +10,8 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
+	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/gen/xerrors"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
@@ -34,11 +36,8 @@ type PowerOperationController = qtransform.QController[*infra.Machine, *resource
 //
 //nolint:dupl
 func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFactory, minRebootInterval time.Duration, pxeBootMode pxe.BootMode) *PowerOperationController {
-	controllerName := meta.ProviderID.String() + ".PowerOperationController"
-
 	helper := &powerOperationControllerHelper{
 		nowFunc:           nowFunc,
-		controllerName:    controllerName,
 		bmcClientFactory:  bmcClientFactory,
 		minRebootInterval: minRebootInterval,
 		pxeBootMode:       pxeBootMode,
@@ -46,15 +45,14 @@ func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFact
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *resources.PowerOperation]{
-			Name: controllerName,
+			Name: meta.ProviderID.String() + ".PowerOperationController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *resources.PowerOperation {
 				return resources.NewPowerOperation(infraMachine.Metadata().ID())
 			},
 			UnmapMetadataFunc: func(powerOperation *resources.PowerOperation) *infra.Machine {
 				return infra.NewMachine(powerOperation.Metadata().ID())
 			},
-			TransformExtraOutputFunc:        helper.transform,
-			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
+			TransformFunc: helper.transform,
 		},
 		qtransform.WithExtraMappedInput[*resources.BMCConfiguration](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithExtraMappedInput[*resources.WipeStatus](qtransform.MapperSameID[*infra.Machine]()),
@@ -67,32 +65,27 @@ func NewPowerOperationController(nowFunc NowFunc, bmcClientFactory BMCClientFact
 type powerOperationControllerHelper struct {
 	bmcClientFactory  BMCClientFactory
 	nowFunc           NowFunc
-	controllerName    string
 	pxeBootMode       pxe.BootMode
 	minRebootInterval time.Duration
 }
 
 //nolint:gocyclo,cyclop
-func (helper *powerOperationControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
+func (helper *powerOperationControllerHelper) transform(ctx context.Context, r controller.Reader, logger *zap.Logger,
 	infraMachine *infra.Machine, powerOperation *resources.PowerOperation,
 ) error {
-	bmcConfiguration, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	wipeStatus, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
-		return err
-	}
-
-	if _, err = handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
+	wipeStatus, err := safe.ReaderGetByID[*resources.WipeStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
 	// this controller needs to wake up after a reboot to bring the machine again to the desired power state
-	rebootStatus, err := handleInput[*resources.RebootStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	rebootStatus, err := safe.ReaderGetByID[*resources.RebootStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -165,26 +158,6 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		powerOperation.TypedSpec().Value.LastPowerOperation = specs.PowerState_POWER_STATE_OFF
 	default:
 		logger.Debug("machine power state is already as desired")
-	}
-
-	return nil
-}
-
-func (helper *powerOperationControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, _ *zap.Logger, infraMachine *infra.Machine) error {
-	if _, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.RebootStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
 	}
 
 	return nil

@@ -2,8 +2,8 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.11.0-beta.0 # needs to match the Talos machinery version in go.mod
-TALOS_VERSION=1.10.5
+TALOSCTL_VERSION=1.11.2 # needs to match the Talos machinery version in go.mod
+TALOS_VERSION=1.11.2
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
@@ -34,9 +34,12 @@ echo "Download talosctl v${TALOSCTL_VERSION}..."
 
 mkdir -p ${ARTIFACTS}
 
-[ -f ${ARTIFACTS}/talosctl ] || (crane export ghcr.io/siderolabs/talosctl:v${TALOSCTL_VERSION} | tar x -C ${ARTIFACTS})
+TALOSCTL=$(realpath "${ARTIFACTS}/talosctl-${TALOSCTL_VERSION}")
+if [ ! -f "${TALOSCTL}" ]; then
+  crane export ghcr.io/siderolabs/talosctl:v${TALOSCTL_VERSION} | tar x -C ${ARTIFACTS}
+  mv "${ARTIFACTS}/talosctl" "${TALOSCTL}"
+fi
 
-TALOSCTL=$(realpath "${ARTIFACTS}/talosctl")
 QEMU_UP="${ARTIFACTS}/qemu-up-linux-amd64 --talosctl-path=${TALOSCTL} --cidr $SUBNET_CIDR --num-machines=$NUM_MACHINES"
 
 echo "Register cleanup script..."
@@ -58,10 +61,11 @@ function cleanup() {
   docker logs omni &>$TEST_OUTPUTS_DIR/omni.log
   docker logs provider &>$TEST_OUTPUTS_DIR/provider.log
 
-  echo "Gather machine logs"
-  machine_logs_dir=$TEST_OUTPUTS_DIR/machines/
-  mkdir -p $machine_logs_dir
-  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} $machine_logs_dir \;
+  echo "Gather machine logs and configs"
+  machines_dir=$TEST_OUTPUTS_DIR/machines/
+  mkdir -p $machines_dir
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} $machines_dir \;
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.config" -exec cp {} $machines_dir \;
 
   pkill -f qemu-up-linux-amd64 || true
   ${QEMU_UP} --destroy || true
@@ -191,13 +195,21 @@ PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify infraprovide
 # Get image factory leaf certificate PEM
 openssl s_client -showcerts -connect $IMAGE_FACTORY_PXE_DOMAIN:443 < /dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/ { print; if (/END CERTIFICATE/) exit }' > factory.crt
 
+CONFIG_FILES_DIR="$HOME/.talos/clusters/bare-metal"
+CONFIG_FILES_DEST_DIR="$(pwd)/configs"
+
+echo "Copy machine config files from $CONFIG_FILES_DIR into $CONFIG_FILES_DEST_DIR"
+
+mkdir -p "$CONFIG_FILES_DEST_DIR"
+find "$CONFIG_FILES_DIR" -type f -name "*.config" -exec cp -v {} "$CONFIG_FILES_DEST_DIR" \;
+
 echo "Launch infra provider in the background..."
 
 # We run the provider in a container, as its container image contains everything needed by the provider,
 # e.g., ipmitool and ipxe binaries, metal agent boot assets etc.
 docker run -d --network host \
   --name provider \
-  -v "$HOME/.talos/clusters/bare-metal:/api-power-mgmt-state:ro" \
+  -v "$CONFIG_FILES_DEST_DIR:/api-power-mgmt-state:ro" \
   -v ./factory.crt:/factory.crt:ro \
   -e OMNI_ENDPOINT \
   -e OMNI_SERVICE_ACCOUNT_KEY="${PROVIDER_SERVICE_ACCOUNT_KEY}" \

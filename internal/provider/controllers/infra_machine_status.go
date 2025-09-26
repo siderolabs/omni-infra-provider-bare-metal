@@ -10,6 +10,8 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/controller/generic/qtransform"
+	"github.com/cosi-project/runtime/pkg/safe"
+	"github.com/cosi-project/runtime/pkg/state"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
@@ -26,23 +28,20 @@ type InfraMachineStatusController = qtransform.QController[*infra.Machine, *infr
 
 // NewInfraMachineStatusController initializes InfraMachineStatusController.
 func NewInfraMachineStatusController(machineLabels map[string]string) *InfraMachineStatusController {
-	controllerName := meta.ProviderID.String() + ".InfraMachineStatusController"
 	helper := &infraMachineStatusControllerHelper{
-		controllerName: controllerName,
-		machineLabels:  machineLabels,
+		machineLabels: machineLabels,
 	}
 
 	return qtransform.NewQController(
 		qtransform.Settings[*infra.Machine, *infra.MachineStatus]{
-			Name: controllerName,
+			Name: meta.ProviderID.String() + ".InfraMachineStatusController",
 			MapMetadataFunc: func(infraMachine *infra.Machine) *infra.MachineStatus {
 				return infra.NewMachineStatus(infraMachine.Metadata().ID())
 			},
 			UnmapMetadataFunc: func(infraMachineStatus *infra.MachineStatus) *infra.Machine {
 				return infra.NewMachine(infraMachineStatus.Metadata().ID())
 			},
-			TransformExtraOutputFunc:        helper.transform,
-			FinalizerRemovalExtraOutputFunc: helper.finalizerRemoval,
+			TransformFunc: helper.transform,
 		},
 		qtransform.WithConcurrency(4),
 		qtransform.WithExtraMappedInput[*resources.MachineStatus](qtransform.MapperSameID[*infra.Machine]()),
@@ -53,30 +52,30 @@ func NewInfraMachineStatusController(machineLabels map[string]string) *InfraMach
 }
 
 type infraMachineStatusControllerHelper struct {
-	machineLabels  map[string]string
-	controllerName string
+	machineLabels map[string]string
 }
 
-func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context, r controller.ReaderWriter, logger *zap.Logger,
+//nolint:gocyclo,cyclop
+func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context, r controller.Reader, logger *zap.Logger,
 	infraMachine *infra.Machine, infraMachineStatus *infra.MachineStatus,
 ) error {
-	machineStatus, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	machineStatus, err := safe.ReaderGetByID[*resources.MachineStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	rebootStatus, err := handleInput[*resources.RebootStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	rebootStatus, err := safe.ReaderGetByID[*resources.RebootStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	wipeStatus, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	wipeStatus, err := safe.ReaderGetByID[*resources.WipeStatus](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
-	bmcConfiguration, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine)
-	if err != nil {
+	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
 
@@ -139,26 +138,6 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 	logger.Debug("machine status",
 		zap.Bool("installed", infraMachineStatus.TypedSpec().Value.Installed),
 		zap.Bool("ready_to_use", infraMachineStatus.TypedSpec().Value.ReadyToUse))
-
-	return nil
-}
-
-func (helper *infraMachineStatusControllerHelper) finalizerRemoval(ctx context.Context, r controller.ReaderWriter, _ *zap.Logger, infraMachine *infra.Machine) error {
-	if _, err := handleInput[*resources.MachineStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.RebootStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.WipeStatus](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
-
-	if _, err := handleInput[*resources.BMCConfiguration](ctx, r, helper.controllerName, infraMachine); err != nil {
-		return err
-	}
 
 	return nil
 }
