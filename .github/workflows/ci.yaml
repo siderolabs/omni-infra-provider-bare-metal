@@ -31,6 +31,35 @@ jobs:
     outputs:
       labels: ${{ steps.retrieve-pr-labels.outputs.result }}
     steps:
+      - name: Build QEMU
+        run: |
+          set -euo pipefail
+
+          qemu-system-x86_64 --version
+
+#          sudo apt-get remove -y qemu-system-x86 qemu-utils || true
+#          sudo apt-get update
+#          sudo apt-get install -y \
+#            wget xz-utils ca-certificates \
+#            build-essential ninja-build pkg-config \
+#            python3-venv python3-pip python3-setuptools python3-tomli \
+#            libglib2.0-dev libpixman-1-dev \
+#            zlib1g-dev libzstd-dev libbz2-dev liblzma-dev \
+#            libgnutls28-dev libseccomp-dev libcurl4-openssl-dev \
+#            libslirp-dev libssh-dev libfdt-dev \
+#            flex bison device-tree-compiler
+#
+#          wget -q https://download.qemu.org/qemu-10.1.1.tar.xz
+#          tar -xJf qemu-10.1.1.tar.xz
+#          cd qemu-10.1.1
+#
+#          ./configure --disable-docs --disable-xen \
+#            --target-list=x86_64-softmmu,aarch64-softmmu,arm-softmmu
+#          make -j"$(nproc)"
+#          sudo make install
+#
+#          hash -r
+#          qemu-system-x86_64 --version
       - name: gather-system-info
         id: system-info
         uses: kenchan0130/actions-system-info@v1.4.0
