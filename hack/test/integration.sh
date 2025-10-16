@@ -2,8 +2,8 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.11.2 # needs to match the Talos machinery version in go.mod
-TALOS_VERSION=1.11.2
+TALOSCTL_VERSION=1.11.3 # needs to match the Talos machinery version in go.mod
+TALOS_VERSION=1.11.3
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
@@ -46,6 +46,8 @@ echo "Register cleanup script..."
 
 function cleanup() {
   local exit_code=$? # preserve the original exit code
+
+  chown -R "${SUDO_USER:-$(whoami)}" ${ARTIFACTS}
 
   if [[ "$SKIP_CLEANUP" == "true" ]]; then
     echo "Skipping cleanup..."

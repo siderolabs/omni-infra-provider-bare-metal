@@ -52,7 +52,7 @@ func DefaultOptions() Options {
 		Description:            "Bare metal infrastructure provider",
 		ImageFactoryBaseURL:    "https://factory.talos.dev",
 		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-		AgentModeTalosVersion:  "v1.11.2",
+		AgentModeTalosVersion:  "v1.11.3",
 		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 		APIPort:                50042,

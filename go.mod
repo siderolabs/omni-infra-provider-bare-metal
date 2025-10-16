@@ -22,9 +22,9 @@ require (
 	github.com/siderolabs/image-factory v0.8.4
 	github.com/siderolabs/net v0.4.0
 	github.com/siderolabs/omni/client v1.2.1
-	github.com/siderolabs/talos v1.11.2
+	github.com/siderolabs/talos v1.11.3
 	github.com/siderolabs/talos-metal-agent v0.1.3
-	github.com/siderolabs/talos/pkg/machinery v1.11.2
+	github.com/siderolabs/talos/pkg/machinery v1.11.3
 	github.com/spf13/cobra v1.10.1
 	github.com/stmcginnis/gofish v0.20.0
 	github.com/stretchr/testify v1.11.1
@@ -53,7 +53,7 @@ require (
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/go-cni v1.1.13 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.17.0 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.18.0 // indirect
 	github.com/containernetworking/cni v1.3.0 // indirect
 	github.com/containernetworking/plugins v1.8.0 // indirect
 	github.com/coreos/go-iptables v0.8.0 // indirect

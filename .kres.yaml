@@ -115,6 +115,10 @@ spec:
   ghaction:
     enabled: true
     sops: true
+    parallelJob:
+      name: integration-test
+      runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     environment:
       TEMP_REGISTRY: registry.dev.siderolabs.io
     artifacts:
