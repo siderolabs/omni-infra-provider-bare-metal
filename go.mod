@@ -4,7 +4,7 @@ go 1.25.3
 
 // forked go-yaml that introduces RawYAML interface, which can be used to populate YAML fields using bytes
 // which are then encoded as a valid YAML blocks with proper indentiation
-replace gopkg.in/yaml.v3 => github.com/unix4ever/yaml v0.0.0-20220527175918-f17b0f05cf2c
+replace gopkg.in/yaml.v3 => github.com/unix4ever/yaml/v2 v2.4.0
 
 require (
 	github.com/bougou/go-ipmi v0.7.8
@@ -15,8 +15,8 @@ require (
 	github.com/insomniacslk/dhcp v0.0.0-20251007151141-da879a2c3546
 	github.com/jhump/grpctunnel v0.3.0
 	github.com/klauspost/compress v1.18.0
-	github.com/pin/tftp/v3 v3.1.1-0.20250927050551-17016b3c2849
-	github.com/planetscale/vtprotobuf v0.6.1-0.20241121165744-79df5c4772f2
+	github.com/pin/tftp/v3 884e640babd9
+	github.com/planetscale/vtprotobuf ba97887b0a25
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/gen v0.8.5
 	github.com/siderolabs/image-factory v0.8.4
