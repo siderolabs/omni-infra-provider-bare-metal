@@ -46,7 +46,6 @@ type Options struct {
 
 	DHCPActuallyProxy   bool
 	UpstreamDHCPAddress string
-	UpstreamDHCPPort    int
 }
 
 // DefaultOptions returns the default provider options.
@@ -71,7 +70,6 @@ func DefaultOptions() Options {
 		},
 		AgentClient:         agent.DefaultClientOptions(),
 		UpstreamDHCPAddress: "192.168.1.1",
-		UpstreamDHCPPort:    67,
 		DHCPActuallyProxy:   false,
 	}
 }

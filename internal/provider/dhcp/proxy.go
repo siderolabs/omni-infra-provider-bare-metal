@@ -25,20 +25,18 @@ type Proxy struct {
 	apiAdvertiseAddress string
 	proxyIfaceOrIP      string
 	apiPort             int
-	upstreamAddress     string
-	upstreamPort        int
 	upstreamEnabled     bool
+	upstreamAddress     string
 }
 
 // NewProxy creates a new DHCP proxy server.
-func NewProxy(apiAdvertiseAddress string, apiPort int, proxyIfaceOrIP string, upstreamEnabled bool, upstreamAddress string, upstreamPort int, logger *zap.Logger) *Proxy {
+func NewProxy(apiAdvertiseAddress string, apiPort int, proxyIfaceOrIP string, upstreamEnabled bool, upstreamAddress string, logger *zap.Logger) *Proxy {
 	return &Proxy{
 		apiAdvertiseAddress: apiAdvertiseAddress,
 		apiPort:             apiPort,
 		proxyIfaceOrIP:      proxyIfaceOrIP,
 		upstreamEnabled:     upstreamEnabled,
 		upstreamAddress:     upstreamAddress,
-		upstreamPort:        upstreamPort,
 		logger:              logger,
 	}
 }

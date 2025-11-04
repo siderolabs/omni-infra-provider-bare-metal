@@ -151,7 +151,6 @@ func init() {
 			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),
 	)
 	rootCmd.Flags().BoolVar(&providerOptions.DHCPActuallyProxy, "upstream-dhcp-proxy-enable", providerOptions.DHCPActuallyProxy, "Whether we should proxy non-PXE DHCP packets to upstream.")
-	rootCmd.Flags().IntVar(&providerOptions.UpstreamDHCPPort, "upstream-dhcp-port", providerOptions.UpstreamDHCPPort, "The port to proxy DHCP requests to.")
 	rootCmd.Flags().StringVar(&providerOptions.UpstreamDHCPAddress, "upstream-dhcp-address", providerOptions.UpstreamDHCPAddress, "The addresss to proxy DHCP requests to.")
 
 	if constants.IsDebugBuild {
