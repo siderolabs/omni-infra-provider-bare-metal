@@ -43,6 +43,10 @@ type Options struct {
 	ClearState            bool
 	DisableDHCPProxy      bool
 	SecureBootEnabled     bool
+
+	DHCPActuallyProxy   bool
+	UpstreamDHCPAddress string
+	UpstreamDHCPPort    int
 }
 
 // DefaultOptions returns the default provider options.
@@ -65,6 +69,9 @@ func DefaultOptions() Options {
 			CATTL:           30 * 365 * 24 * time.Hour, // 30 years
 			CertTTL:         24 * time.Hour,
 		},
-		AgentClient: agent.DefaultClientOptions(),
+		AgentClient:         agent.DefaultClientOptions(),
+		UpstreamDHCPAddress: "192.168.1.1",
+		UpstreamDHCPPort:    67,
+		DHCPActuallyProxy:   false,
 	}
 }

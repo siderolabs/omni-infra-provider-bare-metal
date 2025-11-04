@@ -150,6 +150,9 @@ func init() {
 			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false.`,
 			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),
 	)
+	rootCmd.Flags().BoolVar(&providerOptions.DHCPActuallyProxy, "upstream-dhcp-proxy-enable", providerOptions.DHCPActuallyProxy, "Whether we should proxy non-PXE DHCP packets to upstream.")
+	rootCmd.Flags().IntVar(&providerOptions.UpstreamDHCPPort, "upstream-dhcp-port", providerOptions.UpstreamDHCPPort, "The port to proxy DHCP requests to.")
+	rootCmd.Flags().StringVar(&providerOptions.UpstreamDHCPAddress, "upstream-dhcp-address", providerOptions.UpstreamDHCPAddress, "The addresss to proxy DHCP requests to.")
 
 	if constants.IsDebugBuild {
 		rootCmd.Flags().BoolVar(&providerOptions.ClearState, "clear-state", providerOptions.ClearState, "Clear the state of the provider on startup.")
