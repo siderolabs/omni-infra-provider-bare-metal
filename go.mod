@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/insomniacslk/dhcp v0.0.0-20251007151141-da879a2c3546
+	github.com/insomniacslk/dhcp v0.0.0-20251020182700-175e84fbb167
 	github.com/jhump/grpctunnel v0.3.0
 	github.com/klauspost/compress v1.18.0
 	github.com/pin/tftp/v3 v3.1.1-0.20250927050551-17016b3c2849
@@ -112,6 +112,7 @@ require (
 	github.com/mdlayher/ethtool v0.5.0 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.8.0 // indirect
+	github.com/mdlayher/packet v1.1.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
