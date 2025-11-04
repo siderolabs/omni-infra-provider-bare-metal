@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv4/nclient4"
 	"github.com/insomniacslk/dhcp/dhcpv4/server4"
 	"github.com/insomniacslk/dhcp/iana"
 	"github.com/siderolabs/gen/xslices"
@@ -117,13 +118,33 @@ func (p *Proxy) determineInterface(ifaceOrIP string) (string, error) {
 	return "", fmt.Errorf("no interface found for: %s", ifaceOrIP)
 }
 
+func (p *Proxy) proxyToUpstream(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4) error {
+	proxy, err := nclient4.New(p.upstreamAddress)
+	if err != nil {
+		return err
+	}
+	resp, err := proxy.SendAndRead(context.TODO(), nil, m, nil)
+	_, err = conn.WriteTo(resp.ToBytes(), peer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *Proxy) handlePacket() func(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4) {
 	return func(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4) {
 		logger := p.logger.With(zap.String("source", m.ClientHWAddr.String()))
 
 		if err := isBootDHCP(m); err != nil {
+			if p.upstreamEnabled {
+				logger.Debug("proxying packet to upstream", zap.Error(err))
+				err = p.proxyToUpstream(conn, peer, m)
+				if err != nil {
+					logger.Error("errors proxying upstream", zap.Error(err))
+				}
+				return
+			}
 			logger.Debug("ignoring packet", zap.Error(err))
-
 			return
 		}
 
