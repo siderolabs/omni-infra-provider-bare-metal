@@ -224,7 +224,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	}
 
 	if !p.options.DisableDHCPProxy {
-		dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.logger.With(zap.String("component", "dhcp_proxy")))
+		dhcpProxy := dhcp.NewProxy(apiAdvertiseAddress, p.options.APIPort, dhcpProxyIfaceOrIP, p.options.DHCPProxyPort, p.logger.With(zap.String("component", "dhcp_proxy")))
 
 		components = append(components, component{dhcpProxy.Run, "DHCP proxy"})
 	}

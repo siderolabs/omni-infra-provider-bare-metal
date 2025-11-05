@@ -24,15 +24,17 @@ type Proxy struct {
 	logger              *zap.Logger
 	apiAdvertiseAddress string
 	proxyIfaceOrIP      string
+	proxyPort           int
 	apiPort             int
 }
 
 // NewProxy creates a new DHCP proxy server.
-func NewProxy(apiAdvertiseAddress string, apiPort int, proxyIfaceOrIP string, logger *zap.Logger) *Proxy {
+func NewProxy(apiAdvertiseAddress string, apiPort int, proxyIfaceOrIP string, proxyPort int, logger *zap.Logger) *Proxy {
 	return &Proxy{
 		apiAdvertiseAddress: apiAdvertiseAddress,
 		apiPort:             apiPort,
 		proxyIfaceOrIP:      proxyIfaceOrIP,
+		proxyPort:           proxyPort,
 		logger:              logger,
 	}
 }
@@ -44,7 +46,14 @@ func (p *Proxy) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to determine interface: %w", err)
 	}
 
-	server, err := server4.NewServer(iface, nil, p.handlePacket())
+	var laddr *net.UDPAddr
+	if p.proxyPort != 0 {
+		laddr = &net.UDPAddr{
+			Port: p.proxyPort,
+		}
+	}
+
+	server, err := server4.NewServer(iface, laddr, p.handlePacket())
 	if err != nil {
 		return fmt.Errorf("failed to create DHCP server: %w", err)
 	}

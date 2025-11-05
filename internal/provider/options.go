@@ -16,8 +16,8 @@ import (
 
 // Options contains the provider options.
 type Options struct {
-	Name                   string
-	Description            string
+	IPMIPXEBootMode        string
+	DHCPProxyIfaceOrIP     string
 	OmniAPIEndpoint        string
 	ImageFactoryBaseURL    string
 	ImageFactoryPXEBaseURL string
@@ -25,21 +25,23 @@ type Options struct {
 	APIListenAddress       string
 	APIAdvertiseAddress    string
 	APIPowerMgmtStateDir   string
-	DHCPProxyIfaceOrIP     string
+	Name                   string
+	Description            string
 	BootFromDiskMethod     string
-	IPMIPXEBootMode        string
-	MachineLabels          []string
+
+	MachineLabels []string
 
 	TLS               tls.Options
 	AgentClient       agent.ClientOptions
 	Redfish           redfish.Options
-	APIPort           int
 	MinRebootInterval time.Duration
+	DHCPProxyPort     int
+	APIPort           int
 
-	EnableResourceCache   bool
+	UseLocalBootAssets    bool
 	AgentTestMode         bool
 	InsecureSkipTLSVerify bool
-	UseLocalBootAssets    bool
+	EnableResourceCache   bool
 	ClearState            bool
 	DisableDHCPProxy      bool
 	SecureBootEnabled     bool
@@ -53,6 +55,7 @@ func DefaultOptions() Options {
 		ImageFactoryBaseURL:    "https://factory.talos.dev",
 		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
 		AgentModeTalosVersion:  "v1.11.3",
+		DHCPProxyPort:          67,
 		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 		APIPort:                50042,
