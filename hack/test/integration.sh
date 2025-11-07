@@ -12,6 +12,10 @@ USE_LOCAL_BOOT_ASSETS=false
 IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
 IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
 
+#OMNI_IMAGE=ghcr.io/siderolabs/omni:v1.2.0-beta.3-64-g832beba9 # before kernel args
+#OMNI_IMAGE=ghcr.io/siderolabs/omni:v1.2.0-beta.3-64-g15deddde # after kernel args
+OMNI_IMAGE=ghcr.io/utkuozdemir/omni:latest # after fix
+
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"
