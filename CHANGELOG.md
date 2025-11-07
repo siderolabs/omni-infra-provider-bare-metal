@@ -1,3 +1,30 @@
+## [omni-infra-provider-bare-metal 0.6.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.6.0) (2025-11-07)
+
+Welcome to the v0.6.0 release of omni-infra-provider-bare-metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Contributors
+
+* Utku Ozdemir
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`9c50645`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/9c50645668285df586dcb0e916a02478a3865c03) feat: allow specifying a custom DHCP proxy port
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.5.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.5.0)
+
 ## [omni-infra-provider-bare-metal 0.5.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.5.0) (2025-10-17)
 
 Welcome to the v0.5.0 release of omni-infra-provider-bare-metal!
