@@ -4,33 +4,33 @@ go 1.25.3
 
 // forked go-yaml that introduces RawYAML interface, which can be used to populate YAML fields using bytes
 // which are then encoded as a valid YAML blocks with proper indentiation
-replace gopkg.in/yaml.v3 => github.com/unix4ever/yaml v0.0.0-20220527175918-f17b0f05cf2c
+replace gopkg.in/yaml.v3 => github.com/unix4ever/yaml/v2 v2.4.0
 
 require (
 	github.com/bougou/go-ipmi v0.7.8
-	github.com/cosi-project/runtime v1.11.0
+	github.com/cosi-project/runtime v1.12.0
 	github.com/google/uuid v1.6.0
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/insomniacslk/dhcp v0.0.0-20251007151141-da879a2c3546
+	github.com/insomniacslk/dhcp 175e84fbb167
 	github.com/jhump/grpctunnel v0.3.0
-	github.com/klauspost/compress v1.18.0
-	github.com/pin/tftp/v3 v3.1.1-0.20250927050551-17016b3c2849
-	github.com/planetscale/vtprotobuf v0.6.1-0.20241121165744-79df5c4772f2
+	github.com/klauspost/compress v1.18.1
+	github.com/pin/tftp/v3 884e640babd9
+	github.com/planetscale/vtprotobuf ba97887b0a25
 	github.com/siderolabs/crypto v0.6.4
-	github.com/siderolabs/gen v0.8.5
+	github.com/siderolabs/gen v0.8.6
 	github.com/siderolabs/image-factory v0.8.4
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v1.2.1
-	github.com/siderolabs/talos v1.11.3
+	github.com/siderolabs/omni/client v1.3.1
+	github.com/siderolabs/talos v1.11.5
 	github.com/siderolabs/talos-metal-agent v0.1.3
-	github.com/siderolabs/talos/pkg/machinery v1.11.3
+	github.com/siderolabs/talos/pkg/machinery v1.11.5
 	github.com/spf13/cobra v1.10.1
 	github.com/stmcginnis/gofish v0.20.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.46.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 )
