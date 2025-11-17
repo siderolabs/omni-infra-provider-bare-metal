@@ -2,9 +2,9 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-10-15T12:08:56Z by kres d315fc0.
+# Generated on 2025-11-17T13:17:47Z by kres e1d6dac.
 
-ARG TOOLCHAIN
+ARG TOOLCHAIN=scratch
 
 FROM ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.9.6-agent-v0.1.3 AS assets
 
@@ -21,10 +21,11 @@ FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe-linux-arm64
 FROM ghcr.io/siderolabs/liblzma:v1.11.0 AS liblzma
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.0-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.1-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
+COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
 
