@@ -1,3 +1,75 @@
+## [omni-infra-provider-bare-metal 0.7.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.7.0) (2025-11-17)
+
+Welcome to the v0.7.0 release of omni-infra-provider-bare-metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Mateusz Urbanek
+* Noel Georgi
+* Utku Ozdemir
+* Justin Garrison
+* Laura Brehm
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`61f2a5d`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/61f2a5d55340ee8268901c98c568e61b1276dc83) chore: rekres, bump deps
+* [`f303b3f`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/f303b3ff330d7de951f1e04ef7d4817113d9f578) feat: allow providing additional config documents from config endpoint
+</p>
+</details>
+
+### Changes from siderolabs/gen
+<details><summary>1 commit</summary>
+<p>
+
+* [`4c7388b`](https://github.com/siderolabs/gen/commit/4c7388b6a09d6a2ab6a380541df7a5b4bcc4b241) chore: update Go modules, replace YAML library
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>15 commits</summary>
+<p>
+
+* [`bc34de6e1`](https://github.com/siderolabs/talos/commit/bc34de6e1741969e873dd568054231acf4cb54fd) release(v1.11.5): prepare release
+* [`3945c6c8f`](https://github.com/siderolabs/talos/commit/3945c6c8f029b20edcb3de0bf0a5e4c78023a403) feat: update containerd to 2.1.5
+* [`8aec37684`](https://github.com/siderolabs/talos/commit/8aec376841aa910c960f2aea0ffd8a100cc2575b) release(v1.11.4): prepare release
+* [`9c27f9e62`](https://github.com/siderolabs/talos/commit/9c27f9e62097db284961aa7014e0bef14401f97f) fix: race between VolumeConfigController and UserVolumeConfigController
+* [`ac27129b1`](https://github.com/siderolabs/talos/commit/ac27129b19485142eb76a04eee4b372d1cabcdaf) fix: provide minimal platform metadata always
+* [`19463323e`](https://github.com/siderolabs/talos/commit/19463323eb77b3b0ea51df2793853723185fbbbc) fix: image-signer commands
+* [`62aa09644`](https://github.com/siderolabs/talos/commit/62aa09644196ae6a551168530f42884bc78e00f2) chore: update dependencies
+* [`075f9ef22`](https://github.com/siderolabs/talos/commit/075f9ef22ffb61710165456313c4173d9765641d) fix: userspace wireguard handling
+* [`35b97016c`](https://github.com/siderolabs/talos/commit/35b97016c02b08163bc230e1728e35e61e11418d) fix: log duplication on log senders
+* [`d00754e35`](https://github.com/siderolabs/talos/commit/d00754e35b365ac45c40f62af45a74f38e5ccfd6) fix: add video kernel module to arm
+* [`89bca7590`](https://github.com/siderolabs/talos/commit/89bca759000c11fa7c59e0c9045816c20858067b) fix: set a timeout for SideroLink provision API call
+* [`23b21eb90`](https://github.com/siderolabs/talos/commit/23b21eb90b05d8ebb4adc71fb4a269c1b4049d8a) fix: imager build on arm64
+* [`2a4f1771c`](https://github.com/siderolabs/talos/commit/2a4f1771c632476b1a6569e29bb1043c480ea349) feat: use image signer
+* [`e043e1bc0`](https://github.com/siderolabs/talos/commit/e043e1bc004ed80a93809937096b5e5c59909704) chore: push `latest` tag only on main
+* [`8edddafcd`](https://github.com/siderolabs/talos/commit/8edddafcd97b868df1c8e78cecf1eae70f0eaf83) fix: reserve the apid and trustd ports from the ephemeral port range
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/cosi-project/runtime**                  v1.11.0 -> v1.12.0
+* **github.com/grpc-ecosystem/go-grpc-middleware/v2**  v2.3.2 -> v2.3.3
+* **github.com/insomniacslk/dhcp**                     da879a2c3546 -> 175e84fbb167
+* **github.com/klauspost/compress**                    v1.18.0 -> v1.18.1
+* **github.com/siderolabs/gen**                        v0.8.5 -> v0.8.6
+* **github.com/siderolabs/omni/client**                v1.2.1 -> v1.3.2
+* **github.com/siderolabs/talos**                      v1.11.3 -> v1.11.5
+* **github.com/siderolabs/talos/pkg/machinery**        v1.11.3 -> v1.12.0-beta.0
+* **golang.org/x/net**                                 v0.46.0 -> v0.47.0
+* **golang.org/x/sync**                                v0.17.0 -> v0.18.0
+
+Previous release can be found at [v0.6.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.6.0)
+
 ## [omni-infra-provider-bare-metal 0.6.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.6.0) (2025-11-07)
 
 Welcome to the v0.6.0 release of omni-infra-provider-bare-metal!
