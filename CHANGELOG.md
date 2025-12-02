@@ -1,3 +1,30 @@
+## [omni-infra-provider-bare-metal 0.7.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.7.1) (2025-12-02)
+
+Welcome to the v0.7.1 release of omni-infra-provider-bare-metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Contributors
+
+* Utku Ozdemir
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`821b331`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/821b331cec9fd69fe2ff848f2bda8af472df2a43) fix: always include the extra config docs in machine config
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.7.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.7.0)
+
 ## [omni-infra-provider-bare-metal 0.7.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.7.0) (2025-11-17)
 
 Welcome to the v0.7.0 release of omni-infra-provider-bare-metal!
