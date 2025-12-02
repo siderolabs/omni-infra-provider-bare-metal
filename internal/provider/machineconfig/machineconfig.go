@@ -21,6 +21,8 @@ import (
 	"github.com/siderolabs/omni/client/pkg/siderolink"
 	"github.com/siderolabs/talos/pkg/machinery/config/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
+	"github.com/siderolabs/talos/pkg/machinery/config/container"
+	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/runtime"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/security"
 	siderolinktalos "github.com/siderolabs/talos/pkg/machinery/config/types/siderolink"
@@ -47,6 +49,15 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs, extraMach
 		extraDocs = append(extraDocs, trustedRootsConfig)
 	}
 
+	if extraMachineConfigPath != "" {
+		additionalDocs, err := parseAdditionalDocuments(extraMachineConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load extra machine config: %w", err)
+		}
+
+		extraDocs = append(extraDocs, additionalDocs...)
+	}
+
 	providerJoinConfigRD, err := safe.ReaderGetByID[*meta.ResourceDefinition](ctx, r, strings.ToLower(siderolinkres.ProviderJoinConfigType))
 	if err != nil && !state.IsNotFoundError(err) {
 		return nil, err
@@ -54,14 +65,7 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs, extraMach
 
 	// V2 flow
 	if providerJoinConfigRD != nil {
-		var providerJoinConfig *siderolinkres.ProviderJoinConfig
-
-		providerJoinConfig, err = safe.ReaderGetByID[*siderolinkres.ProviderJoinConfig](ctx, r, providermeta.ProviderID.String())
-		if err != nil {
-			return nil, err
-		}
-
-		return []byte(providerJoinConfig.TypedSpec().Value.Config.Config), nil
+		return buildV2MachineConfig(ctx, r, extraDocs)
 	}
 
 	// keeping this code for compatibility with the older Omni versions
@@ -82,17 +86,29 @@ func Build(ctx context.Context, r controller.Reader, certs *tls.Certs, extraMach
 		return nil, err
 	}
 
-	if extraMachineConfigPath != "" {
-		var additionalDocs []config.Document
+	return opts.RenderJoinConfig(extraDocs...)
+}
 
-		if additionalDocs, err = parseAdditionalDocuments(extraMachineConfigPath); err != nil {
-			return nil, fmt.Errorf("failed to load extra machine config: %w", err)
-		}
-
-		extraDocs = append(extraDocs, additionalDocs...)
+func buildV2MachineConfig(ctx context.Context, r controller.Reader, extraDocs []config.Document) ([]byte, error) {
+	providerJoinConfig, err := safe.ReaderGetByID[*siderolinkres.ProviderJoinConfig](ctx, r, providermeta.ProviderID.String())
+	if err != nil {
+		return nil, err
 	}
 
-	return opts.RenderJoinConfig(extraDocs...)
+	parsedConfig, err := configloader.NewFromReader(strings.NewReader(providerJoinConfig.TypedSpec().Value.Config.Config))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider join config: %w", err)
+	}
+
+	docs := parsedConfig.Documents()
+	docs = append(docs, extraDocs...)
+
+	configContainer, err := container.New(docs...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config container: %w", err)
+	}
+
+	return configContainer.EncodeBytes(encoder.WithComments(encoder.CommentsDisabled))
 }
 
 func parseAdditionalDocuments(extraMachineConfigPath string) ([]config.Document, error) {

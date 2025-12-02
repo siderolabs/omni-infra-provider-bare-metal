@@ -357,6 +357,10 @@ func (p *Provider) determineAPIAdvertiseAddress() (string, error) {
 
 // buildOmniAPIClient creates a new Omni API client.
 func (p *Provider) buildOmniAPIClient(endpoint string, insecureSkipTLSVerify bool) (*client.Client, error) {
+	if endpoint == "" {
+		return nil, errors.New("missing Omni API endpoint")
+	}
+
 	serviceAccountKey := os.Getenv("OMNI_SERVICE_ACCOUNT_KEY")
 
 	cliOpts := []client.Option{
