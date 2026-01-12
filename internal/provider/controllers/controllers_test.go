@@ -77,7 +77,7 @@ type bmcClientMock struct {
 	poweredOn        bool
 }
 
-func (b *bmcClientMock) Close() error {
+func (b *bmcClientMock) Close(context.Context) error {
 	return nil
 }
 

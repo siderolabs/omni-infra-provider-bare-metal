@@ -113,7 +113,7 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		return err
 	}
 
-	defer util.LogClose(bmcClient, logger)
+	defer util.LogCloseContext(ctx, bmcClient, logger)
 
 	isPoweredOn, err := bmcClient.IsPoweredOn(ctx)
 	if err != nil {

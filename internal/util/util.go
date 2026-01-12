@@ -6,6 +6,7 @@
 package util
 
 import (
+	"context"
 	"io"
 
 	"go.uber.org/zap"
@@ -14,6 +15,17 @@ import (
 // LogClose closes the closer and logs any error that occurs.
 func LogClose(closer io.Closer, logger *zap.Logger) {
 	if err := closer.Close(); err != nil {
+		logger.Error("failed to close", zap.Error(err))
+	}
+}
+
+type ContextCloser interface {
+	Close(ctx context.Context) error
+}
+
+// LogCloseContext closes the closer with context and logs any error that occurs.
+func LogCloseContext(ctx context.Context, closer ContextCloser, logger *zap.Logger) {
+	if err := closer.Close(ctx); err != nil {
 		logger.Error("failed to close", zap.Error(err))
 	}
 }

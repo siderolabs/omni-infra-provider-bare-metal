@@ -19,7 +19,6 @@ import (
 	"github.com/google/uuid"
 	talosnet "github.com/siderolabs/net"
 	clientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
-	"github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"github.com/siderolabs/talos/pkg/provision"
 	"github.com/siderolabs/talos/pkg/provision/providers"
 	"go.uber.org/zap"
@@ -187,7 +186,6 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 		nodes = append(nodes, provision.NodeRequest{
 			Name: nodeUUID.String(),
-			Type: machine.TypeWorker,
 
 			IPs:      []netip.Addr{ip},
 			Memory:   machines.options.MemSize,

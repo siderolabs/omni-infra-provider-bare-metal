@@ -16,7 +16,10 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 )
 
-const ipmiUsername = "talos-agent"
+const (
+	ipmiUsername = "talos-agent"
+	timeout      = 30 * time.Second
+)
 
 // Client is a wrapper around the goipmi client.
 type Client struct {
@@ -24,10 +27,7 @@ type Client struct {
 }
 
 // Close implements the power.Client interface.
-func (c *Client) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(ipmi.DefaultExchangeTimeoutSec)*time.Second)
-	defer cancel()
-
+func (c *Client) Close(ctx context.Context) error {
 	return c.ipmiClient.Close(ctx)
 }
 
@@ -86,6 +86,8 @@ func NewClient(ctx context.Context, info *specs.BMCConfigurationSpec_IPMI) (*Cli
 	if err != nil {
 		return nil, fmt.Errorf("failed to create IPMI client: %w", err)
 	}
+
+	client = client.WithTimeout(timeout)
 
 	if err = client.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to connect IPMI client: %w", err)

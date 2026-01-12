@@ -130,7 +130,7 @@ spec:
           always: true
           continueOnError: true
           paths:
-            - "/tmp/integration-test"
+            - ${{ github.workspace }}/integration-test
     jobs:
       - name: e2e
         crons:

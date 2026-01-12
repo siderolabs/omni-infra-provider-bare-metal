@@ -2,8 +2,8 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.11.3 # needs to match the Talos machinery version in go.mod
-TALOS_VERSION=1.11.3
+TALOSCTL_VERSION=1.12.2 # needs to match the Talos machinery version in go.mod
+TALOS_VERSION=1.12.2
 SUBNET_CIDR=172.42.0.0/24
 GATEWAY_IP=172.42.0.1
 ARTIFACTS=_out
@@ -16,8 +16,10 @@ echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"
 
-TEST_OUTPUTS_DIR=/tmp/integration-test
-mkdir -p $TEST_OUTPUTS_DIR
+TEST_OUTPUTS_DIR=${GITHUB_WORKSPACE:-/tmp}/integration-test
+mkdir -p "$TEST_OUTPUTS_DIR"
+
+echo "Using test outputs dir: $TEST_OUTPUTS_DIR"
 
 docker pull "$OMNI_IMAGE"
 docker pull "$OMNI_INTEGRATION_TEST_IMAGE"
@@ -60,14 +62,14 @@ function cleanup() {
   docker stop omni provider vault-dev || true
 
   echo "Gather container logs"
-  docker logs omni &>$TEST_OUTPUTS_DIR/omni.log
-  docker logs provider &>$TEST_OUTPUTS_DIR/provider.log
+  docker logs omni &>"$TEST_OUTPUTS_DIR/omni.log"
+  docker logs provider &>"$TEST_OUTPUTS_DIR/provider.log"
 
   echo "Gather machine logs and configs"
-  machines_dir=$TEST_OUTPUTS_DIR/machines/
-  mkdir -p $machines_dir
-  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} $machines_dir \;
-  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.config" -exec cp {} $machines_dir \;
+  machines_dir="$TEST_OUTPUTS_DIR/machines/"
+  mkdir -p "$machines_dir"
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} "$machines_dir" \;
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.config" -exec cp {} "$machines_dir" \;
 
   pkill -f qemu-up-linux-amd64 || true
   ${QEMU_UP} --destroy || true
@@ -89,7 +91,7 @@ pkill -f talosctl || true
 
 echo "Bring up some QEMU machines..."
 
-${QEMU_UP} 2>&1 | tee $TEST_OUTPUTS_DIR/qemu-up.log
+${QEMU_UP} 2>&1 | tee "$TEST_OUTPUTS_DIR/qemu-up.log"
 
 echo "Wait for IP address $GATEWAY_IP to appear..."
 timeout 60s bash -c "until ip a | grep -q '${GATEWAY_IP}'; do echo 'Waiting for IP address...'; sleep 5; done"
@@ -134,6 +136,8 @@ export AUTH_USERNAME="${AUTH0_TEST_USERNAME}"
 export AUTH0_CLIENT_ID="${AUTH0_CLIENT_ID}"
 export AUTH0_DOMAIN="${AUTH0_DOMAIN}"
 
+sqlite_path="${TEST_OUTPUTS_DIR}/sqlite.db"
+
 docker run -d --network host \
   --name omni \
   -v ./hack/certs:/certs \
@@ -167,6 +171,7 @@ docker run -d --network host \
   --join-tokens-mode=strict \
   --image-factory-address="https://${IMAGE_FACTORY_BASE_DOMAIN}" \
   --image-factory-pxe-address="https://${IMAGE_FACTORY_PXE_DOMAIN}" \
+  --sqlite-storage-path="${sqlite_path}" \
   "${REGISTRY_MIRROR_FLAGS[@]}"
 
 docker logs -f omni &
@@ -195,7 +200,7 @@ echo "Create infra provider..."
 PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify infraprovider create bare-metal | grep 'OMNI_SERVICE_ACCOUNT_KEY=' | cut -d'=' -f2-)
 
 # Get image factory leaf certificate PEM
-openssl s_client -showcerts -connect $IMAGE_FACTORY_PXE_DOMAIN:443 < /dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/ { print; if (/END CERTIFICATE/) exit }' > factory.crt
+openssl s_client -showcerts -connect $IMAGE_FACTORY_PXE_DOMAIN:443 </dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/ { print; if (/END CERTIFICATE/) exit }' >factory.crt
 
 CONFIG_FILES_DIR="$HOME/.talos/clusters/bare-metal"
 CONFIG_FILES_DEST_DIR="$(pwd)/configs"
@@ -241,7 +246,7 @@ docker run --rm --network host \
   --name omni-integration-test \
   -v "$(pwd)/hack/certs:/etc/ssl/certs" \
   -v "$(pwd)/hack/test:/var/test" \
-  -v "$TEST_OUTPUTS_DIR:$TEST_OUTPUTS_DIR" \
+  -v "$TEST_OUTPUTS_DIR:/tmp/integration-test/" \
   -e SSL_CERT_DIR=/etc/ssl/certs \
   -e OMNI_SERVICE_ACCOUNT_KEY="$ADMIN_SERVICE_ACCOUNT_KEY" \
   "$OMNI_INTEGRATION_TEST_IMAGE" \

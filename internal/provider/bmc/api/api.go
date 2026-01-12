@@ -23,7 +23,7 @@ type Client struct {
 }
 
 // Close implements the power.Client interface.
-func (c *Client) Close() error {
+func (c *Client) Close(context.Context) error {
 	return nil
 }
 

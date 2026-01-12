@@ -247,7 +247,7 @@ func (helper *rebootStatusControllerHelper) reboot(ctx context.Context,
 		return err
 	}
 
-	defer util.LogClose(bmcClient, logger)
+	defer util.LogCloseContext(ctx, bmcClient, logger)
 
 	if requiresPXEBoot {
 		if err = bmcClient.SetPXEBootOnce(ctx, helper.pxeBootMode); err != nil {

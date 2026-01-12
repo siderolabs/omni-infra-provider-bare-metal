@@ -307,7 +307,7 @@ func (ctrl *MachineStatusController) getPowerState(ctx context.Context, bmcConfi
 		return specs.PowerState_POWER_STATE_UNKNOWN, err
 	}
 
-	defer util.LogClose(bmcClient, logger)
+	defer util.LogCloseContext(ctx, bmcClient, logger)
 
 	poweredOn, err := bmcClient.IsPoweredOn(ctx)
 	if err != nil {

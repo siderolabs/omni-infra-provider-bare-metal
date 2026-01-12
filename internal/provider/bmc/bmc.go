@@ -8,7 +8,6 @@ package bmc
 import (
 	"context"
 	"fmt"
-	"io"
 	"sync"
 
 	"go.uber.org/zap"
@@ -23,7 +22,7 @@ import (
 
 // Client is the interface to interact with a single machine to send BMC commands to it.
 type Client interface {
-	io.Closer
+	Close(ctx context.Context) error
 	Reboot(ctx context.Context) error
 	IsPoweredOn(ctx context.Context) (bool, error)
 	PowerOn(ctx context.Context) error
@@ -124,10 +123,10 @@ type loggingClient struct {
 	logger *zap.Logger
 }
 
-func (client *loggingClient) Close() error {
+func (client *loggingClient) Close(ctx context.Context) error {
 	client.logger.Debug("close client")
 
-	return client.client.Close()
+	return client.client.Close(ctx)
 }
 
 func (client *loggingClient) Reboot(ctx context.Context) error {
