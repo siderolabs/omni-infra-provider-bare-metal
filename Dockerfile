@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-28T09:36:42Z by kres c0e89fb.
+# Generated on 2026-02-04T12:44:27Z by kres dc032d7.
 
 ARG TOOLCHAIN=scratch
 
@@ -12,13 +12,13 @@ FROM ghcr.io/siderolabs/ca-certificates:v1.12.0 AS image-ca-certificates
 
 FROM ghcr.io/siderolabs/fhs:v1.12.0 AS image-fhs
 
-FROM ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe
+FROM ghcr.io/siderolabs/ipxe:v1.12.0 AS ipxe
 
-FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe-linux-amd64
+FROM --platform=linux/amd64 ghcr.io/siderolabs/ipxe:v1.12.0 AS ipxe-linux-amd64
 
-FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.11.0 AS ipxe-linux-arm64
+FROM --platform=linux/arm64 ghcr.io/siderolabs/ipxe:v1.12.0 AS ipxe-linux-arm64
 
-FROM ghcr.io/siderolabs/liblzma:v1.11.0 AS liblzma
+FROM ghcr.io/siderolabs/liblzma:v1.12.0 AS liblzma
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.3.6-alpine AS lint-markdown
@@ -29,7 +29,7 @@ COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules markdownlint-sentences-per-line .
 
-FROM ghcr.io/siderolabs/musl:v1.11.0 AS musl
+FROM ghcr.io/siderolabs/musl:v1.12.0 AS musl
 
 # collects proto specs
 FROM scratch AS proto-specs

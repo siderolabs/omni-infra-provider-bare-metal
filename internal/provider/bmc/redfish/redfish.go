@@ -15,7 +15,7 @@ import (
 
 	"github.com/siderolabs/gen/xslices"
 	"github.com/stmcginnis/gofish"
-	"github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish/schemas"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
@@ -36,7 +36,7 @@ func (c *Client) Close(context.Context) error {
 // Reboot implements the power.Client interface.
 func (c *Client) Reboot(ctx context.Context) error {
 	return c.withClient(ctx, func(client *gofish.APIClient) error {
-		return c.doComputerSystemReset(client, redfish.ForceRestartResetType) // todo: consider making reset type configurable
+		return c.doComputerSystemReset(client, schemas.ForceRestartResetType) // todo: consider making reset type configurable
 	})
 }
 
@@ -50,7 +50,7 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 			return err
 		}
 
-		poweredOn = system.PowerState == redfish.OnPowerState
+		poweredOn = system.PowerState == schemas.OnPowerState
 
 		return nil
 	}); err != nil {
@@ -63,24 +63,26 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 // PowerOn implements the power.Client interface.
 func (c *Client) PowerOn(ctx context.Context) error {
 	return c.withClient(ctx, func(client *gofish.APIClient) error {
-		return c.doComputerSystemReset(client, redfish.OnResetType)
+		return c.doComputerSystemReset(client, schemas.OnResetType)
 	})
 }
 
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(ctx context.Context) error {
 	return c.withClient(ctx, func(client *gofish.APIClient) error {
-		return c.doComputerSystemReset(client, redfish.ForceOffResetType)
+		return c.doComputerSystemReset(client, schemas.ForceOffResetType)
 	})
 }
 
-func (c *Client) doComputerSystemReset(client *gofish.APIClient, resetType redfish.ResetType) error {
+func (c *Client) doComputerSystemReset(client *gofish.APIClient, resetType schemas.ResetType) error {
 	system, err := c.getSystem(client)
 	if err != nil {
 		return err
 	}
 
-	return system.Reset(resetType)
+	_, err = system.Reset(resetType)
+
+	return err
 }
 
 // SetPXEBootOnce implements the power.Client interface.
@@ -91,23 +93,23 @@ func (c *Client) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error {
 			return err
 		}
 
-		boot := redfish.Boot{
-			BootSourceOverrideEnabled: redfish.OnceBootSourceOverrideEnabled,
-			BootSourceOverrideTarget:  redfish.PxeBootSourceOverrideTarget,
+		boot := schemas.Boot{
+			BootSourceOverrideEnabled: schemas.OnceBootSourceOverrideEnabled,
+			BootSourceOverrideTarget:  schemas.PxeBootSource,
 		}
 
 		if c.setBootSourceOverrideMode {
 			switch mode {
 			case pxe.BootModeBIOS:
-				boot.BootSourceOverrideMode = redfish.LegacyBootSourceOverrideMode
+				boot.BootSourceOverrideMode = schemas.LegacyBootSourceOverrideMode
 			case pxe.BootModeUEFI:
-				boot.BootSourceOverrideMode = redfish.UEFIBootSourceOverrideMode
+				boot.BootSourceOverrideMode = schemas.UEFIBootSourceOverrideMode
 			default:
 				return fmt.Errorf("unknown boot mode: %s", mode)
 			}
 		}
 
-		if err = system.SetBoot(boot); err != nil {
+		if err = system.SetBoot(&boot); err != nil {
 			if c.isAMIFutureStateError(err) {
 				c.logger.Debug("attempting AMI FutureState workaround for boot settings")
 
@@ -135,7 +137,7 @@ func (c *Client) withClient(ctx context.Context, f func(client *gofish.APIClient
 	return f(client)
 }
 
-func (c *Client) getSystem(client *gofish.APIClient) (*redfish.ComputerSystem, error) {
+func (c *Client) getSystem(client *gofish.APIClient) (*schemas.ComputerSystem, error) {
 	systems, err := client.Service.Systems()
 	if err != nil {
 		return nil, err
@@ -146,7 +148,7 @@ func (c *Client) getSystem(client *gofish.APIClient) (*redfish.ComputerSystem, e
 	}
 
 	if len(systems) > 1 {
-		ids := xslices.Map(systems, func(system *redfish.ComputerSystem) string {
+		ids := xslices.Map(systems, func(system *schemas.ComputerSystem) string {
 			return system.ID
 		})
 
@@ -162,7 +164,7 @@ func (c *Client) isAMIFutureStateError(err error) bool {
 }
 
 // setBootAMIFutureState handles boot setting for AMI BMCs using the FutureState URI.
-func (c *Client) setBootAMIFutureState(client *gofish.APIClient, system *redfish.ComputerSystem, boot redfish.Boot) error {
+func (c *Client) setBootAMIFutureState(client *gofish.APIClient, system *schemas.ComputerSystem, boot schemas.Boot) error {
 	// For AMI BMCs, we need to:
 	// 1. GET the current FutureState to obtain ETag
 	// 2. PATCH boot settings to /redfish/v1/Systems/{id}/SD (FutureState URI) with If-Match header
@@ -193,7 +195,7 @@ func (c *Client) setBootAMIFutureState(client *gofish.APIClient, system *redfish
 	// Boot should be a field in the SD object, so we need to wrap it in a Boot object
 	// See https://pubs.lenovo.com/tsm/patch_systems_instance_sd for more details
 	payload := struct {
-		Boot redfish.Boot `json:"Boot"`
+		Boot schemas.Boot `json:"Boot"`
 	}{Boot: boot}
 
 	_, err = client.PatchWithHeaders(futureStateURI, payload, headers)
