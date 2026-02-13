@@ -12,6 +12,9 @@ USE_LOCAL_BOOT_ASSETS=false
 IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
 IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
 
+# TODO: For testing purposes, remove
+OMNI_IMAGE="ghcr.io/utkuozdemir/omni:bare-metal-fix-test-1.5"
+
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"
