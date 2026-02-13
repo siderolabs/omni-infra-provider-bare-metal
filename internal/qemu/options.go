@@ -28,7 +28,7 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		Name:         "bare-metal",
-		CIDR:         "172.42.0.0/24",
+		CIDR:         "172.29.0.0/24",
 		CNIBundleURL: "https://github.com/siderolabs/talos/releases/latest/download/talosctl-cni-bundle-amd64.tar.gz",
 		NumMachines:  4,
 		Nameservers:  []string{"1.1.1.1", "1.0.0.1"},

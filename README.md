@@ -74,7 +74,7 @@ For local development using Talos running on QEMU, follow these steps:
      --use-local-boot-assets \
      --agent-test-mode \
      --api-power-mgmt-state-dir=/api-power-mgmt-state \
-     --dhcp-proxy-iface-or-ip=172.42.0.1 \
+     --dhcp-proxy-iface-or-ip=172.29.0.1 \
      --debug
    ```
 
@@ -90,7 +90,7 @@ For local development using Talos running on QEMU, follow these steps:
     - `--api-power-mgmt-state-dir`: Specifies where to read the API power management address of the nodes.
     - `--dhcp-proxy-iface-or-ip`: Specifies the IP address or interface name for running the DHCP proxy
       (e.g., the IP address of the QEMU bridge interface).
-      The tool `qemu-up` uses the subnet `172.42.0.0/24` by default, and the bridge IP address on the host is `172.42.0.1`.
+      The tool `qemu-up` uses the subnet `172.29.0.0/24` by default, and the bridge IP address on the host is `172.29.0.1`.
 
 7. When you are done with the development/testing, destroy all QEMU machines and their network bridge:
 
