@@ -79,7 +79,7 @@ func New(ctx context.Context, listenAddress string, port, tlsPort int, serveAsse
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(port)),
-		Handler: newMultiHandler(configHandler, ipxeHandler, grpcServer, serveAssetsDir, logger),
+		Handler: NewMultiHandler(configHandler, ipxeHandler, grpcServer, serveAssetsDir, constants.TFTPPath, logger),
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
 		},
@@ -137,18 +137,19 @@ func (s *Server) shutdownOnCancel(ctx context.Context, server *http.Server) erro
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil { //nolint:contextcheck
-		return fmt.Errorf("failed to shutdown iPXE server: %w", err)
+		return fmt.Errorf("failed to shutdown HTTP server: %w", err)
 	}
 
 	return nil
 }
 
-func newMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serveAssetsDir bool, logger *zap.Logger) http.Handler {
+// NewMultiHandler creates the HTTP handler that multiplexes config, iPXE, TFTP file serving, and gRPC.
+func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serveAssetsDir bool, tftpPath string, logger *zap.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/config", configHandler)
 	mux.Handle(fmt.Sprintf("/%s/{script}", constants.IPXEURLPath), ipxeHandler)
-	mux.Handle("/tftp/", http.StripPrefix("/tftp/", http.FileServer(http.Dir(constants.IPXEPath+"/"))))
+	mux.Handle("/tftp/", http.StripPrefix("/tftp/", http.FileServer(http.Dir(tftpPath+"/"))))
 
 	if serveAssetsDir {
 		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("/assets/"))))

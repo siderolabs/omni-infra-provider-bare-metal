@@ -34,7 +34,7 @@ type RebootStatus = typed.Resource[RebootStatusSpec, RebootStatusExtension]
 // RebootStatusSpec wraps specs.RebootStatusSpec.
 type RebootStatusSpec = protobuf.ResourceSpec[specs.RebootStatusSpec, *specs.RebootStatusSpec]
 
-// RebootStatusExtension providers auxiliary methods for RebootStatus resource.
+// RebootStatusExtension provides auxiliary methods for RebootStatus resource.
 type RebootStatusExtension struct{}
 
 // ResourceDefinition implements [typed.Extension] interface.

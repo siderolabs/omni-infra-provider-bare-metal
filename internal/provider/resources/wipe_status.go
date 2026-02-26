@@ -34,7 +34,7 @@ type WipeStatus = typed.Resource[WipeStatusSpec, WipeStatusExtension]
 // WipeStatusSpec wraps specs.WipeStatusSpec.
 type WipeStatusSpec = protobuf.ResourceSpec[specs.WipeStatusSpec, *specs.WipeStatusSpec]
 
-// WipeStatusExtension providers auxiliary methods for WipeStatus resource.
+// WipeStatusExtension provides auxiliary methods for WipeStatus resource.
 type WipeStatusExtension struct{}
 
 // ResourceDefinition implements [typed.Extension] interface.

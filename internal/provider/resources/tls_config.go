@@ -37,7 +37,7 @@ type TLSConfig = typed.Resource[TLSConfigSpec, TLSConfigExtension]
 // TLSConfigSpec wraps specs.TLSConfigSpec.
 type TLSConfigSpec = protobuf.ResourceSpec[specs.TLSConfigSpec, *specs.TLSConfigSpec]
 
-// TLSConfigExtension providers auxiliary methods for TLSConfig resource.
+// TLSConfigExtension provides auxiliary methods for TLSConfig resource.
 type TLSConfigExtension struct{}
 
 // ResourceDefinition implements [typed.Extension] interface.

@@ -34,7 +34,7 @@ type PowerOperation = typed.Resource[PowerOperationSpec, PowerOperationExtension
 // PowerOperationSpec wraps specs.PowerOperationSpec.
 type PowerOperationSpec = protobuf.ResourceSpec[specs.PowerOperationSpec, *specs.PowerOperationSpec]
 
-// PowerOperationExtension providers auxiliary methods for PowerOperation resource.
+// PowerOperationExtension provides auxiliary methods for PowerOperation resource.
 type PowerOperationExtension struct{}
 
 // ResourceDefinition implements [typed.Extension] interface.
