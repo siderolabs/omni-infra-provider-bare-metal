@@ -119,6 +119,10 @@ func (b *bmcClientMock) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) e
 	return nil
 }
 
+func (b *bmcClientMock) ResetBootDevice(context.Context) error {
+	return nil
+}
+
 type agentClientMock struct {
 	getPowerMgmtResponseMap *containers.ConcurrentMap[string, *agentpb.GetPowerManagementResponse]
 	setPowerMgmtRequestCh   chan<- pair.Pair[string, *agentpb.SetPowerManagementRequest]

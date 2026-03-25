@@ -16,10 +16,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
 )
 
-const (
-	ipmiUsername = "talos-agent"
-	timeout      = 30 * time.Second
-)
+const timeout = 30 * time.Second
 
 // Client is a wrapper around the goipmi client.
 type Client struct {
@@ -68,6 +65,11 @@ func (c *Client) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error {
 	return c.ipmiClient.SetBootDevice(ctx, ipmi.BootDeviceSelectorForcePXE, bootType, false)
 }
 
+// ResetBootDevice clears any boot device override, resetting it to the default boot order.
+func (c *Client) ResetBootDevice(ctx context.Context) error {
+	return c.ipmiClient.SetBootDevice(ctx, ipmi.BootDeviceSelectorNoOverride, ipmi.BIOSBootTypeEFI, false)
+}
+
 // IsPoweredOn implements the power.Client interface.
 func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 	resp, err := c.ipmiClient.GetChassisStatus(ctx)
@@ -82,7 +84,7 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 //
 // It needs to be closed after use to release resources.
 func NewClient(ctx context.Context, info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
-	client, err := ipmi.NewClient(info.Address, int(info.Port), ipmiUsername, info.Password)
+	client, err := ipmi.NewClient(info.Address, int(info.Port), info.Username, info.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create IPMI client: %w", err)
 	}

@@ -48,7 +48,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 	t.Run("config path routes to configHandler", func(t *testing.T) {
 		configCalled = false
 
-		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/config", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -59,7 +59,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 	t.Run("ipxe path routes to ipxeHandler", func(t *testing.T) {
 		ipxeCalled = false
 
-		req := httptest.NewRequest(http.MethodGet, "/ipxe/boot.ipxe", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ipxe/boot.ipxe", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -68,7 +68,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 	})
 
 	t.Run("tftp path serves files from tftpDir", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tftp/amd64/snp.efi", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tftp/amd64/snp.efi", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -77,7 +77,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 	})
 
 	t.Run("tftp path does not serve files from a different dir", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tftp/nonexistent.efi", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tftp/nonexistent.efi", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 

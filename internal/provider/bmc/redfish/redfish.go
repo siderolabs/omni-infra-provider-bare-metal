@@ -123,6 +123,21 @@ func (c *Client) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error {
 	})
 }
 
+// ResetBootDevice clears any boot device override, resetting it to the default boot order.
+func (c *Client) ResetBootDevice(ctx context.Context) error {
+	return c.withClient(ctx, func(client *gofish.APIClient) error {
+		system, err := c.getSystem(client)
+		if err != nil {
+			return err
+		}
+
+		return system.SetBoot(&schemas.Boot{
+			BootSourceOverrideEnabled: schemas.DisabledBootSourceOverrideEnabled,
+			BootSourceOverrideTarget:  schemas.NoneBootSource,
+		})
+	})
+}
+
 func (c *Client) withClient(ctx context.Context, f func(client *gofish.APIClient) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

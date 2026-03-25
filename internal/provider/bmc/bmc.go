@@ -28,6 +28,7 @@ type Client interface {
 	PowerOn(ctx context.Context) error
 	PowerOff(ctx context.Context) error
 	SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error
+	ResetBootDevice(ctx context.Context) error
 }
 
 // ClientFactory is a factory to create BMC clients.
@@ -157,4 +158,10 @@ func (client *loggingClient) SetPXEBootOnce(ctx context.Context, mode pxe.BootMo
 	client.logger.Debug("set PXE boot once", zap.String("mode", string(mode)))
 
 	return client.client.SetPXEBootOnce(ctx, mode)
+}
+
+func (client *loggingClient) ResetBootDevice(ctx context.Context) error {
+	client.logger.Debug("reset boot device")
+
+	return client.client.ResetBootDevice(ctx)
 }

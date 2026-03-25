@@ -47,6 +47,11 @@ func (c *Client) SetPXEBootOnce(ctx context.Context, _ pxe.BootMode) error {
 	return c.doPost(ctx, "/pxeboot")
 }
 
+// ResetBootDevice implements the power.Client interface. It is a no-op for API clients.
+func (c *Client) ResetBootDevice(context.Context) error {
+	return nil
+}
+
 func (c *Client) doPost(ctx context.Context, path string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

@@ -97,3 +97,37 @@ For local development using Talos running on QEMU, follow these steps:
    ```bash
    sudo -E _out/qemu-up-linux-amd64 --destroy
    ```
+
+## Integration Tests
+
+**These are manual integration tests meant to be run against a real BMC endpoint.**
+**They do NOT run in CI.**
+
+They exercise BMC operations (power on/off, reboot, PXE boot, power state queries) and are behind separate build tags, excluded from regular test runs.
+
+The tests will power cycle the target machine, so make sure it is safe to do so.
+
+### IPMI
+
+```bash
+go test -tags integration_ipmi -v -timeout 30m ./internal/integration/... \
+  -bmc-address <bmc-ip> -bmc-username <user> -bmc-password <pass>
+```
+
+Additional flag: `-ipmi-port` (default 623).
+
+### Redfish
+
+```bash
+go test -tags integration_redfish -v -timeout 30m ./internal/integration/... \
+  -bmc-address <bmc-ip> -bmc-username <user> -bmc-password <pass>
+```
+
+Additional flags: `-redfish-port` (default 443), `-redfish-use-https` (default true), `-redfish-insecure-skip-tls` (default true), `-redfish-set-boot-source-override-mode` (default true).
+
+### Both
+
+```bash
+go test -tags "integration_ipmi,integration_redfish" -v -timeout 60m ./internal/integration/... \
+  -bmc-address <bmc-ip> -bmc-username <user> -bmc-password <pass>
+```
