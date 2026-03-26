@@ -11,10 +11,10 @@ spec:
     enabled: true
     stages:
       - name: ipxe-linux-amd64
-        from: ghcr.io/siderolabs/ipxe:v1.13.0-alpha.0-64-gb7c7ab2
+        from: ghcr.io/siderolabs/ipxe:v1.14.0-alpha.0-3-ge4d0113
         platform: linux/amd64
       - name: ipxe-linux-arm64
-        from: ghcr.io/siderolabs/ipxe:v1.13.0-alpha.0-64-gb7c7ab2
+        from: ghcr.io/siderolabs/ipxe:v1.14.0-alpha.0-3-ge4d0113
         platform: linux/arm64
 ---
 kind: auto.CustomSteps
@@ -33,15 +33,15 @@ spec:
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
   copyFrom:
-    - stage: ghcr.io/siderolabs/musl:v1.13.0-alpha.0-64-gb7c7ab2 # required by zbin
+    - stage: ghcr.io/siderolabs/musl:v1.14.0-alpha.0-3-ge4d0113 # required by zbin
       source: /
       destination: /
       name: musl
-    - stage: ghcr.io/siderolabs/liblzma:v1.13.0-alpha.0-64-gb7c7ab2 # required by zbin
+    - stage: ghcr.io/siderolabs/liblzma:v1.14.0-alpha.0-3-ge4d0113 # required by zbin
       source: /
       destination: /
       name: liblzma
-    - stage: ghcr.io/siderolabs/ipxe:v1.13.0-alpha.0-64-gb7c7ab2
+    - stage: ghcr.io/siderolabs/ipxe:v1.14.0-alpha.0-3-ge4d0113
       source: /usr/libexec/zbin
       destination: /usr/bin/zbin
       name: ipxe
@@ -54,7 +54,7 @@ spec:
       destination: /var/lib/ipxe/arm64
       name: ipxe-linux-arm64
     -
-      stage: ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.12.2-agent-v0.1.4-1-gc2379a7 # to be used with --use-local-boot-assets for local development
+      stage: ghcr.io/utkuozdemir/talos-metal-agent-boot-assets:v1.13.0-alpha.2-86-g919d8c365-agent-v0.1.4-1-gc2379a7-dirty # to be used with --use-local-boot-assets for local development
       # stage: 127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v0.0.1-local # for local development, to be replaced with the line above and rekres-ed
       source: /
       destination: /assets

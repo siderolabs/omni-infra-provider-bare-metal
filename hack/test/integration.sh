@@ -2,8 +2,8 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.12.2 # needs to match the Talos machinery version in go.mod
-TALOS_VERSION=1.12.2
+TALOSCTL_VERSION=1.13.0 # needs to match the Talos machinery version in go.mod
+TALOS_VERSION=1.13.0
 SUBNET_CIDR=172.29.0.0/24
 GATEWAY_IP=172.29.0.1
 ARTIFACTS=_out
