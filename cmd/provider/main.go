@@ -120,8 +120,9 @@ func init() {
 		"The interface name or the IP address on the interface to run the DHCP proxy server on. "+
 			"If it is an IP address, the DHCP proxy server will run on the interface that has the IP address. "+
 			"If not specified, defaults to the API advertise address.")
-	rootCmd.Flags().IntVar(&providerOptions.DHCPProxyPort, "dhcp-proxy-port", providerOptions.DHCPProxyPort,
-		"The port to run the DHCP proxy on. Use 67 for standard DHCP server mode, or 4011 for ProxyDHCP mode (when a separate DHCP server assigns IP addresses).")
+	rootCmd.Flags().BoolVar(&providerOptions.DisableDHCPProxyBroadcast, "disable-dhcp-proxy-broadcast", providerOptions.DisableDHCPProxyBroadcast,
+		"Disable the DHCP proxy broadcast listener on port 67. When set, the proxy only listens on port 4011 for direct PXE requests. "+
+			"Use this when the provider runs on the same host as the DHCP server.")
 	rootCmd.Flags().StringVar(&providerOptions.ImageFactoryBaseURL, "image-factory-base-url", providerOptions.ImageFactoryBaseURL,
 		"The base URL of the image factory.")
 	rootCmd.Flags().StringVar(&providerOptions.ImageFactoryPXEBaseURL, "image-factory-pxe-base-url", providerOptions.ImageFactoryPXEBaseURL,

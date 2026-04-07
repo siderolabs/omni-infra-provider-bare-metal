@@ -5,7 +5,13 @@ project_name = "omni-infra-provider-bare-metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.8.0"
+previous = "v0.8.1"
 pre_release = false
 
-# [notes]
+[notes.dhcp-proxy-port-removed]
+title = "Removed `--dhcp-proxy-port` Flag"
+description = """\
+The `--dhcp-proxy-port` flag has been removed. \
+The DHCP proxy now always listens on both port 67 and port 4011 as required by the PXE specification. \
+If you were using `--dhcp-proxy-port=4011` to run in proxy DHCP mode, use `--disable-dhcp-proxy-broadcast` instead.
+"""

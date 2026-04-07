@@ -36,16 +36,16 @@ type Options struct {
 	AgentClient       agent.ClientOptions
 	Redfish           redfish.Options
 	MinRebootInterval time.Duration
-	DHCPProxyPort     int
 	APIPort           int
 
-	UseLocalBootAssets    bool
-	AgentTestMode         bool
-	InsecureSkipTLSVerify bool
-	EnableResourceCache   bool
-	ClearState            bool
-	DisableDHCPProxy      bool
-	SecureBootEnabled     bool
+	UseLocalBootAssets        bool
+	AgentTestMode             bool
+	InsecureSkipTLSVerify     bool
+	EnableResourceCache       bool
+	ClearState                bool
+	DisableDHCPProxy          bool
+	DisableDHCPProxyBroadcast bool
+	SecureBootEnabled         bool
 }
 
 // DefaultOptions returns the default provider options.
@@ -56,7 +56,6 @@ func DefaultOptions() Options {
 		ImageFactoryBaseURL:    "https://factory.talos.dev",
 		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
 		AgentModeTalosVersion:  "v1.12.2",
-		DHCPProxyPort:          67,
 		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
 		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 		APIPort:                50042,
