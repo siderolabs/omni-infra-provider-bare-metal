@@ -1,3 +1,38 @@
+## [omni-infra-provider-bare-metal 0.9.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.9.0) (2026-04-08)
+
+Welcome to the v0.9.0 release of omni-infra-provider-bare-metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Removed `--dhcp-proxy-port` Flag
+
+The `--dhcp-proxy-port` flag has been removed. The DHCP proxy now always listens on both port 67 and port 4011 as required by the PXE specification. If you were using `--dhcp-proxy-port=4011` to run in proxy DHCP mode, use `--disable-dhcp-proxy-broadcast` instead.
+
+
+### Contributors
+
+* Utku Ozdemir
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`84b50bf`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/84b50bfd8fe947ab01865c079547f82b2c0d406e) fix: listen on both DHCP port 67 and 4011 per PXE spec
+* [`c9b458e`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/c9b458e808cd16f34e718c747662169241cfe8bd) test: add BMC integration tests and fix hardcoded IPMI username
+</p>
+</details>
+
+### Dependency Changes
+
+* **golang.org/x/net**        v0.51.0 -> v0.52.0
+* **golang.org/x/sync**       v0.19.0 -> v0.20.0
+* **google.golang.org/grpc**  v1.79.1 -> v1.80.0
+
+Previous release can be found at [v0.8.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.8.1)
+
 ## [omni-infra-provider-bare-metal 0.8.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.8.1) (2026-03-03)
 
 Welcome to the v0.8.1 release of omni-infra-provider-bare-metal!
