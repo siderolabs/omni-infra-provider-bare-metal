@@ -148,6 +148,8 @@ docker run -d --network host \
   -e VAULT_TOKEN=dev-o-token \
   -e VAULT_ADDR='http://127.0.0.1:8200' \
   "$OMNI_IMAGE" \
+  --eula-accept-name="Test User" \
+  --eula-accept-email="test-user@siderolabs.com" \
   --siderolink-wireguard-advertised-addr=${GATEWAY_IP}:50180 \
   --siderolink-api-advertised-url="grpc://${GATEWAY_IP}:8090" \
   --machine-api-bind-addr=0.0.0.0:8090 \
