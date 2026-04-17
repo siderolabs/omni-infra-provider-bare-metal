@@ -109,3 +109,18 @@ func RequiresPowerOn(infraMachine *infra.Machine, wipeStatus *resources.WipeStat
 
 	return allocated || installed || requiresWipe
 }
+
+// IsPowerOffActive returns true if the power-off request on the InfraMachine is currently being honored by the provider.
+// The request is considered active when the provider has acknowledged the current PowerOffRequestId and the machine
+// has not gone through a deallocation cycle since (wipe_id matches the one captured at acknowledgment).
+func IsPowerOffActive(infraMachine *infra.Machine, powerOperation *resources.PowerOperation) bool {
+	if infraMachine == nil || powerOperation == nil {
+		return false
+	}
+
+	opSpec := powerOperation.TypedSpec().Value
+
+	return opSpec.LastPowerOffId != "" &&
+		opSpec.LastPowerOffId == infraMachine.TypedSpec().Value.PowerOffRequestId &&
+		opSpec.WipeIdAtPowerOff == infraMachine.TypedSpec().Value.WipeId
+}

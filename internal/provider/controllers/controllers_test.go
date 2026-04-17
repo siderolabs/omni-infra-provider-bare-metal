@@ -72,6 +72,7 @@ func (b *bmcClientFactoryMock) GetClient(context.Context, *resources.BMCConfigur
 
 type bmcClientMock struct {
 	powerOnCh        chan<- struct{}
+	powerOffCh       chan<- struct{}
 	rebootCh         chan<- struct{}
 	setPXEBootOnceCh chan<- pxe.BootMode
 	poweredOn        bool
@@ -105,7 +106,17 @@ func (b *bmcClientMock) PowerOn(ctx context.Context) error {
 	return nil
 }
 
-func (b *bmcClientMock) PowerOff(context.Context) error {
+func (b *bmcClientMock) PowerOff(ctx context.Context) error {
+	if b.powerOffCh == nil {
+		return nil
+	}
+
+	select {
+	case b.powerOffCh <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
 	return nil
 }
 

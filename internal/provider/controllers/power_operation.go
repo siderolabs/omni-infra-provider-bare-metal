@@ -101,11 +101,25 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 
 	requiresPowerOn := machine.RequiresPowerOn(infraMachine, wipeStatus)
 
+	// Acknowledge and track power-off requests from Omni.
+	// A power-off request is considered stale if the machine went through a deallocation cycle
+	// (wipe_id changed) since the request was acknowledged, meaning the request was from a previous lifecycle.
+	powerOffRequestID := infraMachine.TypedSpec().Value.PowerOffRequestId
+	opSpec := powerOperation.TypedSpec().Value
+
+	if powerOffRequestID != "" && powerOffRequestID != opSpec.LastPowerOffId {
+		opSpec.LastPowerOffId = powerOffRequestID
+		opSpec.WipeIdAtPowerOff = infraMachine.TypedSpec().Value.WipeId
+	}
+
+	powerOffActive := machine.IsPowerOffActive(infraMachine, powerOperation)
+
 	logger.Info("power operation",
 		zap.Bool("installed", machine.IsInstalled(infraMachine, wipeStatus)),
 		zap.Bool("allocated", infraMachine.TypedSpec().Value.ClusterTalosVersion != ""),
 		zap.Bool("requires_wipe", machine.RequiresWipe(infraMachine, wipeStatus)),
 		zap.Bool("requires_power_on", requiresPowerOn),
+		zap.Bool("power_off_active", powerOffActive),
 	)
 
 	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
@@ -125,7 +139,7 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 	logger = logger.With(zap.Bool("is_powered_on", isPoweredOn), zap.Stringer("preferred_power_state", preferredPowerState))
 
 	switch {
-	case !isPoweredOn && (requiresPowerOn || preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_ON):
+	case !isPoweredOn && !powerOffActive && (requiresPowerOn || preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_ON):
 		logger.Debug("power on machine")
 
 		requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
@@ -139,8 +153,8 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 			return err
 		}
 
-		powerOperation.TypedSpec().Value.LastPowerOperation = specs.PowerState_POWER_STATE_ON
-		powerOperation.TypedSpec().Value.LastPowerOnTimestamp = timestamppb.New(helper.nowFunc())
+		opSpec.LastPowerOperation = specs.PowerState_POWER_STATE_ON
+		opSpec.LastPowerOnTimestamp = timestamppb.New(helper.nowFunc())
 	case isPoweredOn && (!requiresPowerOn && preferredPowerState == omnispecs.InfraMachineSpec_POWER_STATE_OFF):
 		timeSinceLastPowerOn := getTimeSinceLastPowerOn(powerOperation, rebootStatus)
 		if timeSinceLastPowerOn < helper.minRebootInterval {
@@ -155,7 +169,7 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 			return err
 		}
 
-		powerOperation.TypedSpec().Value.LastPowerOperation = specs.PowerState_POWER_STATE_OFF
+		opSpec.LastPowerOperation = specs.PowerState_POWER_STATE_OFF
 	default:
 		logger.Debug("machine power state is already as desired")
 	}

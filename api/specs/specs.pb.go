@@ -76,8 +76,13 @@ type PowerOperationSpec struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	LastPowerOperation   PowerState             `protobuf:"varint,1,opt,name=last_power_operation,json=lastPowerOperation,proto3,enum=baremetalproviderspecs.PowerState" json:"last_power_operation,omitempty"`
 	LastPowerOnTimestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=last_power_on_timestamp,json=lastPowerOnTimestamp,proto3" json:"last_power_on_timestamp,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// LastPowerOffId is the power-off request ID that was last acknowledged by the provider.
+	LastPowerOffId string `protobuf:"bytes,3,opt,name=last_power_off_id,json=lastPowerOffId,proto3" json:"last_power_off_id,omitempty"`
+	// WipeIdAtPowerOff is the WipeId of the InfraMachine at the time the power-off request was acknowledged.
+	// If the WipeId changes (machine was deallocated and wiped), the power-off request is considered stale.
+	WipeIdAtPowerOff string `protobuf:"bytes,4,opt,name=wipe_id_at_power_off,json=wipeIdAtPowerOff,proto3" json:"wipe_id_at_power_off,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PowerOperationSpec) Reset() {
@@ -122,6 +127,20 @@ func (x *PowerOperationSpec) GetLastPowerOnTimestamp() *timestamppb.Timestamp {
 		return x.LastPowerOnTimestamp
 	}
 	return nil
+}
+
+func (x *PowerOperationSpec) GetLastPowerOffId() string {
+	if x != nil {
+		return x.LastPowerOffId
+	}
+	return ""
+}
+
+func (x *PowerOperationSpec) GetWipeIdAtPowerOff() string {
+	if x != nil {
+		return x.WipeIdAtPowerOff
+	}
+	return ""
 }
 
 type BMCConfigurationSpec struct {
@@ -546,10 +565,12 @@ var File_specs_specs_proto protoreflect.FileDescriptor
 
 const file_specs_specs_proto_rawDesc = "" +
 	"\n" +
-	"\x11specs/specs.proto\x12\x16baremetalproviderspecs\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbd\x01\n" +
+	"\x11specs/specs.proto\x12\x16baremetalproviderspecs\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x02\n" +
 	"\x12PowerOperationSpec\x12T\n" +
 	"\x14last_power_operation\x18\x01 \x01(\x0e2\".baremetalproviderspecs.PowerStateR\x12lastPowerOperation\x12Q\n" +
-	"\x17last_power_on_timestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x14lastPowerOnTimestamp\"\xe1\x02\n" +
+	"\x17last_power_on_timestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x14lastPowerOnTimestamp\x12)\n" +
+	"\x11last_power_off_id\x18\x03 \x01(\tR\x0elastPowerOffId\x12.\n" +
+	"\x14wipe_id_at_power_off\x18\x04 \x01(\tR\x10wipeIdAtPowerOff\"\xe1\x02\n" +
 	"\x14BMCConfigurationSpec\x12E\n" +
 	"\x04ipmi\x18\x01 \x01(\v21.baremetalproviderspecs.BMCConfigurationSpec.IPMIR\x04ipmi\x12B\n" +
 	"\x03api\x18\x02 \x01(\v20.baremetalproviderspecs.BMCConfigurationSpec.APIR\x03api\x12/\n" +

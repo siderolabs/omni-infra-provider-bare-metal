@@ -48,6 +48,7 @@ func NewInfraMachineStatusController(machineLabels map[string]string) *InfraMach
 		qtransform.WithExtraMappedInput[*resources.RebootStatus](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithExtraMappedInput[*resources.WipeStatus](qtransform.MapperSameID[*infra.Machine]()),
 		qtransform.WithExtraMappedInput[*resources.BMCConfiguration](qtransform.MapperSameID[*infra.Machine]()),
+		qtransform.WithExtraMappedInput[*resources.PowerOperation](qtransform.MapperSameID[*infra.Machine]()),
 	)
 }
 
@@ -75,6 +76,11 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 	}
 
 	bmcConfiguration, err := safe.ReaderGetByID[*resources.BMCConfiguration](ctx, r, infraMachine.Metadata().ID())
+	if err != nil && !state.IsNotFoundError(err) {
+		return err
+	}
+
+	powerOperation, err := safe.ReaderGetByID[*resources.PowerOperation](ctx, r, infraMachine.Metadata().ID())
 	if err != nil && !state.IsNotFoundError(err) {
 		return err
 	}
@@ -133,6 +139,14 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 
 	if wipeStatus != nil {
 		infraMachineStatus.TypedSpec().Value.WipedNodeUniqueToken = wipeStatus.TypedSpec().Value.WipedNodeUniqueToken
+	}
+
+	// Surface the currently honored power-off request ID so Omni can distinguish
+	// "intentionally powered off" from "powering on transiently" for UI purposes.
+	if machine.IsPowerOffActive(infraMachine, powerOperation) {
+		infraMachineStatus.TypedSpec().Value.LastPowerOffId = powerOperation.TypedSpec().Value.LastPowerOffId
+	} else {
+		infraMachineStatus.TypedSpec().Value.LastPowerOffId = ""
 	}
 
 	logger.Debug("machine status",
