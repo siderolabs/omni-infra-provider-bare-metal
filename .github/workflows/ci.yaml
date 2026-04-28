@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-27T13:00:19Z by kres f51cb9c.
+# Generated on 2026-04-28T10:24:54Z by kres e4dc583.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -110,7 +110,7 @@ jobs:
           make qemu-up
       - name: Retrieve PR labels
         id: retrieve-pr-labels
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # version: v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # version: v9.0.0
         with:
           retries: "3"
           script: |
@@ -135,7 +135,7 @@ jobs:
           make release-notes
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # version: v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # version: v3.0.0
         with:
           body_path: _out/RELEASE_NOTES.md
           draft: "true"
@@ -146,7 +146,7 @@ jobs:
   e2e:
     runs-on:
       group: large
-    if: contains(fromJSON(needs.default.outputs.labels), 'integration/e2e')
+    if: contains(fromJSON(needs.default.outputs.labels || '[]'), 'integration/e2e')
     needs:
       - default
     steps:
@@ -208,7 +208,7 @@ jobs:
           sudo -E make run-integration-test
       - name: save-integration-test-artifacts
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # version: v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # version: v7.0.1
         with:
           name: integration-test-e2e
           path: ${{ github.workspace }}/integration-test
@@ -275,7 +275,7 @@ jobs:
         run: |
           find _out -type f -executable > _out/executable-artifacts
       - name: save-artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # version: v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # version: v7.0.1
         with:
           name: artifacts
           path: |-
@@ -284,7 +284,7 @@ jobs:
           retention-days: "5"
       - name: save-integration-test-artifacts
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # version: v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # version: v7.0.1
         with:
           name: integration-test
           path: ${{ github.workspace }}/integration-test
