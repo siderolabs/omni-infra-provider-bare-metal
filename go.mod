@@ -15,11 +15,11 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25
 	github.com/siderolabs/crypto v0.6.5
 	github.com/siderolabs/gen v0.8.6
-	github.com/siderolabs/image-factory v1.1.0
+	github.com/siderolabs/image-factory v1.2.0
 	github.com/siderolabs/net v0.4.0
 	github.com/siderolabs/omni/client v1.7.0-beta.0.0.20260427113332-dc3b974d0dad
 	github.com/siderolabs/talos v1.13.0
-	github.com/siderolabs/talos-metal-agent v0.1.4
+	github.com/siderolabs/talos-metal-agent v0.1.5
 	github.com/siderolabs/talos/pkg/machinery v1.13.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stmcginnis/gofish v0.21.6
@@ -43,6 +43,7 @@ require (
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -93,6 +94,7 @@ require (
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-containerregistry v0.21.5 // indirect
+	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
