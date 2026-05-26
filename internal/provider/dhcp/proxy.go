@@ -294,7 +294,8 @@ func offerDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 		dhcpv4.WithOptionCopied(req, dhcpv4.OptionClassIdentifier),
 	}
 
-	resp, err := dhcpv4.NewReplyFromRequest(req,
+	resp, err := dhcpv4.NewReplyFromRequest(
+		req,
 		modifiers...,
 	)
 	if err != nil {

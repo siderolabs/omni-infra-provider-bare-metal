@@ -169,7 +169,8 @@ func (helper *bmcConfigurationControllerHelper) storeUserProvidedBMCConfig(userC
 			Password: config.Ipmi.Password,
 		}
 
-		logger.Info("user-provided ipmi config initialized",
+		logger.Info(
+			"user-provided ipmi config initialized",
 			zap.String("ipmi_address", config.Ipmi.Address),
 			zap.String("ipmi_username", config.Ipmi.Username),
 			zap.Uint32("ipmi_port", port),

@@ -43,7 +43,8 @@ func TestBMCConfiguration(t *testing.T) {
 		setPowerMgmtRequestCh:   setPowerMgmtRequestCh,
 	}
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewBMCConfigurationController(agentClient, nil)
 			require.NoError(t, rt.RegisterQController(controller))

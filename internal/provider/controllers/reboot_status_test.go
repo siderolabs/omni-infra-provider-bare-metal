@@ -40,7 +40,8 @@ func TestNoRebootWhenPoweredOnNotRequired(t *testing.T) {
 
 	asserter := reconcileAsserter{t: t}
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewRebootStatusController(bmcClientFactory, 5*time.Minute, pxe.BootModeUEFI, controllers.RebootStatusControllerOptions{
 				PostTransformFunc: asserter.incrementReconcile,

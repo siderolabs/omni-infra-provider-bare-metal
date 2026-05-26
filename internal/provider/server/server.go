@@ -19,8 +19,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/jhump/grpctunnel/tunnelpb"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -77,12 +75,18 @@ func New(ctx context.Context, listenAddress string, port, tlsPort int, serveAsse
 		}
 	}
 
+	// Accept HTTP/1.1 and cleartext HTTP/2 (h2c) on the same listener so gRPC works without TLS.
+	httpProtocols := new(http.Protocols)
+	httpProtocols.SetHTTP1(true)
+	httpProtocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(port)),
 		Handler: NewMultiHandler(configHandler, ipxeHandler, grpcServer, serveAssetsDir, constants.TFTPPath, logger),
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
 		},
+		Protocols: httpProtocols,
 	}
 
 	return &Server{
@@ -161,7 +165,8 @@ func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serve
 
 			next.ServeHTTP(w, req)
 
-			logger.Info("request",
+			logger.Info(
+				"request",
 				zap.String("method", req.Method),
 				zap.String("path", req.URL.Path),
 				zap.Duration("duration", time.Since(start)),
@@ -169,12 +174,10 @@ func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serve
 		})
 	}
 
-	multi := &multiHandler{
+	return &multiHandler{
 		httpHandler: loggingMiddleware(mux),
 		grpcHandler: grpcHandler,
 	}
-
-	return h2c.NewHandler(multi, &http2.Server{})
 }
 
 type multiHandler struct {
@@ -184,7 +187,8 @@ type multiHandler struct {
 
 func (m *multiHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.ProtoMajor == 2 && strings.HasPrefix(
-		req.Header.Get("Content-Type"), "application/grpc") {
+		req.Header.Get("Content-Type"), "application/grpc",
+	) {
 		m.grpcHandler.ServeHTTP(w, req)
 
 		return

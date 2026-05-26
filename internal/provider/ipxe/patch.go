@@ -265,7 +265,8 @@ func replaceCA(fileContents, customCAHash []byte, logger *zap.Logger) error {
 		numOccurrences++
 	}
 
-	logger.Info("replaced iPXE root CA with custom CA",
+	logger.Info(
+		"replaced iPXE root CA with custom CA",
 		zap.String("original_hash", fmt.Sprintf("%x", ipxeRootCAHash)),
 		zap.String("custom_hash", fmt.Sprintf("%x", customCAHash)),
 		zap.Int("occurrences", numOccurrences),

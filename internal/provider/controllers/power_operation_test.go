@@ -44,7 +44,8 @@ func TestPowerOn(t *testing.T) {
 	now := time.Now()
 	nowFunc := func() time.Time { return now }
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewPowerOperationController(nowFunc, bmcClientFactory, 0, pxeBootMode)
 
@@ -96,7 +97,8 @@ func TestPowerOnHonorsPowerOffRequest(t *testing.T) {
 	now := time.Now()
 	nowFunc := func() time.Time { return now }
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewPowerOperationController(nowFunc, bmcClientFactory, 0, pxeBootMode)
 
@@ -146,7 +148,8 @@ func TestPowerOffRequestDoesNotPowerOffPoweredOnMachine(t *testing.T) {
 	now := time.Now()
 	nowFunc := func() time.Time { return now }
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewPowerOperationController(nowFunc, bmcClientFactory, 0, pxeBootMode)
 
@@ -195,7 +198,8 @@ func TestPowerOffRequestBecomesInactiveAfterWipeIdChange(t *testing.T) {
 	now := time.Now()
 	nowFunc := func() time.Time { return now }
 
-	withRuntime(t,
+	withRuntime(
+		t,
 		func(_ context.Context, _ state.State, rt *runtime.Runtime, _ *zap.Logger) {
 			controller := controllers.NewPowerOperationController(nowFunc, bmcClientFactory, 0, pxeBootMode)
 

@@ -102,7 +102,8 @@ func New(options Options, logger *zap.Logger) (*Machines, error) {
 
 // Run starts the provisioner by provisioning a QEMU cluster with the given number of machines. If the cluster already exists, it is loaded instead.
 func (machines *Machines) Run(ctx context.Context) error {
-	machines.logger.Info("provision a new set of machines",
+	machines.logger.Info(
+		"provision a new set of machines",
 		zap.String("name", machines.options.Name),
 		zap.String("subnet_cidr", machines.subnetCIDR.String()),
 		zap.Int("num_machines", machines.options.NumMachines),
@@ -226,7 +227,8 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 		Nodes: nodes,
 	}
 
-	if _, err = qemuProvisioner.Create(ctx, request,
+	if _, err = qemuProvisioner.Create(
+		ctx, request,
 		provision.WithBootlader(true),
 		provision.WithLogWriter(logWriter),
 		provision.WithUEFI(machines.options.UEFIEnabled), // Note: UEFI doesn't work correctly on PXE timeout in QEMU, as it drops to UEFI shell

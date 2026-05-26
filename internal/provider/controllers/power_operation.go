@@ -114,7 +114,8 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 
 	powerOffActive := machine.IsPowerOffActive(infraMachine, powerOperation)
 
-	logger.Info("power operation",
+	logger.Info(
+		"power operation",
 		zap.Bool("installed", machine.IsInstalled(infraMachine, wipeStatus)),
 		zap.Bool("allocated", infraMachine.TypedSpec().Value.ClusterTalosVersion != ""),
 		zap.Bool("requires_wipe", machine.RequiresWipe(infraMachine, wipeStatus)),

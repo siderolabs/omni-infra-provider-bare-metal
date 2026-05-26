@@ -97,7 +97,8 @@ func (p *Provider) Run(ctx context.Context) error {
 		dhcpProxyIfaceOrIP = apiAdvertiseAddress
 	}
 
-	p.logger.Info("starting provider",
+	p.logger.Info(
+		"starting provider",
 		zap.Any("options", p.options),
 		zap.String("api_advertise_address", apiAdvertiseAddress),
 		zap.String("dhcp_proxy_iface_or_ip", dhcpProxyIfaceOrIP),
@@ -161,7 +162,8 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	pxeBootEventCh := make(chan controllers.PXEBootEvent)
 
-	ipxeHandler, err := ipxe.NewHandler(ctx, imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
+	ipxeHandler, err := ipxe.NewHandler(
+		ctx, imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
 		ipxe.HandlerOptions{
 			APIAdvertiseAddress: apiAdvertiseAddress,
 			APIPort:             p.options.APIPort,
@@ -237,7 +239,8 @@ func BuildCOSIRuntime(state state.State, enableResourceCache bool, logger *zap.L
 	var options []runtimeoptions.Option
 
 	if enableResourceCache {
-		options = append(options,
+		options = append(
+			options,
 			safe.WithResourceCache[*resources.BMCConfiguration](),
 			safe.WithResourceCache[*resources.MachineStatus](),
 			safe.WithResourceCache[*resources.PowerOperation](),

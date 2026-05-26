@@ -148,7 +148,8 @@ func init() {
 		"Skip TLS verification when connecting to the Omni API.")
 	rootCmd.Flags().DurationVar(&providerOptions.MinRebootInterval, "min-reboot-interval", providerOptions.MinRebootInterval,
 		"the minimum interval between reboots of the machine issued by the provider. This is to prevent the provider from issuing reboots too frequently.")
-	rootCmd.Flags().BoolVar(&providerOptions.SecureBootEnabled, "secure-boot-enabled", providerOptions.SecureBootEnabled,
+	rootCmd.Flags().BoolVar(
+		&providerOptions.SecureBootEnabled, "secure-boot-enabled", providerOptions.SecureBootEnabled,
 		fmt.Sprintf("Serve secure boot UKI from the iPXE endpoint. The UKI can be used to boot a machine without secure boot, "+
 			`but it is required to boot a machine with secure boot. When enabled, "--%s" must be set to %q and "--%s" must be set to false.`,
 			ipmiPXEBootModeFlag, pxe.BootModeUEFI, useLocalBootAssetsFlag),

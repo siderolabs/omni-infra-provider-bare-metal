@@ -384,13 +384,15 @@ func NewHandler(ctx context.Context, imageFactoryClient ImageFactoryClient, mach
 	}
 
 	if options.AgentTestMode {
-		agentExtraKernelArgs = append(agentExtraKernelArgs,
+		agentExtraKernelArgs = append(
+			agentExtraKernelArgs,
 			fmt.Sprintf("%s=%s", agentconfig.TestModeKernelArg, "1"),
 		)
 	}
 
 	if options.TLS.AgentSkipVerify {
-		agentExtraKernelArgs = append(agentExtraKernelArgs,
+		agentExtraKernelArgs = append(
+			agentExtraKernelArgs,
 			fmt.Sprintf("%s=%s", agentconfig.TLSSkipVerifyKernelArg, "1"),
 		)
 	}

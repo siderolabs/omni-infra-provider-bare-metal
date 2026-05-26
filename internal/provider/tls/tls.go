@@ -171,7 +171,8 @@ func generateCA(ctx context.Context, st state.State, caTTL time.Duration, update
 	ca, err := siderox509.NewSelfSignedCertificateAuthority(
 		siderox509.Organization("siderolabs"),
 		siderox509.NotBefore(now),
-		siderox509.NotAfter(expiration))
+		siderox509.NotAfter(expiration),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create self-signed CA: %w", err)
 	}
