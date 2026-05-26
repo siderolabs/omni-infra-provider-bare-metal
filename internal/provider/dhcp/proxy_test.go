@@ -90,6 +90,7 @@ func TestOfferDHCP(t *testing.T) {
 
 		assert.Equal(t, dhcpv4.MessageTypeOffer, resp.MessageType())
 		assert.Equal(t, "snp.efi", resp.BootFileNameOption())
+		assert.Equal(t, "snp.efi", resp.BootFileName)
 		assert.NotNil(t, resp.GetOneOption(dhcpv4.OptionClassIdentifier))
 	})
 
@@ -102,6 +103,7 @@ func TestOfferDHCP(t *testing.T) {
 
 		assert.Equal(t, dhcpv4.MessageTypeAck, resp.MessageType())
 		assert.Equal(t, "snp.efi", resp.BootFileNameOption())
+		assert.Equal(t, "snp.efi", resp.BootFileName)
 		assert.NotNil(t, resp.GetOneOption(dhcpv4.OptionClassIdentifier))
 	})
 
@@ -109,12 +111,13 @@ func TestOfferDHCP(t *testing.T) {
 		t.Parallel()
 
 		tests := []struct {
-			wantFile string
-			fwtype   dhcp.Firmware
+			wantFile      string
+			wantBOOTPFile string // BOOTP `file` header (resp.BootFileName); empty when only DHCP option 67 is set.
+			fwtype        dhcp.Firmware
 		}{
-			{fwtype: dhcp.FirmwareX86PC, wantFile: "undionly.kpxe"},
-			{fwtype: dhcp.FirmwareX86EFI, wantFile: "snp.efi"},
-			{fwtype: dhcp.FirmwareARMEFI, wantFile: "snp-arm64.efi"},
+			{fwtype: dhcp.FirmwareX86PC, wantFile: "undionly.kpxe", wantBOOTPFile: "undionly.kpxe"},
+			{fwtype: dhcp.FirmwareX86EFI, wantFile: "snp.efi", wantBOOTPFile: "snp.efi"},
+			{fwtype: dhcp.FirmwareARMEFI, wantFile: "snp-arm64.efi", wantBOOTPFile: "snp-arm64.efi"},
 			{fwtype: dhcp.FirmwareX86Ipxe, wantFile: "tftp://192.168.1.100/undionly.kpxe"},
 			{fwtype: dhcp.FirmwareX86HTTP, wantFile: "http://192.168.1.100:50042/tftp/amd64/snp.efi"},
 			{fwtype: dhcp.FirmwareARMHTTP, wantFile: "http://192.168.1.100:50042/tftp/arm64/snp.efi"},
@@ -123,6 +126,30 @@ func TestOfferDHCP(t *testing.T) {
 		for _, tt := range tests {
 			req := newPXEPacket(t, dhcpv4.MessageTypeDiscover)
 			resp, err := dhcp.OfferDHCP(req, apiAddr, apiPort, tt.fwtype, dhcp.Port67)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantFile, resp.BootFileNameOption(), "firmware type %d option 67", tt.fwtype)
+			assert.Equal(t, tt.wantBOOTPFile, resp.BootFileName, "firmware type %d BOOTP file header", tt.fwtype)
+		}
+	})
+
+	t.Run("URL-based boot filenames bracket IPv6 advertise addresses", func(t *testing.T) {
+		t.Parallel()
+
+		const ipv6Addr = "2001:db8::1"
+
+		tests := []struct {
+			wantFile string
+			fwtype   dhcp.Firmware
+		}{
+			{fwtype: dhcp.FirmwareX86Ipxe, wantFile: "tftp://[2001:db8::1]/undionly.kpxe"},
+			{fwtype: dhcp.FirmwareX86HTTP, wantFile: "http://[2001:db8::1]:50042/tftp/amd64/snp.efi"},
+			{fwtype: dhcp.FirmwareARMHTTP, wantFile: "http://[2001:db8::1]:50042/tftp/arm64/snp.efi"},
+		}
+
+		for _, tt := range tests {
+			req := newPXEPacket(t, dhcpv4.MessageTypeDiscover)
+			resp, err := dhcp.OfferDHCP(req, ipv6Addr, apiPort, tt.fwtype, dhcp.Port67)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantFile, resp.BootFileNameOption(), "firmware type %d", tt.fwtype)

@@ -306,22 +306,35 @@ func offerDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 		resp.UpdateOption(dhcpv4.OptClassIdentifier("PXEClient"))
 	}
 
+	// For the standard PXE TFTP firmware types below, the boot filename is also written to the BOOTP
+	// `file` header field in addition to DHCP option 67. U-Boot's ProxyDHCP code path reads the filename
+	// from the header directly and never processes DHCP options, so without this the BOOTP file field
+	// would be empty. iPXE and HTTP-boot firmwares are not included here since they process DHCP options
+	// correctly.
 	switch fwtype {
 	case FirmwareX86PC:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
-		resp.UpdateOption(dhcpv4.OptBootFileName("undionly.kpxe"))
+		resp.BootFileName = "undionly.kpxe"
+		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
 	case FirmwareX86Ipxe:
 		// Almost standard PXE, but the boot filename needs to be a URL.
-		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("tftp://%s/undionly.kpxe", serverIP)))
+		urlHost := serverIP.String()
+		if serverIP.To4() == nil { // IPv6 host must be bracketed in a URL authority per RFC 3986
+			urlHost = "[" + urlHost + "]"
+		}
+
+		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("tftp://%s/undionly.kpxe", urlHost)))
 	case FirmwareX86EFI:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
-		resp.UpdateOption(dhcpv4.OptBootFileName("snp.efi"))
+		resp.BootFileName = "snp.efi"
+		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
 	case FirmwareARMEFI:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
-		resp.UpdateOption(dhcpv4.OptBootFileName("snp-arm64.efi"))
+		resp.BootFileName = "snp-arm64.efi"
+		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
 	case FirmwareX86HTTP:
 		// This is completely standard HTTP-boot: just load a file from HTTP.
 		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/amd64/snp.efi", ipPort)))
