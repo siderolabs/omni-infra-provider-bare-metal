@@ -194,7 +194,7 @@ export OMNI_SERVICE_ACCOUNT_KEY="${ADMIN_SERVICE_ACCOUNT_KEY}"
 export OMNI_ENDPOINT="${BASE_URL}"
 
 echo "Download omnictl..."
-curl -k -o ./omnictl "${BASE_URL}/omnictl/omnictl-linux-amd64"
+curl -fsSL -k -o ./omnictl "${BASE_URL}/api/omnictl/omnictl-linux-amd64"
 chmod +x ./omnictl
 
 echo "Create infra provider..."
