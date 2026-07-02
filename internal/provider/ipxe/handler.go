@@ -139,6 +139,8 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// set Content-Length so net/http sends the body as-is rather than chunked, which would hold the closing chunk until the handler returns
+	w.Header().Set("Content-Length", strconv.Itoa(len(decision.body)))
 	w.WriteHeader(decision.statusCode)
 
 	if _, err = w.Write([]byte(decision.body)); err != nil {
@@ -147,10 +149,16 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// flush now so the machine gets the script without waiting for the handler to return
+	if err = http.NewResponseController(w).Flush(); err != nil {
+		handler.logger.Error("failed to flush response", zap.Error(err))
+	}
+
+	// non-blocking send so the request never waits on the controller; the channel is buffered to absorb bursts
 	select {
-	case <-ctx.Done():
-		handler.logger.Error("failed to send PXE boot event", zap.String("uuid", uuid))
 	case handler.pxeBootEventCh <- controllers.PXEBootEvent{MachineID: uuid}:
+	default:
+		handler.logger.Warn("dropped PXE boot event, channel full", zap.String("uuid", uuid))
 	}
 }
 

@@ -53,6 +53,9 @@ import (
 //go:embed data/icon.svg
 var icon []byte
 
+// pxeBootEventChBuffer bounds how many PXE boot events can queue while the consumer is busy polling BMCs, so a burst of concurrent boots does not block the iPXE handler.
+const pxeBootEventChBuffer = 1024
+
 // Provider implements the bare metal infra provider.
 type Provider struct {
 	logger *zap.Logger
@@ -160,7 +163,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to build machine config: %w", err)
 	}
 
-	pxeBootEventCh := make(chan controllers.PXEBootEvent)
+	pxeBootEventCh := make(chan controllers.PXEBootEvent, pxeBootEventChBuffer)
 
 	ipxeHandler, err := ipxe.NewHandler(
 		ctx, imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
