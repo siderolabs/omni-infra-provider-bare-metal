@@ -1,3 +1,32 @@
+## [omni-infra-provider-bare-metal 0.10.2](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.10.2) (2026-07-02)
+
+Welcome to the v0.10.2 release of omni-infra-provider-bare-metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Contributors
+
+* Oguz Kilcan
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`dc42fb6`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/dc42fb6fc93a2245741bf0cc4c1306e0debf528f) fix: don't stall boot.ipxe requests when many nodes PXE boot at once
+* [`37cae94`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/37cae94841a1bcfb400a274924f9d6831d41217a) chore: rekres
+* [`16fad8a`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/16fad8a23e954865be9820d1ba1412114546ff27) test: download omnictl from the /api/omnictl/ path
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.10.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.10.1)
+
 ## [omni-infra-provider-bare-metal 0.10.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.10.1) (2026-05-27)
 
 Welcome to the v0.10.1 release of omni-infra-provider-bare-metal!

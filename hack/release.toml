@@ -5,20 +5,5 @@ project_name = "omni-infra-provider-bare-metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.9.0"
+previous = "v0.10.1"
 pre_release = false
-
-[notes.talos-v1-13]
-title = "Talos v1.13.0"
-description = """\
-This release updates the dependency on Talos to v1.13.0.
-"""
-
-[notes.power-off-support]
-title = "Machine Power-Off Support"
-description = """\
-The provider now honors power-off requests from Omni. \
-When Omni requests a machine to be powered off, the provider acknowledges the request and avoids automatically powering the machine back on due to cluster allocation. \
-The request is honored until the machine goes through a deallocation cycle, at which point it is considered stale and the provider resumes normal power management. \
-The provider also reports the currently honored request back to Omni, allowing Omni to distinguish intentional power-off from unexpected disconnects.
-"""
