@@ -95,7 +95,7 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 
 	logger.Debug("generated schematic", zap.String("schematic", string(marshaled)))
 
-	schematicID, err := c.factoryClient.SchematicCreate(ctx, sch)
+	schematicID, _, err := c.factoryClient.SchematicCreate(ctx, sch)
 	if err != nil {
 		return "", fmt.Errorf("failed to create schematic: %w", err)
 	}

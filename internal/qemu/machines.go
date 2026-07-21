@@ -229,7 +229,7 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 	if _, err = qemuProvisioner.Create(
 		ctx, request,
-		provision.WithBootlader(true),
+		provision.WithBootloader(true),
 		provision.WithLogWriter(logWriter),
 		provision.WithUEFI(machines.options.UEFIEnabled), // Note: UEFI doesn't work correctly on PXE timeout in QEMU, as it drops to UEFI shell
 	); err != nil {
