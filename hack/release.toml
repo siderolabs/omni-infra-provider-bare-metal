@@ -1,9 +1,15 @@
 # commit to be tagged for the new release
 commit = "HEAD"
 
-project_name = "omni-infra-provider-bare-metal"
+project_name = "Omni Infra Provider Bare Metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 previous = "v0.10.1"
 pre_release = false
+
+[notes.versioning-support]
+title = "Add Versioning Support"
+description = """\
+The infra provider will now report its version to Omni.
+"""

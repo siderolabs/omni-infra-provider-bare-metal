@@ -48,6 +48,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tftp"
 	tls "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/version"
 )
 
 //go:embed data/icon.svg
@@ -280,6 +281,7 @@ func (p *Provider) ensureProviderStatus(ctx context.Context, st state.State) err
 		res.TypedSpec().Value.Name = p.options.Name
 		res.TypedSpec().Value.Description = p.options.Description
 		res.TypedSpec().Value.Icon = base64.RawStdEncoding.EncodeToString(icon)
+		res.TypedSpec().Value.Version = version.Tag
 	}
 
 	providerStatus := infra.NewProviderStatus(meta.ProviderID.String())
