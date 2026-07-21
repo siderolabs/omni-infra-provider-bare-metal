@@ -54,7 +54,7 @@ spec:
       destination: /var/lib/ipxe/arm64
       name: ipxe-linux-arm64
     -
-      stage: ghcr.io/utkuozdemir/talos-metal-agent-boot-assets:v1.13.0-alpha.2-86-g919d8c365-agent-v0.1.4-1-gc2379a7-dirty # to be used with --use-local-boot-assets for local development
+      stage: ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.13.6-agent-v0.1.6 # to be used with --use-local-boot-assets for local development
       # stage: 127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v0.0.1-local # for local development, to be replaced with the line above and rekres-ed
       source: /
       destination: /assets
