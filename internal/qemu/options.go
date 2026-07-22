@@ -22,6 +22,14 @@ type Options struct {
 	MemSize  int64
 
 	UEFIEnabled bool
+
+	// PXEBootViaDHCPD makes the provisioner's own DHCP server hand out the PXE boot server and boot
+	// file directly, instead of relying on the provider's ProxyDHCP responses. Some UEFI firmware
+	// PXE stacks (e.g., EDK2 in QEMU) do not accept ProxyDHCP offers, so this makes them boot via
+	// plain single-server PXE. The boot file is chosen for the machine firmware and architecture
+	// and served by the provider's TFTP server on the gateway address. Only applies when the
+	// machines are created, not when an existing set is loaded.
+	PXEBootViaDHCPD bool
 }
 
 // DefaultOptions returns the default options for the set of machines.

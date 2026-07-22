@@ -6,12 +6,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -45,8 +47,8 @@ func (s *Server) RegisterService(desc *grpc.ServiceDesc, impl any) {
 }
 
 // New creates a new server.
-func New(ctx context.Context, listenAddress string, port, tlsPort int, serveAssetsDir bool, certs *providertls.Certs,
-	configHandler, ipxeHandler http.Handler, tunnelServiceServer tunnelpb.TunnelServiceServer, logger *zap.Logger,
+func New(ctx context.Context, listenAddress string, port, tlsPort int, assetsDir string, certs *providertls.Certs,
+	configHandler, ipxeHandler http.Handler, files map[string][]byte, tunnelServiceServer tunnelpb.TunnelServiceServer, logger *zap.Logger,
 ) *Server {
 	recoveryOption := recovery.WithRecoveryHandler(recoveryHandler(logger))
 
@@ -82,7 +84,7 @@ func New(ctx context.Context, listenAddress string, port, tlsPort int, serveAsse
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(listenAddress, strconv.Itoa(port)),
-		Handler: NewMultiHandler(configHandler, ipxeHandler, grpcServer, serveAssetsDir, constants.TFTPPath, logger),
+		Handler: NewMultiHandler(configHandler, ipxeHandler, grpcServer, assetsDir, files, logger),
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
 		},
@@ -148,15 +150,17 @@ func (s *Server) shutdownOnCancel(ctx context.Context, server *http.Server) erro
 }
 
 // NewMultiHandler creates the HTTP handler that multiplexes config, iPXE, TFTP file serving, and gRPC.
-func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, serveAssetsDir bool, tftpPath string, logger *zap.Logger) http.Handler {
+//
+// If assetsDir is not empty, its contents are served under the /assets/ path.
+func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, assetsDir string, files map[string][]byte, logger *zap.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/config", configHandler)
 	mux.Handle(fmt.Sprintf("/%s/{script}", constants.IPXEURLPath), ipxeHandler)
-	mux.Handle("/tftp/", http.StripPrefix("/tftp/", http.FileServer(http.Dir(tftpPath+"/"))))
+	mux.Handle("/tftp/", http.StripPrefix("/tftp/", filesHandler(files)))
 
-	if serveAssetsDir {
-		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("/assets/"))))
+	if assetsDir != "" {
+		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))
 	}
 
 	loggingMiddleware := func(next http.Handler) http.Handler {
@@ -205,4 +209,21 @@ func recoveryHandler(logger *zap.Logger) recovery.RecoveryHandlerFunc {
 
 		return status.Errorf(codes.Internal, "%v", p)
 	}
+}
+
+// filesHandler serves the given in-memory files, keyed by the request path.
+func filesHandler(files map[string][]byte) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		contents, ok := files[strings.TrimPrefix(path.Clean("/"+req.URL.Path), "/")]
+		if !ok {
+			http.NotFound(w, req)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/octet-stream")
+
+		// ServeContent handles HEAD, range, and conditional requests, and sets Content-Length.
+		http.ServeContent(w, req, "", time.Time{}, bytes.NewReader(contents))
+	})
 }

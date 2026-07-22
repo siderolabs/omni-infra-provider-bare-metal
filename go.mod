@@ -15,6 +15,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25
 	github.com/siderolabs/crypto v0.6.5
 	github.com/siderolabs/gen v0.8.7
+	github.com/siderolabs/go-zbin v0.1.0
 	github.com/siderolabs/image-factory v1.4.0
 	github.com/siderolabs/net v0.4.0
 	github.com/siderolabs/omni/client v1.9.0-beta.1.0.20260723121807-582730ce940c
@@ -148,7 +149,7 @@ require (
 	github.com/siderolabs/siderolink v0.3.16 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/ulikunitz/xz v0.5.16 // indirect
 	github.com/vishvananda/netlink v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

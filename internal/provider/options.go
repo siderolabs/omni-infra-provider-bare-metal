@@ -29,6 +29,7 @@ type Options struct {
 	Description            string
 	BootFromDiskMethod     string
 	ExtraMachineConfigPath string
+	BootAssetsPath         string
 
 	MachineLabels []string
 
@@ -57,6 +58,7 @@ func DefaultOptions() Options {
 		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
 		AgentModeTalosVersion:  "v1.13.7",
 		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
+		BootAssetsPath:         "/assets",
 		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
 		APIPort:                50042,
 		MinRebootInterval:      15 * time.Minute,

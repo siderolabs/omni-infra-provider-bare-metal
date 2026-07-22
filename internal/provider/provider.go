@@ -74,7 +74,7 @@ func New(options Options, logger *zap.Logger) *Provider {
 
 // Run runs the provider.
 //
-//nolint:gocyclo,cyclop
+//nolint:gocyclo,cyclop,gocognit
 func (p *Provider) Run(ctx context.Context) error {
 	pxeBootMode, err := pxe.ParseBootMode(p.options.IPMIPXEBootMode)
 	if err != nil {
@@ -88,6 +88,12 @@ func (p *Provider) Run(ctx context.Context) error {
 
 		if p.options.UseLocalBootAssets {
 			return errors.New("local boot assets cannot be used with secure boot")
+		}
+	}
+
+	if p.options.UseLocalBootAssets {
+		if err = ipxe.ValidateBootAssets(p.options.BootAssetsPath, p.logger); err != nil {
+			return err
 		}
 	}
 
@@ -167,12 +173,13 @@ func (p *Provider) Run(ctx context.Context) error {
 	pxeBootEventCh := make(chan controllers.PXEBootEvent, pxeBootEventChBuffer)
 
 	ipxeHandler, err := ipxe.NewHandler(
-		ctx, imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
+		imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
 		ipxe.HandlerOptions{
 			APIAdvertiseAddress: apiAdvertiseAddress,
 			APIPort:             p.options.APIPort,
 			TLS:                 p.options.TLS,
 			UseLocalBootAssets:  p.options.UseLocalBootAssets,
+			BootAssetsPath:      p.options.BootAssetsPath,
 			AgentTestMode:       p.options.AgentTestMode,
 			BootFromDiskMethod:  p.options.BootFromDiskMethod,
 		},
@@ -195,10 +202,16 @@ func (p *Provider) Run(ctx context.Context) error {
 	bmcClientFactory := bmc.NewClientFactory(bmc.ClientFactoryOptions{
 		RedfishOptions: p.options.Redfish,
 	})
-	tftpServer := tftp.NewServer(p.options.APIListenAddress, p.logger.With(zap.String("component", "tftp_server")))
+	tftpServer := tftp.NewServer(p.options.APIListenAddress, ipxeHandler.PatchedFiles(), p.logger.With(zap.String("component", "tftp_server")))
 	bmcAPIAddressReader := bmcapi.NewAddressReader(p.options.APIPowerMgmtStateDir)
 	agentClient := agent.NewClient(agentConnectionEventCh, p.options.AgentClient, p.logger.With(zap.String("component", "agent_client"))) //nolint:contextcheck // false positive
-	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, p.options.UseLocalBootAssets, certs, configHandler, ipxeHandler,
+
+	assetsDir := ""
+	if p.options.UseLocalBootAssets {
+		assetsDir = p.options.BootAssetsPath
+	}
+
+	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, assetsDir, certs, configHandler, ipxeHandler, ipxeHandler.PatchedFiles(),
 		agentClient.TunnelServiceServer(), p.logger.With(zap.String("component", "server")))
 
 	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID.String(), providercontrollers.ProviderHealthStatusOptions{})

@@ -57,7 +57,8 @@ So the agent version served this way is whatever the extensions catalog pins for
 
 The local boot-assets path is for dev and airgap and is enabled by `--use-local-boot-assets`.
 The boot-assets image is baked into the provider image at `/assets` at build time, pinned in `.kres.yaml` as a `copyFrom` stage and copied in the generated `Dockerfile`.
-The flag only decides whether those already-baked files get served.
+The assets are read from the directory given by `--boot-assets-path`, which defaults to `/assets`, so a containerized run serves the baked-in files and a native run points the flag at any directory.
+At startup the directory is validated: at least one architecture must have a complete and usable set of assets or the provider refuses to start, and architectures with incomplete assets are logged as unbootable.
 Important: when `--use-local-boot-assets` is set, `--agent-mode-talos-version` has no effect, because the agent binary comes from the baked-in initramfs, not the factory.
 When debugging "my agent fix did not take", first check the provider version and whether local assets are in use.
 
@@ -129,7 +130,8 @@ It builds its own runtime and controllers and reuses only pieces of the SDK, suc
 Flags live in `cmd/provider/main.go`.
 The most relevant for this repo's work:
 
-- `--use-local-boot-assets` serves baked-in assets instead of the factory.
+- `--use-local-boot-assets` serves local boot assets instead of the factory.
+- `--boot-assets-path` sets the directory the local boot assets are read from, defaulting to the `/assets` baked into the provider image.
 - `--agent-mode-talos-version` sets the Talos version used for factory agent-mode schematics, and it has no effect under `--use-local-boot-assets`.
 - `--image-factory-base-url` and `--image-factory-pxe-base-url` point at the factory.
 - `--secure-boot-enabled` serves a UKI, requires UEFI PXE mode, and rules out local boot assets.
@@ -146,6 +148,11 @@ Each machine's launcher process serves a small per-machine HTTP power API (power
 The provider is then run with `--agent-test-mode` and with `--api-power-mgmt-state-dir` pointing at that state directory.
 In agent test mode the provider boots agents with the test-mode kernel argument, the agent reports API-based power management instead of configuring IPMI, and the provider looks up each machine's power API address in the state directory by node UUID.
 From there on everything behaves as with real hardware, with the API-backed BMC client standing in for IPMI or Redfish.
+
+The provider and `qemu-up` also run natively outside docker.
+A fresh clone needs `make fetch-source-assets` once before any native Go build, because the iPXE binaries referenced by `go:embed` are not committed, and `go build ./...` fails with a missing-embed-file error without them.
+Some UEFI PXE firmware, notably EDK2 in QEMU, rejects ProxyDHCP offers; `qemu-up --pxe-boot-via-dhcpd` makes the provisioner's own DHCP server hand out the boot file directly, chosen by machine firmware and architecture.
+That option applies only when the machines are created, so destroy and recreate an existing set to change it.
 
 `hack/test/integration.sh` wires this together end to end: it builds the provider image, brings up emulated machines with `qemu-up`, starts Vault and Omni in containers, creates the infra provider with `omnictl infraprovider create`, runs the provider in agent test mode, and then runs Omni's integration test suite against the whole stack.
 It runs in CI through the `run-integration-test` make target.
@@ -165,6 +172,10 @@ That is why every committed root `.md` file, including this one, must pass markd
 The boot-assets stage image is pinned in `.kres.yaml` as `ghcr.io/siderolabs/talos-metal-agent-boot-assets:<imager>-agent-<agent-version>`.
 Repin it and rekres when you want newer default local-dev assets, and always use the upstream `siderolabs` image rather than a fork build.
 
+The iPXE image is pinned in the `common.SourceAssets` document of `.kres.yaml`, which materializes the iPXE binaries into `internal/provider/ipxe/data/` for the `go:embed` directives.
+Those files are git-ignored; the docker build injects them from the image, and `make fetch-source-assets` fetches them for native builds.
+After repinning the iPXE image, run `make rekres` and then `make fetch-source-assets` to refresh a local tree.
+
 `AgentModeTalosVersion` (`internal/provider/options.go`) should track a Talos version whose extensions catalog publishes the desired metal-agent version.
 
 ## Dependency bumps
@@ -174,7 +185,7 @@ Never use `-u` or `all`, since those drag indirect deps past what direct deps re
 
 Bumping `talos/pkg/machinery` (Talos's public API) is almost always safe, including to an alpha, because it is backwards compatible.
 When the latest `image-factory` or `omni/client` require a Talos prerelease, pin the prerelease first (`go get github.com/siderolabs/talos@<prerelease> github.com/siderolabs/talos/pkg/machinery@<prerelease>`), then run the direct-deps bump so it resolves cleanly.
-A machinery jump can break a few call sites, so expect to fix them (for example the `image-factory` `SchematicCreate` return signature or renamed Talos `provision` options), and verify with `go build ./...` first.
+A machinery jump can break a few call sites, so expect to fix them (for example the `image-factory` `SchematicCreate` return signature or renamed Talos `provision` options), and verify with `go build ./...` first (on a fresh clone, `make fetch-source-assets` before building).
 
 Gates, in order, using the make targets, which are authoritative: `make lint-fmt`, `make lint` (includes govulncheck and markdownlint), `make generate`, and `make unit-tests`.
 

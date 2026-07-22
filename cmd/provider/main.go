@@ -116,6 +116,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&providerOptions.UseLocalBootAssets, useLocalBootAssetsFlag, providerOptions.UseLocalBootAssets,
 		"Use local boot assets for iPXE booting. If set, the iPXE server will use the kernel and initramfs from the local assets "+
 			"instead of forwarding the request to the image factory to boot into agent mode.")
+	rootCmd.Flags().StringVar(&providerOptions.BootAssetsPath, "boot-assets-path", providerOptions.BootAssetsPath,
+		fmt.Sprintf("The directory containing the local boot assets (agent kernel, initramfs and kernel cmdline). Only used when --%s is set.", useLocalBootAssetsFlag))
 	rootCmd.Flags().StringVar(&providerOptions.DHCPProxyIfaceOrIP, "dhcp-proxy-iface-or-ip", providerOptions.DHCPProxyIfaceOrIP,
 		"The interface name or the IP address on the interface to run the DHCP proxy server on. "+
 			"If it is an IP address, the DHCP proxy server will run on the interface that has the IP address. "+

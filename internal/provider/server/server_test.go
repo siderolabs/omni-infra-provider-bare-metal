@@ -7,22 +7,18 @@ package server_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
 )
 
 func TestMultiHandlerRouting(t *testing.T) {
-	tftpDir := t.TempDir()
-
-	require.NoError(t, os.MkdirAll(filepath.Join(tftpDir, "amd64"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(tftpDir, "amd64", "snp.efi"), []byte("snp-efi-content"), 0o644))
+	files := map[string][]byte{
+		"amd64/snp.efi": []byte("snp-efi-content"),
+	}
 
 	configCalled := false
 	configHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -43,7 +39,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 	})
 
 	logger := zaptest.NewLogger(t)
-	handler := server.NewMultiHandler(configHandler, ipxeHandler, grpcHandler, false, tftpDir, logger)
+	handler := server.NewMultiHandler(configHandler, ipxeHandler, grpcHandler, "", files, logger)
 
 	t.Run("config path routes to configHandler", func(t *testing.T) {
 		configCalled = false
@@ -67,7 +63,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
-	t.Run("tftp path serves files from tftpDir", func(t *testing.T) {
+	t.Run("tftp path serves the in-memory files", func(t *testing.T) {
 		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tftp/amd64/snp.efi", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -76,7 +72,7 @@ func TestMultiHandlerRouting(t *testing.T) {
 		assert.Equal(t, "snp-efi-content", rec.Body.String())
 	})
 
-	t.Run("tftp path does not serve files from a different dir", func(t *testing.T) {
+	t.Run("tftp path does not serve unknown names", func(t *testing.T) {
 		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tftp/nonexistent.efi", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)

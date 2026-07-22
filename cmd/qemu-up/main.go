@@ -100,6 +100,8 @@ func init() {
 	rootCmd.Flags().StringVar(&qemuOptions.Name, "name", qemuOptions.Name, "Name of the cluster (the set of machines).")
 	rootCmd.Flags().StringVar(&qemuOptions.CIDR, "cidr", qemuOptions.CIDR, "CIDR for the machines' network.")
 	rootCmd.Flags().StringVar(&qemuOptions.CNIBundleURL, "cni-bundle-url", qemuOptions.CNIBundleURL, "URL to the CNI bundle.")
+	rootCmd.Flags().BoolVar(&qemuOptions.PXEBootViaDHCPD, "pxe-boot-via-dhcpd", qemuOptions.PXEBootViaDHCPD,
+		"Serve the PXE boot server and boot file directly from the provisioner DHCP server instead of relying on ProxyDHCP (for UEFI firmwares which do not support ProxyDHCP, e.g., EDK2 in QEMU).")
 	rootCmd.Flags().StringVar(&qemuOptions.TalosctlPath, "talosctl-path", qemuOptions.TalosctlPath,
 		fmt.Sprintf("Path to the talosctl binary. If not specified, the binary %q will be looked up in the current working dir and in the PATH.", qemu.TalosctlBinary))
 	rootCmd.Flags().StringVar(&qemuOptions.CPUs, "cpus", qemuOptions.CPUs, "Number of CPUs for each machine.")

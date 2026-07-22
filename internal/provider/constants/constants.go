@@ -6,12 +6,6 @@
 package constants
 
 const (
-	// IPXEPath is the path to the iPXE binaries.
-	IPXEPath = "/var/lib/ipxe"
-
-	// TFTPPath is the path from which the TFTP server serves files.
-	TFTPPath = "/var/lib/tftp"
-
 	// IPXEURLPath is the path from which the HTTP server serves the iPXE scripts.
 	IPXEURLPath = "ipxe"
 )

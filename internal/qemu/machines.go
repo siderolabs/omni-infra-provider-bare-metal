@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/google/uuid"
@@ -126,6 +127,10 @@ func (machines *Machines) Run(ctx context.Context) error {
 		return err
 	}
 
+	if loaded && machines.options.PXEBootViaDHCPD {
+		machines.logger.Warn("an existing machine set was loaded, so the PXE-boot-via-DHCPD option has no effect - destroy and recreate the machines for it to apply")
+	}
+
 	if !loaded {
 		logWriter := &zapio.Writer{
 			Log:   machines.logger,
@@ -173,6 +178,24 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 		return fmt.Errorf("failed to get gateway address: %w", err)
 	}
 
+	var tftpServer, ipxeBootFilename string
+
+	if machines.options.PXEBootViaDHCPD {
+		tftpServer = gatewayAddr.String()
+
+		// This mirrors the firmware detection the provider's ProxyDHCP does, which this mode
+		// bypasses. The guest arch matches runtime.GOARCH because qemu-up always creates
+		// host-native VMs.
+		switch {
+		case !machines.options.UEFIEnabled:
+			ipxeBootFilename = "undionly.kpxe"
+		case runtime.GOARCH == "arm64":
+			ipxeBootFilename = "snp-arm64.efi"
+		default:
+			ipxeBootFilename = "snp.efi"
+		}
+	}
+
 	nodes := make([]provision.NodeRequest, 0, machines.options.NumMachines)
 
 	for i := range machines.options.NumMachines {
@@ -201,6 +224,8 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 			UUID:                &nodeUUID,
 			PXEBooted:           true,
 			DefaultBootOrder:    machines.options.DefaultBootOrder, // first disk, then network
+			TFTPServer:          tftpServer,
+			IPXEBootFilename:    ipxeBootFilename,
 		})
 	}
 

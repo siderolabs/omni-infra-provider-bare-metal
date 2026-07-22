@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -78,6 +79,7 @@ type ImageFactoryClient interface {
 type HandlerOptions struct {
 	APIAdvertiseAddress string
 	BootFromDiskMethod  string
+	BootAssetsPath      string
 	TLS                 tls.Options
 	APIPort             int
 	UseLocalBootAssets  bool
@@ -90,6 +92,7 @@ type Handler struct {
 	reader             controller.Reader
 	logger             *zap.Logger
 	pxeBootEventCh     chan<- controllers.PXEBootEvent
+	files              map[string][]byte
 	bootFromDiskMethod BootFromDiskMethod
 	defaultKernelArgs  []string
 	agentKernelArgs    []string
@@ -313,6 +316,63 @@ func (handler *Handler) bootViaFactoryIPXEScript(ctx context.Context, agentMode 
 	return ipxeScript, http.StatusOK, nil
 }
 
+// ValidateBootAssets checks the local boot assets directory, so a misconfiguration fails at
+// startup instead of when a machine attempts to boot.
+//
+// A single fully populated architecture is enough, since a deployment might only ever boot
+// machines of one architecture. Architectures with missing or unusable files are logged, as
+// machines of those architectures will fail to boot.
+func ValidateBootAssets(dir string, logger *zap.Logger) error {
+	var problems []string
+
+	numComplete := 0
+
+	for _, arch := range []string{archAmd64, archArm64} {
+		var archProblems []string
+
+		for _, name := range []string{"kernel-" + arch, "initramfs-metal-" + arch + ".xz", "cmdline-metal-" + arch} {
+			if err := validateBootAssetFile(filepath.Join(dir, name)); err != nil {
+				archProblems = append(archProblems, err.Error())
+			}
+		}
+
+		if len(archProblems) == 0 {
+			numComplete++
+
+			continue
+		}
+
+		problems = append(problems, archProblems...)
+
+		logger.Warn("boot assets are incomplete for an architecture, machines of it will fail to boot",
+			zap.String("arch", arch), zap.Strings("problems", archProblems))
+	}
+
+	if numComplete == 0 {
+		return fmt.Errorf("boot assets directory %q has no complete set of assets for any architecture: %s", dir, strings.Join(problems, "; "))
+	}
+
+	return nil
+}
+
+// validateBootAssetFile checks that the given boot asset is a non-empty regular file.
+func validateBootAssetFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", path)
+	}
+
+	if info.Size() == 0 {
+		return fmt.Errorf("%s is empty", path)
+	}
+
+	return nil
+}
+
 func (handler *Handler) bootAgentModeViaLocalIPXEScript(arch string, kernelArgs []string) (string, int, error) {
 	hostPort := net.JoinHostPort(handler.options.APIAdvertiseAddress, strconv.Itoa(handler.options.APIPort))
 
@@ -320,7 +380,7 @@ func (handler *Handler) bootAgentModeViaLocalIPXEScript(arch string, kernelArgs 
 	initramfs := fmt.Sprintf("http://%s/assets/initramfs-metal-%s.xz", hostPort, arch)
 
 	// read cmdline
-	cmdline, err := os.ReadFile(fmt.Sprintf("/assets/cmdline-metal-%s", arch))
+	cmdline, err := os.ReadFile(filepath.Join(handler.options.BootAssetsPath, "cmdline-metal-"+arch))
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to read cmdline: %w", err)
 	}
@@ -341,7 +401,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(ctx context.Context, imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
+func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
 ) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
@@ -356,7 +416,8 @@ func NewHandler(ctx context.Context, imageFactoryClient ImageFactoryClient, mach
 
 	logger.Info("patch iPXE binaries")
 
-	if err = patchBinaries(ctx, initScript, options.TLS.CustomIPXECACertFile, logger); err != nil {
+	files, err := patchBinaries(initScript, options.TLS.CustomIPXECACertFile, logger)
+	if err != nil {
 		return nil, err
 	}
 
@@ -411,6 +472,7 @@ func NewHandler(ctx context.Context, imageFactoryClient ImageFactoryClient, mach
 		pxeBootEventCh:     pxeBootEventCh,
 		reader:             r,
 		imageFactoryClient: imageFactoryClient,
+		files:              files,
 		options:            options,
 		defaultKernelArgs:  defaultKernelArgs,
 		agentKernelArgs:    agentKernelArgs,
@@ -447,4 +509,10 @@ func compressInlineConfig(config []byte, logger *zap.Logger) (string, error) {
 	configBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	return configBase64, nil
+}
+
+// PatchedFiles returns the patched iPXE binaries to be served over TFTP and HTTP, keyed by the names
+// they are served under.
+func (handler *Handler) PatchedFiles() map[string][]byte {
+	return handler.files
 }
