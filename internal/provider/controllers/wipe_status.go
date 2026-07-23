@@ -85,6 +85,8 @@ func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r contr
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("agent is not accessible")
 	}
 
+	logger.Info("XCORR wiping disks", zap.String("machine", infraMachine.Metadata().ID()), zap.String("wipe_id", infraMachine.TypedSpec().Value.WipeId))
+
 	if err = helper.agentClient.WipeDisks(ctx, infraMachine.Metadata().ID()); err != nil {
 		return fmt.Errorf("failed to wipe disks: %w", err)
 	}

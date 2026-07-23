@@ -12,6 +12,9 @@ USE_LOCAL_BOOT_ASSETS=false
 IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
 IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
 
+# DEBUG ONLY, DO NOT MERGE. Instrumented Omni (XCORR logs + duplicate-install guard hypothesis).
+OMNI_IMAGE=ghcr.io/utkuozdemir/omni:bm-debug-dupinstall
+
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"

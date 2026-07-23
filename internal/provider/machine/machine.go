@@ -85,13 +85,31 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 		requiredBootMode = BootModeTalosPXE
 	}
 
+	var (
+		installEventID, lastWipeInstallEventID uint64
+		machineID                              string
+	)
+
+	if infraMachine != nil {
+		installEventID = infraMachine.TypedSpec().Value.InstallEventId
+		machineID = infraMachine.Metadata().ID()
+	}
+
+	if wipeStatus != nil {
+		lastWipeInstallEventID = wipeStatus.TypedSpec().Value.LastWipeInstallEventId
+	}
+
 	logger.With(
+		zap.String("machine", machineID),
 		zap.Bool("infra_machine_tearing_down", infraMachineTearingDown),
 		zap.Bool("requires_power_mgmt_config", requiresPowerMgmtConfig),
 		zap.Bool("installed", installed),
+		zap.Bool("requires_wipe", requiresWipe),
+		zap.Uint64("install_event_id", installEventID),
+		zap.Uint64("last_wipe_install_event_id", lastWipeInstallEventID),
 		zap.Stringer("acceptance_status", acceptanceStatus),
 		zap.String("required_boot_mode", string(requiredBootMode)),
-	).Debug("determined boot mode")
+	).Info("XCORR determined boot mode")
 
 	return requiredBootMode
 }

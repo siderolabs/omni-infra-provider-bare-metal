@@ -149,8 +149,10 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 		infraMachineStatus.TypedSpec().Value.LastPowerOffId = ""
 	}
 
-	logger.Debug("machine status",
+	logger.Info("XCORR infra machine status out",
+		zap.String("machine", infraMachine.Metadata().ID()),
 		zap.Bool("installed", infraMachineStatus.TypedSpec().Value.Installed),
+		zap.Bool("requires_wipe", requiresWipe),
 		zap.Bool("ready_to_use", infraMachineStatus.TypedSpec().Value.ReadyToUse))
 
 	return nil
