@@ -12,6 +12,10 @@ USE_LOCAL_BOOT_ASSETS=false
 IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
 IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
 
+# XCORR experiment (DO NOT MERGE): pin omni to the instrumented POST-lifecycle build in Utku's ghcr.
+# The docker pull below keeps it fresh. The xcorr-pre branch changes only this tag to :xcorr-pre.
+OMNI_IMAGE=ghcr.io/utkuozdemir/omni:xcorr-post
+
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
 echo "SKIP_CLEANUP: $SKIP_CLEANUP"

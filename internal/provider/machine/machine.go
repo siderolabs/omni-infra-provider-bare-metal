@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 )
 
 // BootMode represents the boot mode of a machine.
@@ -84,6 +85,23 @@ func RequiredBootMode(infraMachine *infra.Machine, bmcConfiguration *resources.B
 	default:
 		requiredBootMode = BootModeTalosPXE
 	}
+
+	xcorrMachineID := "<nil>"
+
+	var xcorrInstallEventID, xcorrLastWipeInstallEventID uint64
+
+	if infraMachine != nil {
+		xcorrMachineID = infraMachine.Metadata().ID()
+		xcorrInstallEventID = infraMachine.TypedSpec().Value.InstallEventId
+	}
+
+	if wipeStatus != nil {
+		xcorrLastWipeInstallEventID = wipeStatus.TypedSpec().Value.LastWipeInstallEventId
+	}
+
+	xcorr.Logf("RequiredBootMode machine=%s -> %s (installed=%v requiresWipe=%v allocated=%v acceptancePending=%v rejected=%v requiresPowerMgmtConfig=%v tearingDown=%v installEventId=%d lastWipeInstallEventId=%d)",
+		xcorrMachineID, requiredBootMode, installed, requiresWipe, allocated, acceptancePending, rejected, requiresPowerMgmtConfig, infraMachineTearingDown,
+		xcorrInstallEventID, xcorrLastWipeInstallEventID)
 
 	logger.With(
 		zap.Bool("infra_machine_tearing_down", infraMachineTearingDown),

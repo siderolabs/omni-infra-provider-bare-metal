@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
@@ -108,6 +109,8 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 	opSpec := powerOperation.TypedSpec().Value
 
 	if powerOffRequestID != "" && powerOffRequestID != opSpec.LastPowerOffId {
+		xcorr.Logf("PowerOffRequest-ack machine=%s powerOffRequestId=%s wipeId=%s", infraMachine.Metadata().ID(), powerOffRequestID, infraMachine.TypedSpec().Value.WipeId)
+
 		opSpec.LastPowerOffId = powerOffRequestID
 		opSpec.WipeIdAtPowerOff = infraMachine.TypedSpec().Value.WipeId
 	}
@@ -144,6 +147,9 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		logger.Debug("power on machine")
 
 		requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
+
+		xcorr.Logf("PowerOn machine=%s requiredBootMode=%s pxeBoot=%v (powering on via BMC)", infraMachine.Metadata().ID(), requiredBootMode, machine.RequiresPXEBoot(requiredBootMode))
+
 		if machine.RequiresPXEBoot(requiredBootMode) {
 			if err = bmcClient.SetPXEBootOnce(ctx, helper.pxeBootMode); err != nil {
 				return err
@@ -165,6 +171,8 @@ func (helper *powerOperationControllerHelper) transform(ctx context.Context, r c
 		}
 
 		logger.Debug("power off machine")
+
+		xcorr.Logf("PowerOff machine=%s (powering off via BMC)", infraMachine.Metadata().ID())
 
 		if err = bmcClient.PowerOff(ctx); err != nil {
 			return err

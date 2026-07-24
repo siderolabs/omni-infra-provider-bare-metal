@@ -19,6 +19,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 )
 
 // WipeStatusController manages machine power management.
@@ -85,6 +86,9 @@ func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r contr
 		return xerrors.NewTaggedf[qtransform.SkipReconcileTag]("agent is not accessible")
 	}
 
+	xcorr.Logf("Wipe-start machine=%s wipeId=%s installEventId=%d (wiping disks, will destroy system disk)",
+		infraMachine.Metadata().ID(), infraMachine.TypedSpec().Value.WipeId, infraMachine.TypedSpec().Value.InstallEventId)
+
 	if err = helper.agentClient.WipeDisks(ctx, infraMachine.Metadata().ID()); err != nil {
 		return fmt.Errorf("failed to wipe disks: %w", err)
 	}
@@ -94,6 +98,9 @@ func (helper *wipeStatusControllerHelper) transform(ctx context.Context, r contr
 	wipeStatus.TypedSpec().Value.LastWipeId = infraMachine.TypedSpec().Value.WipeId
 	wipeStatus.TypedSpec().Value.LastWipeInstallEventId = infraMachine.TypedSpec().Value.InstallEventId
 	wipeStatus.TypedSpec().Value.WipedNodeUniqueToken = infraMachine.TypedSpec().Value.NodeUniqueToken
+
+	xcorr.Logf("Wipe-done machine=%s lastWipeId=%s lastWipeInstallEventId=%d wasInitialWipe=%v (system disk destroyed, Installed now false)",
+		infraMachine.Metadata().ID(), wipeStatus.TypedSpec().Value.LastWipeId, wipeStatus.TypedSpec().Value.LastWipeInstallEventId, wasInitialWipe)
 
 	logger.Info("wiped disks on the machine", zap.String("wipe_id", wipeStatus.TypedSpec().Value.LastWipeId),
 		zap.Bool("was_initial_wipe", wasInitialWipe), zap.Uint64("install_event_id", infraMachine.TypedSpec().Value.InstallEventId))

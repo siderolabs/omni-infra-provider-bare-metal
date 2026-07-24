@@ -221,8 +221,6 @@ jobs:
     if: github.event_name == 'pull_request'
     needs:
       - default
-      - lint
-      - unit-tests
     steps:
       - name: gather-system-info
         id: system-info

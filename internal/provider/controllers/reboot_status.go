@@ -22,6 +22,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
@@ -241,6 +242,8 @@ func (helper *rebootStatusControllerHelper) reboot(ctx context.Context,
 	}
 
 	logger.Info("reboot machine to switch boot mode")
+
+	xcorr.Logf("Reboot-issue machine=%s requiresPXEBoot=%v (provider issuing BMC reboot to switch boot mode)", infraMachine.Metadata().ID(), requiresPXEBoot)
 
 	bmcClient, err := helper.bmcClientFactory.GetClient(ctx, bmcConfiguration, logger)
 	if err != nil {

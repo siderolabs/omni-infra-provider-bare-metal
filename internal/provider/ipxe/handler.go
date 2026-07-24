@@ -31,6 +31,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 )
 
 const (
@@ -220,6 +221,8 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 	}
 
 	requiredBootMode := machine.RequiredBootMode(infraMachine, bmcConfiguration, wipeStatus, logger)
+
+	xcorr.Logf("iPXE-boot-request machine=%s arch=%s -> servedBootMode=%s (machine is PXE-booting NOW)", uuid, arch, requiredBootMode)
 
 	var userExtraKernelArgs []string
 

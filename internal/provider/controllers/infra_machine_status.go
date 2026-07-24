@@ -21,6 +21,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/xcorr"
 )
 
 // InfraMachineStatusController manages InfraMachine resource lifecycle.
@@ -148,6 +149,15 @@ func (helper *infraMachineStatusControllerHelper) transform(ctx context.Context,
 	} else {
 		infraMachineStatus.TypedSpec().Value.LastPowerOffId = ""
 	}
+
+	var xcorrLastWipeEventID uint64
+	if wipeStatus != nil {
+		xcorrLastWipeEventID = wipeStatus.TypedSpec().Value.LastWipeInstallEventId
+	}
+
+	xcorr.Logf("InfraMachineStatus machine=%s installed=%v readyToUse=%v requiresWipe=%v bmcConfigured=%v installEventId=%d lastWipeInstallEventId=%d (this Installed flag is what omni's guards read)",
+		infraMachine.Metadata().ID(), infraMachineStatus.TypedSpec().Value.Installed, infraMachineStatus.TypedSpec().Value.ReadyToUse,
+		requiresWipe, bmcConfigurationConfigured, infraMachine.TypedSpec().Value.InstallEventId, xcorrLastWipeEventID)
 
 	logger.Debug("machine status",
 		zap.Bool("installed", infraMachineStatus.TypedSpec().Value.Installed),
