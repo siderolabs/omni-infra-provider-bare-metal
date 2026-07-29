@@ -6,20 +6,17 @@ package ipxe
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
+	"github.com/siderolabs/go-zbin/zbin"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 )
 
 // bootTemplate is embedded into iPXE binary when that binary is sent to the node.
@@ -101,9 +98,8 @@ func buildInitScript(endpoint string, port int) ([]byte, error) {
 //
 // This relies on special build in `pkgs/ipxe` where a placeholder iPXE script is embedded.
 // EFI iPXE binaries are uncompressed, so these are patched directly.
-// BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back using zbin.
-// (zbin is built with iPXE).
-func patchBinaries(ctx context.Context, initScript []byte, customCAFile string, logger *zap.Logger) error {
+// BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back.
+func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) error {
 	var customCAHash []byte
 
 	if customCAFile != "" {
@@ -143,14 +139,9 @@ func patchBinaries(ctx context.Context, initScript []byte, customCAFile string, 
 		return fmt.Errorf("failed to patch undionly.kpxe.bin: %w", err)
 	}
 
-	if err := compressKPXE(ctx, constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
-		constants.TFTPPath+"/undionly.kpxe", logger); err != nil {
+	if err := compressKPXE(constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
+		constants.TFTPPath+"/undionly.kpxe", constants.TFTPPath+"/undionly.kpxe.0"); err != nil {
 		return fmt.Errorf("failed to compress undionly.kpxe: %w", err)
-	}
-
-	if err := compressKPXE(ctx, constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.bin.patched", constants.IPXEPath+"/amd64/kpxe/undionly.kpxe.zinfo",
-		constants.TFTPPath+"/undionly.kpxe.0", logger); err != nil {
-		return fmt.Errorf("failed to compress undionly.kpxe.0: %w", err)
 	}
 
 	return nil
@@ -275,26 +266,29 @@ func replaceCA(fileContents, customCAHash []byte, logger *zap.Logger) error {
 	return nil
 }
 
-// compressKPXE is equivalent to: ./util/zbin bin/undionly.kpxe.bin bin/undionly.kpxe.zinfo > bin/undionly.kpxe.zbin.
-func compressKPXE(ctx context.Context, binFile, infoFile, outFile string, logger *zap.Logger) error {
-	out, err := os.Create(outFile)
+// compressKPXE compresses the patched BIOS iPXE binary according to its zinfo directive stream and
+// writes the result to each given output file. It is equivalent to running iPXE's zbin tool:
+// ./util/zbin bin/undionly.kpxe.bin bin/undionly.kpxe.zinfo > bin/undionly.kpxe.zbin.
+func compressKPXE(binFile, infoFile string, outFiles ...string) error {
+	bin, err := os.ReadFile(binFile)
 	if err != nil {
 		return err
 	}
 
-	defer util.LogClose(out, logger)
-
-	cmd := exec.CommandContext(ctx, "/bin/zbin", binFile, infoFile)
-	cmd.Stdout = out
-
-	err = cmd.Run()
+	zinfo, err := os.ReadFile(infoFile)
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return fmt.Errorf("zbin failed with exit code %d, stderr: %v", exitErr.ExitCode(), string(exitErr.Stderr))
-		}
+		return err
+	}
 
-		return fmt.Errorf("failed to run zbin: %w", err)
+	out, err := zbin.Compress(bin, zinfo)
+	if err != nil {
+		return fmt.Errorf("failed to compress %q: %w", binFile, err)
+	}
+
+	for _, outFile := range outFiles {
+		if err = os.WriteFile(outFile, out, 0o644); err != nil {
+			return err
+		}
 	}
 
 	return nil
