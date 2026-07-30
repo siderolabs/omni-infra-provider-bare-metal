@@ -4,7 +4,4 @@
 
 package dhcp
 
-var (
-	IsBootDHCP = isBootDHCP
-	OfferDHCP  = offerDHCP
-)
+var IsBootDHCP = isBootDHCP

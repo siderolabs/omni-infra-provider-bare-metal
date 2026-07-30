@@ -8,4 +8,10 @@ package constants
 const (
 	// IPXEURLPath is the path from which the HTTP server serves the iPXE scripts.
 	IPXEURLPath = "ipxe"
+
+	// ConfigURLPath is the path from which the HTTP server serves the machine configs.
+	ConfigURLPath = "config"
+
+	// AssetsURLPath is the path from which the HTTP server serves the local boot assets.
+	AssetsURLPath = "assets"
 )

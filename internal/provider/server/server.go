@@ -155,12 +155,14 @@ func (s *Server) shutdownOnCancel(ctx context.Context, server *http.Server) erro
 func NewMultiHandler(configHandler, ipxeHandler, grpcHandler http.Handler, assetsDir string, files map[string][]byte, logger *zap.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.Handle("/config", configHandler)
+	mux.Handle("/"+constants.ConfigURLPath, configHandler)
 	mux.Handle(fmt.Sprintf("/%s/{script}", constants.IPXEURLPath), ipxeHandler)
 	mux.Handle("/tftp/", http.StripPrefix("/tftp/", filesHandler(files)))
 
 	if assetsDir != "" {
-		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))
+		assetsPrefix := "/" + constants.AssetsURLPath + "/"
+
+		mux.Handle(assetsPrefix, http.StripPrefix(assetsPrefix, http.FileServer(http.Dir(assetsDir))))
 	}
 
 	loggingMiddleware := func(next http.Handler) http.Handler {

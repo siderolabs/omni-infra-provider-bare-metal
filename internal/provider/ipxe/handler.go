@@ -28,6 +28,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"go.uber.org/zap"
 
+	providerconstants "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
@@ -316,6 +317,12 @@ func (handler *Handler) bootViaFactoryIPXEScript(ctx context.Context, agentMode 
 	return ipxeScript, http.StatusOK, nil
 }
 
+// bootAssetNames returns the boot asset file names for the given architecture. It is the single
+// source of the names, shared by the agent-mode boot script builder and the startup validation.
+func bootAssetNames(arch string) (kernel, initramfs, cmdline string) {
+	return "kernel-" + arch, "initramfs-metal-" + arch + ".xz", "cmdline-metal-" + arch
+}
+
 // ValidateBootAssets checks the local boot assets directory, so a misconfiguration fails at
 // startup instead of when a machine attempts to boot.
 //
@@ -330,7 +337,9 @@ func ValidateBootAssets(dir string, logger *zap.Logger) error {
 	for _, arch := range []string{archAmd64, archArm64} {
 		var archProblems []string
 
-		for _, name := range []string{"kernel-" + arch, "initramfs-metal-" + arch + ".xz", "cmdline-metal-" + arch} {
+		kernel, initramfs, cmdline := bootAssetNames(arch)
+
+		for _, name := range []string{kernel, initramfs, cmdline} {
 			if err := validateBootAssetFile(filepath.Join(dir, name)); err != nil {
 				archProblems = append(archProblems, err.Error())
 			}
@@ -376,11 +385,13 @@ func validateBootAssetFile(path string) error {
 func (handler *Handler) bootAgentModeViaLocalIPXEScript(arch string, kernelArgs []string) (string, int, error) {
 	hostPort := net.JoinHostPort(handler.options.APIAdvertiseAddress, strconv.Itoa(handler.options.APIPort))
 
-	kernel := fmt.Sprintf("http://%s/assets/kernel-%s", hostPort, arch)
-	initramfs := fmt.Sprintf("http://%s/assets/initramfs-metal-%s.xz", hostPort, arch)
+	kernelName, initramfsName, cmdlineName := bootAssetNames(arch)
+
+	kernel := fmt.Sprintf("http://%s/%s/%s", hostPort, providerconstants.AssetsURLPath, kernelName)
+	initramfs := fmt.Sprintf("http://%s/%s/%s", hostPort, providerconstants.AssetsURLPath, initramfsName)
 
 	// read cmdline
-	cmdline, err := os.ReadFile(filepath.Join(handler.options.BootAssetsPath, "cmdline-metal-"+arch))
+	cmdline, err := os.ReadFile(filepath.Join(handler.options.BootAssetsPath, cmdlineName))
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to read cmdline: %w", err)
 	}
@@ -424,7 +435,7 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r c
 	logger.Info("successfully patched iPXE binaries")
 
 	apiHostPort := net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.APIPort))
-	talosConfigURL := fmt.Sprintf("http://%s/config?u=${uuid}", apiHostPort)
+	talosConfigURL := fmt.Sprintf("http://%s/%s?u=${uuid}", apiHostPort, providerconstants.ConfigURLPath)
 	defaultKernelArgs := []string{
 		fmt.Sprintf("%s=%s", constants.KernelParamConfig, talosConfigURL),
 	}
