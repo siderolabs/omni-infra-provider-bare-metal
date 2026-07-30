@@ -1,3 +1,47 @@
+## [Omni Infra Provider Bare Metal 0.12.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.12.0) (2026-07-30)
+
+Welcome to the v0.12.0 release of Omni Infra Provider Bare Metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Run Natively
+
+The provider no longer depends on its container image and can run as a plain binary.
+The iPXE boot binaries are embedded into the provider at build time, patched in memory, and served from memory over TFTP and HTTP.
+UEFI HTTP boot works out of the box now, as the boot file names handed out by the DHCP proxy resolve without any manual filesystem setup.
+The local boot assets directory is configurable via the new --boot-assets-path flag and is validated at startup.
+
+
+### Contributors
+
+* Utku Ozdemir
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`a9b4266`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/a9b4266e4710375254e6f3114831cfbb291581a1) feat: support running the provider and emulated machines natively
+</p>
+</details>
+
+### Changes from siderolabs/go-zbin
+<details><summary>2 commits</summary>
+<p>
+
+* [`720e539`](https://github.com/siderolabs/go-zbin/commit/720e53961c7d27b9e363865a1609baa62d994354) feat: implement the iPXE zbin image compression format
+* [`7b104fd`](https://github.com/siderolabs/go-zbin/commit/7b104fda23a9635a212ab75f2f361e218da246f4) chore: add initial kres skeleton
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/go-zbin**  v0.1.0 **_new_**
+
+Previous release can be found at [v0.11.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.11.0)
+
 ## [Omni Infra Provider Bare Metal 0.11.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.11.0) (2026-07-27)
 
 Welcome to the v0.11.0 release of Omni Infra Provider Bare Metal!

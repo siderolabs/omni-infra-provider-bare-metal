@@ -5,11 +5,14 @@ project_name = "Omni Infra Provider Bare Metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.10.2"
+previous = "v0.11.0"
 pre_release = false
 
-[notes.versioning-support]
-title = "Add Versioning Support"
+[notes.native-run]
+title = "Run Natively"
 description = """\
-The infra provider will now report its version to Omni.
+The provider no longer depends on its container image and can run as a plain binary.
+The iPXE boot binaries are embedded into the provider at build time, patched in memory, and served from memory over TFTP and HTTP.
+UEFI HTTP boot works out of the box now, as the boot file names handed out by the DHCP proxy resolve without any manual filesystem setup.
+The local boot assets directory is configurable via the new --boot-assets-path flag and is validated at startup.
 """
