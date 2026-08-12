@@ -112,4 +112,10 @@ func init() {
 	rootCmd.Flags().StringSliceVar(&qemuOptions.Nameservers, "nameservers", qemuOptions.Nameservers, "Nameservers for the machines' network.")
 	rootCmd.Flags().StringVar(&qemuOptions.DefaultBootOrder, "default-boot-order", qemuOptions.DefaultBootOrder, "Default boot order for the machines.")
 	rootCmd.Flags().BoolVar(&qemuOptions.UEFIEnabled, "uefi-enabled", qemuOptions.UEFIEnabled, "Enable UEFI for the machines.")
+
+	rootCmd.Flags().BoolVar(&qemuOptions.VirtualBMC, "virtual-bmc", qemuOptions.VirtualBMC,
+		"Give each machine an emulated IPMI BMC so the provider drives real IPMI instead of the fake power backend. "+
+			"qemu-up then stays running to host the BMCs. The out-of-band LAN BMC runs on any host, the in-band KCS device only on linux/amd64.")
+	rootCmd.Flags().StringVar(&qemuOptions.VirtualBMCUsername, "virtual-bmc-username", qemuOptions.VirtualBMCUsername, "Seeded admin username for every emulated BMC.")
+	rootCmd.Flags().StringVar(&qemuOptions.VirtualBMCPassword, "virtual-bmc-password", qemuOptions.VirtualBMCPassword, "Seeded admin password for every emulated BMC.")
 }

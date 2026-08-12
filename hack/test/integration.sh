@@ -2,7 +2,6 @@
 
 set -eou pipefail
 
-TALOSCTL_VERSION=1.13.0 # needs to match the Talos machinery version in go.mod
 TALOS_VERSION=1.13.0
 SUBNET_CIDR=172.29.0.0/24
 GATEWAY_IP=172.29.0.1
@@ -11,6 +10,13 @@ NUM_MACHINES=8
 USE_LOCAL_BOOT_ASSETS=false
 IMAGE_FACTORY_BASE_DOMAIN=factory.talos.dev
 IMAGE_FACTORY_PXE_DOMAIN=pxe.factory.talos.dev
+
+# The integration test drives the provider's real IPMI path against per-machine
+# emulated BMCs (hosted in-process by qemu-up) instead of the fake HTTP power
+# backend. Keep TALOSCTL_IMAGE in sync with the talos version in go.mod: the
+# launcher comes from this image while qemu-up links the provision library, and a
+# version mismatch fails silently because the launch config ignores unknown fields.
+TALOSCTL_IMAGE=${TALOSCTL_IMAGE:-ghcr.io/siderolabs/talosctl:v1.14.0-rc.2-1-g322de8bf2}
 
 echo "OMNI_IMAGE: $OMNI_IMAGE"
 echo "OMNI_INTEGRATION_TEST_IMAGE: $OMNI_INTEGRATION_TEST_IMAGE"
@@ -32,46 +38,72 @@ PROVIDER_IMAGE="$TEMP_REGISTRY/siderolabs/omni-infra-provider-bare-metal:test"
 
 docker pull "$PROVIDER_IMAGE"
 
-echo "Download talosctl v${TALOSCTL_VERSION}..."
+echo "Export talosctl (${TALOSCTL_IMAGE})..."
 
 mkdir -p ${ARTIFACTS}
 
-TALOSCTL=$(realpath "${ARTIFACTS}/talosctl-${TALOSCTL_VERSION}")
-if [ ! -f "${TALOSCTL}" ]; then
-  crane export ghcr.io/siderolabs/talosctl:v${TALOSCTL_VERSION} | tar x -C ${ARTIFACTS}
-  mv "${ARTIFACTS}/talosctl" "${TALOSCTL}"
-fi
+# Always re-export talosctl fresh, so a copy cached from a prior run cannot shadow
+# a talos version bump made here.
+TALOSCTL=$(realpath "${ARTIFACTS}/talosctl")
+crane export "${TALOSCTL_IMAGE}" | tar x -C ${ARTIFACTS}
 
-QEMU_UP="${ARTIFACTS}/qemu-up-linux-amd64 --talosctl-path=${TALOSCTL} --cidr $SUBNET_CIDR --num-machines=$NUM_MACHINES"
+QEMU_UP="${ARTIFACTS}/qemu-up-linux-amd64 --talosctl-path=${TALOSCTL} --cidr $SUBNET_CIDR --num-machines=$NUM_MACHINES --virtual-bmc"
 
 echo "Register cleanup script..."
+
+# stop_supervisors signals any lingering qemu-up supervisor and waits for it to
+# exit, so its launcher children are reparented and reaped before a destroy runs.
+# A destroy polls the launcher PIDs, and a killed launcher whose qemu-up parent is
+# still alive lingers as a zombie that the poll would wait on until it times out.
+function stop_supervisors() {
+  pkill -f qemu-up-linux-amd64 || true
+
+  for _ in $(seq 1 20); do
+    pgrep -f qemu-up-linux-amd64 >/dev/null || return 0
+    sleep 0.5
+  done
+
+  # Still alive after the grace period: force it, so a stuck supervisor cannot keep
+  # its launcher children parented and stall the destroy.
+  pkill -KILL -f qemu-up-linux-amd64 || true
+}
 
 function cleanup() {
   local exit_code=$? # preserve the original exit code
 
-  chown -R "${SUDO_USER:-$(whoami)}" ${ARTIFACTS}
+  chown -R "${SUDO_USER:-$(whoami)}" ${ARTIFACTS} || true
 
   if [[ "$SKIP_CLEANUP" == "true" ]]; then
     echo "Skipping cleanup..."
     exit $exit_code
   fi
 
-  rm -rf ./omnictl
+  rm -rf ./omnictl || true
 
   echo "Stop containers"
   docker stop omni provider vault-dev || true
 
+  # Artifact collection is best-effort: it runs under `set -e`, and a failure here
+  # (e.g., a container that never started) must not abort cleanup before qemu-up and
+  # the machines are torn down below, which would leak the resident supervisor.
   echo "Gather container logs"
-  docker logs omni &>"$TEST_OUTPUTS_DIR/omni.log"
-  docker logs provider &>"$TEST_OUTPUTS_DIR/provider.log"
+  docker logs omni &>"$TEST_OUTPUTS_DIR/omni.log" || true
+  docker logs provider &>"$TEST_OUTPUTS_DIR/provider.log" || true
 
   echo "Gather machine logs and configs"
   machines_dir="$TEST_OUTPUTS_DIR/machines/"
   mkdir -p "$machines_dir"
-  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} "$machines_dir" \;
-  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.config" -exec cp {} "$machines_dir" \;
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.log" ! -name "dhcpd.log" ! -name "lb.log" -exec cp {} "$machines_dir" \; || true
+  find "$HOME/.talos/clusters/bare-metal" -type f -name "*.config" -exec cp {} "$machines_dir" \; || true
 
-  pkill -f qemu-up-linux-amd64 || true
+  # qemu-up hosts the emulated BMCs in-process, so stop it and WAIT for it to exit
+  # before destroying: its launcher children must be reparented and reaped first,
+  # otherwise a concurrent destroy polls zombie PIDs forever.
+  if [[ -n "${QEMU_UP_PID:-}" ]]; then
+    kill "$QEMU_UP_PID" 2>/dev/null || true
+    wait "$QEMU_UP_PID" 2>/dev/null || true
+  fi
+  stop_supervisors
   ${QEMU_UP} --destroy || true
   pkill -f talosctl || true
 
@@ -82,16 +114,29 @@ function cleanup() {
   exit $exit_code
 }
 
-trap cleanup EXIT SIGINT
+# Run cleanup once, from the EXIT trap only. The signal traps just exit, which
+# then fires EXIT, so a SIGINT/SIGTERM does not run cleanup a second time on top of
+# the normal exit path (which truncated logs and raced container removal).
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo "Stop any existing QEMU machines..."
 
+stop_supervisors
 ${QEMU_UP} --destroy || true
 pkill -f talosctl || true
 
-echo "Bring up some QEMU machines..."
+echo "Bring up some QEMU machines (qemu-up stays running to host the emulated BMCs)..."
 
-${QEMU_UP} 2>&1 | tee "$TEST_OUTPUTS_DIR/qemu-up.log"
+${QEMU_UP} >"$TEST_OUTPUTS_DIR/qemu-up.log" 2>&1 &
+QEMU_UP_PID=$!
+
+echo "Wait for qemu-up to report all machines and virtual BMCs ready..."
+timeout 300s bash -c "until grep -q 'all machines and virtual BMCs ready' '$TEST_OUTPUTS_DIR/qemu-up.log'; do
+  kill -0 $QEMU_UP_PID 2>/dev/null || { echo 'qemu-up exited before becoming ready:'; cat '$TEST_OUTPUTS_DIR/qemu-up.log'; exit 1; }
+  sleep 2
+done"
 
 echo "Wait for IP address $GATEWAY_IP to appear..."
 timeout 60s bash -c "until ip a | grep -q '${GATEWAY_IP}'; do echo 'Waiting for IP address...'; sleep 5; done"
@@ -204,21 +249,12 @@ PROVIDER_SERVICE_ACCOUNT_KEY=$(./omnictl --insecure-skip-tls-verify infraprovide
 # Get image factory leaf certificate PEM
 openssl s_client -showcerts -connect $IMAGE_FACTORY_PXE_DOMAIN:443 </dev/null | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/ { print; if (/END CERTIFICATE/) exit }' >factory.crt
 
-CONFIG_FILES_DIR="$HOME/.talos/clusters/bare-metal"
-CONFIG_FILES_DEST_DIR="$(pwd)/configs"
-
-echo "Copy machine config files from $CONFIG_FILES_DIR into $CONFIG_FILES_DEST_DIR"
-
-mkdir -p "$CONFIG_FILES_DEST_DIR"
-find "$CONFIG_FILES_DIR" -type f -name "*.config" -exec cp -v {} "$CONFIG_FILES_DEST_DIR" \;
-
 echo "Launch infra provider in the background..."
 
 # We run the provider in a container, as its container image contains everything needed by the provider,
 # e.g., ipmitool and ipxe binaries, metal agent boot assets etc.
 docker run -d --network host \
   --name provider \
-  -v "$CONFIG_FILES_DEST_DIR:/api-power-mgmt-state:ro" \
   -v ./factory.crt:/factory.crt:ro \
   -e OMNI_ENDPOINT \
   -e OMNI_SERVICE_ACCOUNT_KEY="${PROVIDER_SERVICE_ACCOUNT_KEY}" \
@@ -226,8 +262,7 @@ docker run -d --network host \
   --insecure-skip-tls-verify \
   --api-advertise-address="$GATEWAY_IP" \
   --use-local-boot-assets=$USE_LOCAL_BOOT_ASSETS \
-  --agent-test-mode \
-  --api-power-mgmt-state-dir=/api-power-mgmt-state \
+  --redfish-use-when-available=false \
   --ipmi-pxe-boot-mode=bios \
   --min-reboot-interval=1m \
   --machine-labels=a=b,c \

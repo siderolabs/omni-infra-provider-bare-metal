@@ -39,18 +39,13 @@ const (
 
 // Machines represents a set of Talos QEMU machines.
 type Machines struct {
-	logger *zap.Logger
-
-	subnetCIDR netip.Prefix
-
-	stateDir string
-	cniDir   string
-
+	logger      *zap.Logger
+	subnetCIDR  netip.Prefix
+	stateDir    string
+	cniDir      string
 	nameservers []netip.Addr
-
-	options Options
-
-	nanoCPUs int64
+	options     Options
+	nanoCPUs    int64
 }
 
 // New creates a new set of Talos QEMU machines.
@@ -122,60 +117,82 @@ func (machines *Machines) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create provisioner: %w", err)
 	}
 
-	loaded, err := machines.loadExisting(ctx, qemuProvisioner)
+	existingCluster, err := machines.loadExisting(ctx, qemuProvisioner)
 	if err != nil {
 		return err
 	}
 
-	if loaded && machines.options.PXEBootViaDHCPD {
-		machines.logger.Warn("an existing machine set was loaded, so the PXE-boot-via-DHCPD option has no effect - destroy and recreate the machines for it to apply")
+	if existingCluster != nil {
+		if machines.options.PXEBootViaDHCPD {
+			machines.logger.Warn("an existing machine set was loaded, so the PXE-boot-via-DHCPD option has no effect - destroy and recreate the machines for it to apply")
+		}
+
+		// The emulated BMCs live inside this qemu-up process, so a fresh qemu-up
+		// cannot re-attach to an existing set: it would bind new ports and start
+		// with an empty user store, orphaning any machine already accepted against
+		// the previous run's BMCs.
+		if machines.options.VirtualBMC {
+			return errors.New("virtual BMC machines cannot be re-attached - destroy and recreate the machines")
+		}
+
+		return nil
 	}
 
-	if !loaded {
-		logWriter := &zapio.Writer{
-			Log:   machines.logger,
-			Level: zapcore.InfoLevel,
-		}
+	logWriter := &zapio.Writer{
+		Log:   machines.logger,
+		Level: zapcore.InfoLevel,
+	}
 
-		defer util.LogClose(logWriter, machines.logger)
+	defer util.LogClose(logWriter, machines.logger)
 
-		if err = machines.createNew(ctx, qemuProvisioner, logWriter); err != nil {
-			return err
-		}
+	cluster, err := machines.createNew(ctx, qemuProvisioner, logWriter)
+	if err != nil {
+		return err
+	}
+
+	// With virtual BMC, qemu-up becomes the BMC supervisor: it hosts one emulated
+	// BMC per machine in-process and blocks here until signaled.
+	if machines.options.VirtualBMC {
+		return machines.serveBMCs(ctx, cluster)
 	}
 
 	return nil
 }
 
-func (machines *Machines) loadExisting(ctx context.Context, qemuProvisioner provision.Provisioner) (bool, error) {
+// loadExisting returns the already-provisioned cluster, or nil when none exists.
+func (machines *Machines) loadExisting(ctx context.Context, qemuProvisioner provision.Provisioner) (provision.Cluster, error) {
 	existingCluster, err := qemuProvisioner.Reflect(ctx, machines.options.Name, machines.stateDir)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return false, fmt.Errorf("failed to load existing cluster: %w", err)
+			return nil, fmt.Errorf("failed to load existing cluster: %w", err)
 		}
 
 		machines.logger.Info("no existing set of machines found")
 
-		return false, nil
+		return nil, nil //nolint:nilnil // nil cluster means "none exists", not an error
 	}
 
 	machines.logger.Info("loaded existing set of machines")
 
-	if len(existingCluster.Info().Nodes) != machines.options.NumMachines {
+	// The machines are PXE nodes, which the provisioner reports in ExtraNodes, so
+	// count both to compare against the requested number.
+	info := existingCluster.Info()
+
+	if existing := len(info.Nodes) + len(info.ExtraNodes); existing != machines.options.NumMachines {
 		machines.logger.Warn("number of existing machines does not match the requested number of machines",
 			zap.Int("requested", machines.options.NumMachines),
-			zap.Int("existing", len(existingCluster.Info().Nodes)))
+			zap.Int("existing", existing))
 	}
 
-	return true, nil
+	return existingCluster, nil
 }
 
-func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provision.Provisioner, logWriter io.Writer) error {
+func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provision.Provisioner, logWriter io.Writer) (provision.Cluster, error) {
 	machines.logger.Info("create a new set of machines")
 
 	gatewayAddr, err := talosnet.NthIPInNetwork(machines.subnetCIDR, 1)
 	if err != nil {
-		return fmt.Errorf("failed to get gateway address: %w", err)
+		return nil, fmt.Errorf("failed to get gateway address: %w", err)
 	}
 
 	var tftpServer, ipxeBootFilename string
@@ -198,6 +215,15 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 	nodes := make([]provision.NodeRequest, 0, machines.options.NumMachines)
 
+	// Attach the in-band KCS device only where QEMU has the IPMI devices. Probe
+	// the reconnect chardev option once for the whole set.
+	attachBMCKCS := machines.options.VirtualBMC && attachKCS()
+
+	bmcReconnectOpt := ""
+	if attachBMCKCS {
+		bmcReconnectOpt = qemuReconnectOpt()
+	}
+
 	for i := range machines.options.NumMachines {
 		nodeUUID := uuid.New()
 
@@ -205,10 +231,10 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 
 		ip, ipErr := talosnet.NthIPInNetwork(machines.subnetCIDR, i+2)
 		if ipErr != nil {
-			return fmt.Errorf("failed to calculate offset %d from CIDR %s: %w", i+2, machines.subnetCIDR, ipErr)
+			return nil, fmt.Errorf("failed to calculate offset %d from CIDR %s: %w", i+2, machines.subnetCIDR, ipErr)
 		}
 
-		nodes = append(nodes, provision.NodeRequest{
+		nodeReq := provision.NodeRequest{
 			Name: nodeUUID.String(),
 
 			IPs:      []netip.Addr{ip},
@@ -226,7 +252,13 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 			DefaultBootOrder:    machines.options.DefaultBootOrder, // first disk, then network
 			TFTPServer:          tftpServer,
 			IPXEBootFilename:    ipxeBootFilename,
-		})
+		}
+
+		if attachBMCKCS {
+			nodeReq.ExtraQEMUArgs = bmcExtraQEMUArgs(bmcSocketPath(machines.statePath(), nodeReq.Name), bmcReconnectOpt)
+		}
+
+		nodes = append(nodes, nodeReq)
 	}
 
 	request := provision.ClusterRequest{
@@ -252,16 +284,17 @@ func (machines *Machines) createNew(ctx context.Context, qemuProvisioner provisi
 		Nodes: nodes,
 	}
 
-	if _, err = qemuProvisioner.Create(
+	cluster, err := qemuProvisioner.Create(
 		ctx, request,
 		provision.WithBootloader(true),
 		provision.WithLogWriter(logWriter),
 		provision.WithUEFI(machines.options.UEFIEnabled), // Note: UEFI doesn't work correctly on PXE timeout in QEMU, as it drops to UEFI shell
-	); err != nil {
-		return fmt.Errorf("failed to create machines: %w", err)
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create machines: %w", err)
 	}
 
-	return nil
+	return cluster, nil
 }
 
 // Destroy destroys the existing set of machines.
@@ -269,6 +302,11 @@ func (machines *Machines) Destroy(ctx context.Context) error {
 	defer util.LogErr(func() error {
 		return os.RemoveAll(filepath.Join(machines.stateDir, machines.options.Name))
 	}, machines.logger)
+
+	// The emulated BMCs are goroutines inside the supervising qemu-up process, so
+	// there is nothing for destroy to tear down here: whoever runs destroy must
+	// stop that process first (which stops its BMCs). Destroy only removes the
+	// machines and network.
 
 	qemuProvisioner, err := providers.Factory(ctx, providerName)
 	if err != nil {

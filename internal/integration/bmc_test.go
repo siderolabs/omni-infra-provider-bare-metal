@@ -11,12 +11,13 @@ import (
 	"errors"
 	"flag"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/bougou/go-ipmi/pkg/client"
+	"github.com/bougou/go-ipmi/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -57,25 +58,26 @@ func isRetryable(err error) bool {
 	}
 
 	// Context deadline exceeded from inner timeouts (e.g. Redfish per-request timeout) is retryable.
-	// This does NOT conflict with the retry loop's own context check — that context is checked
+	// This does NOT conflict with the retry loop's own context check, since that context is checked
 	// separately via the select on ctx.Done().
 	if errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
 
 	// IPMI completion codes.
-	var respErr *client.ResponseError
+	retryableCodes := []types.CompletionCode{
+		types.CodeNodeBusy,
+		types.CodeProcessTimeout,
+		types.CodeOutOfSpace,
+		types.CodeCannotProvideResponseSDRRInUpdate,
+		types.CodeCannotProvideResponseFirmwareUpdate,
+		types.CodeCannotProvideResponseBMCInitialize,
+	}
 
-	if errors.As(err, &respErr) {
-		switch respErr.CompletionCode() {
-		case client.CompletionCodeNodeBusy,
-			client.CompletionCodeProcessTimeout,
-			client.CompletionCodeOutOfSpace,
-			client.CompletionCodeCannotProvideResponseSDRRInUpdate,
-			client.CompletionCodeCannotProvideResponseFirmwareUpdate,
-			client.CompletionCodeCannotProvideResponseBMCInitialize:
-			return true
-		}
+	var respErr *types.ResponseError
+
+	if errors.As(err, &respErr) && slices.Contains(retryableCodes, respErr.CompletionCode()) {
+		return true
 	}
 
 	// Redfish/iLO transient error messages.
@@ -210,10 +212,7 @@ func (w *clientWrapper) assertAllMethodsTested(t *testing.T) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	clientType := reflect.TypeOf((*bmc.Client)(nil)).Elem()
-
-	for i := range clientType.NumMethod() {
-		method := clientType.Method(i)
+	for method := range reflect.TypeFor[bmc.Client]().Methods() {
 		assert.True(t, w.called[method.Name], "bmc.Client method %q was not exercised by the integration test", method.Name)
 	}
 }
@@ -283,6 +282,7 @@ func ensurePoweredOn(ctx context.Context, t *testing.T, client *clientWrapper) {
 
 	retry(ctx, t, "check power state", func() error {
 		var err error
+
 		poweredOn, err = client.IsPoweredOn(ctx)
 
 		return err

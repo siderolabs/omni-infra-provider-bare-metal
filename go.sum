@@ -30,7 +30,6 @@ github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d h1:xDfNPAt8lFiC1U
 github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d/go.mod h1:6QX/PXZ00z/TKoufEY6K/a0k6AhaJrQKdFe6OfVXsa4=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
-github.com/bougou/go-ipmi v0.8.3/go.mod h1:HWli0nfKgnBtD/3ViiDaqp6wHZogZrg5A5ctMMDUYS0=
 github.com/bougou/go-ipmi v0.9.1 h1:dI/ihmEnJ/tIKjCsx85Rm8XPh2yiJll8CVFlYlFgY5c=
 github.com/bougou/go-ipmi v0.9.1/go.mod h1:09+IrJAgPdIwDEl2eBPQ/61e5Pl1m0WoBczP2oUwTN8=
 github.com/brianvoe/gofakeit/v7 v7.7.3 h1:RWOATEGpJ5EVg2nN8nlaEyaV/aB4d6c3GqYrbqQekss=

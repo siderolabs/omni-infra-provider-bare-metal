@@ -59,6 +59,12 @@ spec:
       GOOS: linux
       GOARCH: arm64
 ---
+kind: golang.GolangciLint
+spec:
+  buildTags:
+    - integration_ipmi
+    - integration_redfish
+---
 kind: golang.Generate
 spec:
   versionPackagePath: internal/version

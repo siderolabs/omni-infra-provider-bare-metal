@@ -144,19 +144,26 @@ The most relevant for this repo's work:
 
 Bare-metal machines can be emulated with QEMU for development and integration testing.
 The `qemu-up` command in this repo uses the Talos provision library to create PXE-bootable QEMU machines with blank disks, the same machinery behind `talosctl cluster create`.
-Each machine's launcher process serves a small per-machine HTTP power API (power on and off, reboot, one-time PXE boot, status) that emulates a BMC, and its address is recorded in the machine's launch config file under the provisioner state directory.
-The provider is then run with `--agent-test-mode` and with `--api-power-mgmt-state-dir` pointing at that state directory.
-In agent test mode the provider boots agents with the test-mode kernel argument, the agent reports API-based power management instead of configuring IPMI, and the provider looks up each machine's power API address in the state directory by node UUID.
-From there on everything behaves as with real hardware, with the API-backed BMC client standing in for IPMI or Redfish.
+Each machine's launcher process serves a small per-machine HTTP power API (power on and off, reboot, one-time PXE boot, status), and its address is recorded in the machine's launch config file under the provisioner state directory.
+There are two ways for the provider to power-control the emulated machines, and the virtual BMC mode is the one CI uses.
+
+With `qemu-up --virtual-bmc`, each machine gets a real emulated IPMI BMC, hosted in-process by `qemu-up`, which stays running as the BMC supervisor after creating the machines.
+Each BMC serves IPMI-over-LAN on an OS-assigned loopback port and maps power and boot operations onto the launcher's HTTP power API, so the provider drives its production IPMI path with no test-specific flags.
+On linux/amd64 the machine also gets an in-band IPMI device (`/dev/ipmi0`) through the QEMU KCS device, so the agent discovers the BMC and creates the IPMI user as it does on physical hardware.
+On other platforms the BMC is LAN-only, and the machines are registered with the seeded admin credentials (`--virtual-bmc-username` and `--virtual-bmc-password`).
+A machine set created with `--virtual-bmc` cannot be re-attached by a fresh `qemu-up`, because the BMCs only ever lived in the previous process, so destroy and recreate the set instead.
+
+The older alternative is agent test mode: the provider is run with `--agent-test-mode` and with `--api-power-mgmt-state-dir` pointing at the provisioner state directory.
+In agent test mode the provider boots agents with the test-mode kernel argument, the agent reports API-based power management instead of configuring IPMI, and the provider looks up each machine's power API address in the state directory by node UUID, with the API-backed BMC client standing in for IPMI or Redfish.
 
 The provider and `qemu-up` also run natively outside docker.
 A fresh clone needs `make fetch-source-assets` once before any native Go build, because the iPXE binaries referenced by `go:embed` are not committed, and `go build ./...` fails with a missing-embed-file error without them.
 Some UEFI PXE firmware, notably EDK2 in QEMU, rejects ProxyDHCP offers; `qemu-up --pxe-boot-via-dhcpd` makes the provisioner's own DHCP server hand out the boot file directly, chosen by machine firmware and architecture.
 That option applies only when the machines are created, so destroy and recreate an existing set to change it.
 
-`hack/test/integration.sh` wires this together end to end: it builds the provider image, brings up emulated machines with `qemu-up`, starts Vault and Omni in containers, creates the infra provider with `omnictl infraprovider create`, runs the provider in agent test mode, and then runs Omni's integration test suite against the whole stack.
+`hack/test/integration.sh` wires this together end to end: it builds the provider image, brings up emulated machines with `qemu-up --virtual-bmc` (left running in the background to host the BMCs), starts Vault and Omni in containers, creates the infra provider with `omnictl infraprovider create`, runs the provider against the emulated BMCs over IPMI, and then runs Omni's integration test suite against the whole stack.
 It runs in CI through the `run-integration-test` make target.
-Agent test mode is a development-only feature, so it is intentionally not part of the public documentation.
+The virtual BMC and agent test mode are development-only features, so they are intentionally not part of the public documentation.
 
 ## Generated files and rekres
 
