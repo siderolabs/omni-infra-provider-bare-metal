@@ -18,7 +18,7 @@ require (
 	github.com/siderolabs/go-zbin v0.1.0
 	github.com/siderolabs/image-factory v1.6.0
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v1.10.0-beta.0.0.20260829003502-b1341200b16d
+	github.com/siderolabs/omni/client v1.10.5
 	github.com/siderolabs/talos v1.14.0-rc.2.0.20260825161121-322de8bf2974
 	github.com/siderolabs/talos-metal-agent v0.1.6
 	github.com/siderolabs/talos/pkg/machinery v1.14.0-rc.2.0.20260825161121-322de8bf2974
