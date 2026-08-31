@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/siderolabs/omni/client/pkg/client"
+	omnifactory "github.com/siderolabs/omni/client/pkg/imagefactory"
+	"github.com/siderolabs/omni/client/pkg/infra"
+	"github.com/siderolabs/omni/client/pkg/infra/provision"
+	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"go.uber.org/zap"
 )
 
@@ -29,26 +33,21 @@ var agentModeExtensions = []string{
 	"siderolabs/metal-agent",
 }
 
-// Client is an image factory client.
+// Client resolves a boot request into an iPXE URL through Omni.
+//
+// Omni picks the factory and authenticates the fetch, so no factory address or credentials live here.
 type Client struct {
-	factoryClient         *client.Client
+	omniClient            *client.Client
 	logger                *zap.Logger
-	pxeBaseURL            string
 	agentModeTalosVersion string
 	secureBootEnabled     bool
 }
 
 // NewClient creates a new image factory client.
-func NewClient(baseURL, pxeBaseURL, agentModeTalosVersion string, secureBootEnabled bool, logger *zap.Logger) (*Client, error) {
-	factoryClient, err := client.New(baseURL)
-	if err != nil {
-		return nil, err
-	}
-
+func NewClient(omniClient *client.Client, agentModeTalosVersion string, secureBootEnabled bool, logger *zap.Logger) (*Client, error) {
 	return &Client{
-		pxeBaseURL:            pxeBaseURL,
+		omniClient:            omniClient,
 		agentModeTalosVersion: agentModeTalosVersion,
-		factoryClient:         factoryClient,
 		secureBootEnabled:     secureBootEnabled,
 		logger:                logger,
 	}, nil
@@ -95,17 +94,22 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 
 	logger.Debug("generated schematic", zap.String("schematic", string(marshaled)))
 
-	schematicID, _, err := c.factoryClient.SchematicCreate(ctx, sch)
+	media, err := infra.EnsureInstallationMedia(ctx, c.omniClient, talosVersion, sch, provision.MediaSpec{
+		MediaSpec: omnifactory.MediaSpec{
+			Kind:         omnifactory.InstallationMediaKindPXE,
+			Platform:     constants.PlatformMetal,
+			Architecture: arch,
+			SecureBoot:   c.secureBootEnabled,
+		},
+		StandaloneURL: true,
+	})
 	if err != nil {
-		return "", fmt.Errorf("failed to create schematic: %w", err)
+		return "", fmt.Errorf("failed to resolve the iPXE installation media: %w", err)
 	}
 
-	ipxeURL := fmt.Sprintf("%s/pxe/%s/%s/metal-%s", c.pxeBaseURL, schematicID, talosVersion, arch)
-	if c.secureBootEnabled {
-		ipxeURL += "-secureboot"
-	}
+	logger.Debug("generated schematic iPXE URL",
+		zap.String("schematic_id", media.SchematicID),
+		zap.String("image_factory_host", media.ImageFactoryHost))
 
-	logger.Debug("generated schematic iPXE URL", zap.String("ipxe_url", ipxeURL))
-
-	return ipxeURL, nil
+	return media.URL, nil
 }

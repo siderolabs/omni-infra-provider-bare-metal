@@ -17,7 +17,8 @@ To run the provider, you need:
 
   Replace `bare-metal` with your desired provider ID.
 - A DHCP server: This provider runs a DHCP proxy to provide DHCP responses for iPXE boot, so a DHCP server must be running in the same network as the provider.
-- Access to an [Image Factory](https://www.talos.dev/v1.8/learn-more/image-factory/).
+- Access to an [Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/image-factory).
+  The provider uses whichever factory your Omni is configured with, including its credentials when that factory is authenticated.
 
 ## Development
 

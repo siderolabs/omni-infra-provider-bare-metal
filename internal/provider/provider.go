@@ -159,8 +159,8 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
 
-	imageFactoryClient, err := imagefactory.NewClient(p.options.ImageFactoryBaseURL, p.options.ImageFactoryPXEBaseURL,
-		p.options.AgentModeTalosVersion, p.options.SecureBootEnabled, p.logger.With(zap.String("component", "image_factory_client")))
+	imageFactoryClient, err := imagefactory.NewClient(omniAPIClient, p.options.AgentModeTalosVersion, p.options.SecureBootEnabled,
+		p.logger.With(zap.String("component", "image_factory_client")))
 	if err != nil {
 		return fmt.Errorf("failed to create image factory client: %w", err)
 	}

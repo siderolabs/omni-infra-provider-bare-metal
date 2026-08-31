@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bougou/go-ipmi"
+	"github.com/bougou/go-ipmi/pkg/client"
+	"github.com/bougou/go-ipmi/pkg/command/chassis"
+	"github.com/bougou/go-ipmi/pkg/types"
 
 	"github.com/siderolabs/omni-infra-provider-bare-metal/api/specs"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
@@ -20,7 +22,7 @@ const timeout = 30 * time.Second
 
 // Client is a wrapper around the goipmi client.
 type Client struct {
-	ipmiClient *ipmi.Client
+	ipmiClient *client.Client
 }
 
 // Close implements the power.Client interface.
@@ -30,44 +32,44 @@ func (c *Client) Close(ctx context.Context) error {
 
 // Reboot implements the power.Client interface.
 func (c *Client) Reboot(ctx context.Context) error {
-	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerCycle)
+	_, err := c.ipmiClient.ChassisControl(ctx, chassis.ChassisControlPowerCycle)
 
 	return err
 }
 
 // PowerOn implements the power.Client interface.
 func (c *Client) PowerOn(ctx context.Context) error {
-	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerUp)
+	_, err := c.ipmiClient.ChassisControl(ctx, chassis.ChassisControlPowerUp)
 
 	return err
 }
 
 // PowerOff implements the power.Client interface.
 func (c *Client) PowerOff(ctx context.Context) error {
-	_, err := c.ipmiClient.ChassisControl(ctx, ipmi.ChassisControlPowerDown)
+	_, err := c.ipmiClient.ChassisControl(ctx, chassis.ChassisControlPowerDown)
 
 	return err
 }
 
 // SetPXEBootOnce implements the power.Client interface.
 func (c *Client) SetPXEBootOnce(ctx context.Context, mode pxe.BootMode) error {
-	var bootType ipmi.BIOSBootType
+	var bootType types.BIOSBootType
 
 	switch mode {
 	case pxe.BootModeBIOS:
-		bootType = ipmi.BIOSBootTypeLegacy
+		bootType = types.BIOSBootTypeLegacy
 	case pxe.BootModeUEFI:
-		bootType = ipmi.BIOSBootTypeEFI
+		bootType = types.BIOSBootTypeEFI
 	default:
 		return fmt.Errorf("unsupported mode %q", mode)
 	}
 
-	return c.ipmiClient.SetBootDevice(ctx, ipmi.BootDeviceSelectorForcePXE, bootType, false)
+	return c.ipmiClient.SetBootDevice(ctx, types.BootDeviceSelectorForcePXE, bootType, false)
 }
 
 // ResetBootDevice clears any boot device override, resetting it to the default boot order.
 func (c *Client) ResetBootDevice(ctx context.Context) error {
-	return c.ipmiClient.SetBootDevice(ctx, ipmi.BootDeviceSelectorNoOverride, ipmi.BIOSBootTypeEFI, false)
+	return c.ipmiClient.SetBootDevice(ctx, types.BootDeviceSelectorNoOverride, types.BIOSBootTypeEFI, false)
 }
 
 // IsPoweredOn implements the power.Client interface.
@@ -84,18 +86,18 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 //
 // It needs to be closed after use to release resources.
 func NewClient(ctx context.Context, info *specs.BMCConfigurationSpec_IPMI) (*Client, error) {
-	client, err := ipmi.NewClient(info.Address, int(info.Port), info.Username, info.Password)
+	ipmiClient, err := client.NewClient(info.Address, int(info.Port), info.Username, info.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create IPMI client: %w", err)
 	}
 
-	client = client.WithTimeout(timeout)
+	ipmiClient = ipmiClient.WithTimeout(timeout)
 
-	if err = client.Connect(ctx); err != nil {
+	if err = ipmiClient.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("failed to connect IPMI client: %w", err)
 	}
 
 	return &Client{
-		ipmiClient: client,
+		ipmiClient: ipmiClient,
 	}, nil
 }

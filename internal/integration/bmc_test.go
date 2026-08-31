@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	goipmi "github.com/bougou/go-ipmi"
+	"github.com/bougou/go-ipmi/pkg/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -64,16 +64,16 @@ func isRetryable(err error) bool {
 	}
 
 	// IPMI completion codes.
-	var respErr *goipmi.ResponseError
+	var respErr *client.ResponseError
 
 	if errors.As(err, &respErr) {
 		switch respErr.CompletionCode() {
-		case goipmi.CompletionCodeNodeBusy,
-			goipmi.CompletionCodeProcessTimeout,
-			goipmi.CompletionCodeOutOfSpace,
-			goipmi.CompletionCodeCannotProvideResponseSDRRInUpdate,
-			goipmi.CompletionCodeCannotProvideResponseFirmwareUpdate,
-			goipmi.CompletionCodeCannotProvideResponseBMCInitialize:
+		case client.CompletionCodeNodeBusy,
+			client.CompletionCodeProcessTimeout,
+			client.CompletionCodeOutOfSpace,
+			client.CompletionCodeCannotProvideResponseSDRRInUpdate,
+			client.CompletionCodeCannotProvideResponseFirmwareUpdate,
+			client.CompletionCodeCannotProvideResponseBMCInitialize:
 			return true
 		}
 	}

@@ -231,8 +231,6 @@ docker run -d --network host \
   --ipmi-pxe-boot-mode=bios \
   --min-reboot-interval=1m \
   --machine-labels=a=b,c \
-  --image-factory-base-url="https://$IMAGE_FACTORY_BASE_DOMAIN" \
-  --image-factory-pxe-base-url="https://$IMAGE_FACTORY_PXE_DOMAIN" \
   --tls-custom-ipxe-ca-cert-file=/factory.crt \
   --debug
 

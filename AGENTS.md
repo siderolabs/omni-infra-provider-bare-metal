@@ -51,7 +51,8 @@ The power-management RPCs let the agent bootstrap out-of-band BMC access from in
 The iPXE handler (`internal/provider/ipxe/handler.go`, `bootIntoAgentMode`) chooses between two paths based on `--use-local-boot-assets`.
 
 The image factory path is the production default.
-The provider asks the Image Factory for a schematic (`internal/provider/imagefactory/client.go`, `SchematicIPXEURL` with `agentMode=true`), forcing `talosVersion = AgentModeTalosVersion` and a fixed extension set of firmware extensions plus `siderolabs/metal-agent` with no version.
+The provider asks Omni for the boot asset (`internal/provider/imagefactory/client.go`, `SchematicIPXEURL` with `agentMode=true`), forcing `talosVersion = AgentModeTalosVersion` and a fixed extension set of firmware extensions plus `siderolabs/metal-agent` with no version.
+Omni ensures the schematic on whichever factory it is configured with and hands back a self-contained iPXE URL, so the factory address and any credentials it needs come from Omni rather than from provider flags.
 The factory resolves `siderolabs/metal-agent` against its per-Talos-version official-extensions catalog and errors if the extension is not published for that Talos version.
 So the agent version served this way is whatever the extensions catalog pins for `AgentModeTalosVersion`, and advancing it means getting `AgentModeTalosVersion` onto a Talos version whose catalog pins the desired agent version, by waiting for such a catalog or bumping the setting to one.
 
@@ -103,7 +104,7 @@ The exact predicates live in `internal/provider/machine`, so treat this as the i
 - Provider to Omni: COSI runtime over gRPC, authed via `OMNI_SERVICE_ACCOUNT_KEY`, watching and writing `infra.*` resources.
 - Provider to agent: reverse gRPC tunnel on the API port, affinity-routed by machine UUID (`internal/provider/agent`).
 - Provider to machines: DHCP proxy (`internal/provider/dhcp`), TFTP (`internal/provider/tftp`), and the HTTP iPXE handler (`internal/provider/ipxe`).
-- Provider to Image Factory: HTTP (`internal/provider/imagefactory`).
+- Provider to Image Factory: none directly, since `internal/provider/imagefactory` goes through the Omni client to ensure the boot asset and get the iPXE URL back.
 - Provider to BMC: IPMI, Redfish, or API backends behind one `Client` interface (`internal/provider/bmc`), with `bmc/pxe` holding the BIOS/UEFI PXE-boot abstraction.
   The backend is chosen per machine: the API backend if the machine has an API power management config, otherwise Redfish when enabled and probed as available (cached per address), otherwise IPMI.
 
@@ -133,7 +134,6 @@ The most relevant for this repo's work:
 - `--use-local-boot-assets` serves local boot assets instead of the factory.
 - `--boot-assets-path` sets the directory the local boot assets are read from, defaulting to the `/assets` baked into the provider image.
 - `--agent-mode-talos-version` sets the Talos version used for factory agent-mode schematics, and it has no effect under `--use-local-boot-assets`.
-- `--image-factory-base-url` and `--image-factory-pxe-base-url` point at the factory.
 - `--secure-boot-enabled` serves a UKI, requires UEFI PXE mode, and rules out local boot assets.
 - `--boot-from-disk-method` picks how an installed machine boots from disk (`ipxe-exit`, `http-404`, or `ipxe-sanboot`), for firmware that handles the iPXE exit path differently.
 - The `--redfish-*` and `--ipmi-*` flags tune BMC behavior.
@@ -185,7 +185,7 @@ Never use `-u` or `all`, since those drag indirect deps past what direct deps re
 
 Bumping `talos/pkg/machinery` (Talos's public API) is almost always safe, including to an alpha, because it is backwards compatible.
 When the latest `image-factory` or `omni/client` require a Talos prerelease, pin the prerelease first (`go get github.com/siderolabs/talos@<prerelease> github.com/siderolabs/talos/pkg/machinery@<prerelease>`), then run the direct-deps bump so it resolves cleanly.
-A machinery jump can break a few call sites, so expect to fix them (for example the `image-factory` `SchematicCreate` return signature or renamed Talos `provision` options), and verify with `go build ./...` first (on a fresh clone, `make fetch-source-assets` before building).
+A Talos or `omni/client` jump can break a few call sites, so expect to fix them (for example the `omni/client` boot asset API that `internal/provider/imagefactory` calls, or renamed Talos `provision` options), and verify with `go build ./...` first (on a fresh clone, `make fetch-source-assets` before building).
 
 Gates, in order, using the make targets, which are authoritative: `make lint-fmt`, `make lint` (includes govulncheck and markdownlint), `make generate`, and `make unit-tests`.
 

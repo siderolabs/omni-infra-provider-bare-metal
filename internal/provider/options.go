@@ -19,8 +19,6 @@ type Options struct {
 	IPMIPXEBootMode        string
 	DHCPProxyIfaceOrIP     string
 	OmniAPIEndpoint        string
-	ImageFactoryBaseURL    string
-	ImageFactoryPXEBaseURL string
 	AgentModeTalosVersion  string // todo: get this from Omni. Warning: needs to be Talos 1.9 with agent code inside
 	APIListenAddress       string
 	APIAdvertiseAddress    string
@@ -52,17 +50,15 @@ type Options struct {
 // DefaultOptions returns the default provider options.
 func DefaultOptions() Options {
 	return Options{
-		Name:                   "Bare Metal",
-		Description:            "Bare metal infrastructure provider",
-		ImageFactoryBaseURL:    "https://factory.talos.dev",
-		ImageFactoryPXEBaseURL: "https://pxe.factory.talos.dev",
-		AgentModeTalosVersion:  "v1.13.7",
-		BootFromDiskMethod:     string(ipxe.BootIPXEExit),
-		BootAssetsPath:         "/assets",
-		IPMIPXEBootMode:        string(pxe.BootModeUEFI),
-		APIPort:                50042,
-		MinRebootInterval:      15 * time.Minute,
-		Redfish:                redfish.DefaultOptions(),
+		Name:                  "Bare Metal",
+		Description:           "Bare metal infrastructure provider",
+		AgentModeTalosVersion: "v1.13.7",
+		BootFromDiskMethod:    string(ipxe.BootIPXEExit),
+		BootAssetsPath:        "/assets",
+		IPMIPXEBootMode:       string(pxe.BootModeUEFI),
+		APIPort:               50042,
+		MinRebootInterval:     15 * time.Minute,
+		Redfish:               redfish.DefaultOptions(),
 		TLS: tls.Options{
 			Enabled:         false,
 			APIPort:         50043,
