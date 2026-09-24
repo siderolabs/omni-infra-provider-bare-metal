@@ -95,12 +95,10 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 	logger.Debug("generated schematic", zap.String("schematic", string(marshaled)))
 
 	media, err := infra.EnsureInstallationMedia(ctx, c.omniClient, talosVersion, sch, provision.MediaSpec{
-		MediaSpec: omnifactory.MediaSpec{
-			Kind:         omnifactory.InstallationMediaKindPXE,
-			Platform:     constants.PlatformMetal,
-			Architecture: arch,
-			SecureBoot:   c.secureBootEnabled,
-		},
+		Kind:          omnifactory.InstallationMediaKindPXE,
+		Platform:      constants.PlatformMetal,
+		Architecture:  arch,
+		SecureBoot:    c.secureBootEnabled,
 		StandaloneURL: true,
 	})
 	if err != nil {

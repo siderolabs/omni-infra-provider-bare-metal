@@ -58,9 +58,7 @@ func NewMachineStatusController(bmcClientFactory BMCClientFactory, agentClient A
 		agentConnectionEventCh: agentConnectionEventCh,
 		pxeBootEventCh:         pxeBootEventCh,
 		pollInterval:           pollInterval,
-		NamedController: generic.NamedController{
-			ControllerName: meta.ProviderID.String() + ".MachineStatusController",
-		},
+		ControllerName:         meta.ProviderID.String() + ".MachineStatusController",
 	}
 }
 

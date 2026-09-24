@@ -123,6 +123,10 @@ function cleanup() {
   docker rm -f omni provider vault-dev || true
   rm -rf $ARTIFACTS/omni/ || true
 
+  # The script runs as root, so make every collected output readable to the CI artifact upload,
+  # including files written owner-only, such as the machine launch configs.
+  chmod -R a+rX "$TEST_OUTPUTS_DIR" || true
+
   exit $exit_code
 }
 
