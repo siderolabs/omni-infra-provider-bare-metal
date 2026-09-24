@@ -20,7 +20,7 @@ require (
 	github.com/siderolabs/net v0.4.0
 	github.com/siderolabs/omni/client v1.12.2
 	github.com/siderolabs/talos v1.15.0-alpha.0.0.20260908133727-5c5fd29e95f7
-	github.com/siderolabs/talos-metal-agent v0.1.6
+	github.com/siderolabs/talos-metal-agent v0.1.7
 	github.com/siderolabs/talos/pkg/machinery v1.15.0-alpha.0.0.20260908133727-5c5fd29e95f7
 	github.com/spf13/cobra v1.10.2
 	github.com/stmcginnis/gofish v0.26.0
