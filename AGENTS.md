@@ -51,10 +51,12 @@ The power-management RPCs let the agent bootstrap out-of-band BMC access from in
 The iPXE handler (`internal/provider/ipxe/handler.go`, `bootIntoAgentMode`) chooses between two paths based on `--use-local-boot-assets`.
 
 The image factory path is the production default.
-The provider asks Omni for the boot asset (`internal/provider/imagefactory/client.go`, `SchematicIPXEURL` with `agentMode=true`), forcing `talosVersion = AgentModeTalosVersion` and a fixed extension set of firmware extensions plus `siderolabs/metal-agent` with no version.
+The provider asks Omni for the boot asset (`internal/provider/imagefactory/client.go`, `SchematicIPXEURL` with `agentMode=true`), forcing the agent-mode Talos version and a fixed extension set of firmware extensions plus `siderolabs/metal-agent` with no version.
 Omni ensures the schematic on whichever factory it is configured with and hands back a self-contained iPXE URL, so the factory address and any credentials it needs come from Omni rather than from provider flags.
 The factory resolves `siderolabs/metal-agent` against its per-Talos-version official-extensions catalog and errors if the extension is not published for that Talos version.
-So the agent version served this way is whatever the extensions catalog pins for `AgentModeTalosVersion`, and advancing it means getting `AgentModeTalosVersion` onto a Talos version whose catalog pins the desired agent version, by waiting for such a catalog or bumping the setting to one.
+The agent-mode Talos version is `--agent-mode-talos-version` when set, otherwise the `TalosVersion` Omni labels with `omni.sidero.dev/default-version` (its own default), falling back to the Omni client library's `DefaultTalosVersion` for an Omni that labels none.
+The resolved version is reused for 15 minutes, so a new Omni default reaches agent mode without a provider release.
+So the agent version served this way is whatever the extensions catalog pins for that Talos version, and advancing it means getting the agent-mode Talos version onto one whose catalog pins the desired agent version, by waiting for Omni's default to reach it or by setting the flag.
 
 The local boot-assets path is for dev and airgap and is enabled by `--use-local-boot-assets`.
 The boot-assets image is baked into the provider image at `/assets` at build time, pinned in `.kres.yaml` as a `copyFrom` stage and copied in the generated `Dockerfile`.
@@ -133,7 +135,7 @@ The most relevant for this repo's work:
 
 - `--use-local-boot-assets` serves local boot assets instead of the factory.
 - `--boot-assets-path` sets the directory the local boot assets are read from, defaulting to the `/assets` baked into the provider image.
-- `--agent-mode-talos-version` sets the Talos version used for factory agent-mode schematics, and it has no effect under `--use-local-boot-assets`.
+- `--agent-mode-talos-version` overrides the Talos version used for factory agent-mode schematics, which otherwise follows Omni's default, and it has no effect under `--use-local-boot-assets`.
 - `--secure-boot-enabled` serves a UKI, requires UEFI PXE mode, and rules out local boot assets.
 - `--boot-from-disk-method` picks how an installed machine boots from disk (`ipxe-exit`, `http-404`, or `ipxe-sanboot`), for firmware that handles the iPXE exit path differently.
 - The `--redfish-*` and `--ipmi-*` flags tune BMC behavior.
@@ -182,8 +184,6 @@ Repin it and rekres when you want newer default local-dev assets, and always use
 The iPXE image is pinned in the `common.SourceAssets` document of `.kres.yaml`, which materializes the iPXE binaries into `internal/provider/ipxe/data/` for the `go:embed` directives.
 Those files are git-ignored; the docker build injects them from the image, and `make fetch-source-assets` fetches them for native builds.
 After repinning the iPXE image, run `make rekres` and then `make fetch-source-assets` to refresh a local tree.
-
-`AgentModeTalosVersion` (`internal/provider/options.go`) should track a Talos version whose extensions catalog publishes the desired metal-agent version.
 
 ## Dependency bumps
 

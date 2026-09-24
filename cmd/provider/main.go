@@ -126,7 +126,8 @@ func init() {
 		"Disable the DHCP proxy broadcast listener on port 67. When set, the proxy only listens on port 4011 for direct PXE requests. "+
 			"Use this when the provider runs on the same host as the DHCP server.")
 	rootCmd.Flags().StringVar(&providerOptions.AgentModeTalosVersion, "agent-mode-talos-version", providerOptions.AgentModeTalosVersion,
-		fmt.Sprintf("The Talos version of the agent mode boot assets resolved through Omni. Not used when --%s is set.", useLocalBootAssetsFlag))
+		fmt.Sprintf("The Talos version of the agent mode boot assets resolved through Omni. Defaults to the Talos version Omni uses as its default. Not used when --%s is set.",
+			useLocalBootAssetsFlag))
 	rootCmd.Flags().BoolVar(&providerOptions.AgentTestMode, "agent-test-mode", providerOptions.AgentTestMode,
 		fmt.Sprintf("Enable agent test mode. In this mode, the Talos agent will be booted into the test mode via the kernel arg %q. "+
 			`In this mode, you probably want to set the "--%s" flag, as the test mode agents are probably QEMU machines whose power is managed over the HTTP API.`,
