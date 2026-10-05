@@ -21,13 +21,13 @@ var PatchBinaries = patchBinaries
 var PatchBytes = patchBytes
 
 // NewTestHandler builds a Handler with only the fields needed to exercise the boot path in ServeHTTP.
-func NewTestHandler(imageFactoryClient ImageFactoryClient, reader controller.Reader,
+func NewTestHandler(installationMediaClient InstallationMediaClient, reader controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, logger *zap.Logger,
 ) *Handler {
 	return &Handler{
-		imageFactoryClient: imageFactoryClient,
-		reader:             reader,
-		pxeBootEventCh:     pxeBootEventCh,
-		logger:             logger,
+		installationMediaClient: installationMediaClient,
+		reader:                  reader,
+		pxeBootEventCh:          pxeBootEventCh,
+		logger:                  logger,
 	}
 }

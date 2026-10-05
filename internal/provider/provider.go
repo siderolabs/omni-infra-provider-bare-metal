@@ -38,7 +38,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/config"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/dhcp"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/imagefactory"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/installationmedia"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ip"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machineconfig"
@@ -159,10 +159,10 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
 
-	imageFactoryClient, err := imagefactory.NewClient(omniAPIClient, p.options.AgentModeTalosVersion, p.options.SecureBootEnabled,
-		p.logger.With(zap.String("component", "image_factory_client")))
+	installationMediaClient, err := installationmedia.NewClient(omniAPIClient, p.options.AgentModeTalosVersion, p.options.SecureBootEnabled,
+		p.logger.With(zap.String("component", "installation_media_client")))
 	if err != nil {
-		return fmt.Errorf("failed to create image factory client: %w", err)
+		return fmt.Errorf("failed to create installation media client: %w", err)
 	}
 
 	machineConfig, err := machineconfig.Build(ctx, omniState, certs, p.options.ExtraMachineConfigPath)
@@ -173,7 +173,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	pxeBootEventCh := make(chan controllers.PXEBootEvent, pxeBootEventChBuffer)
 
 	ipxeHandler, err := ipxe.NewHandler(
-		imageFactoryClient, machineConfig, omniState, pxeBootEventCh,
+		installationMediaClient, machineConfig, omniState, pxeBootEventCh,
 		ipxe.HandlerOptions{
 			APIAdvertiseAddress: apiAdvertiseAddress,
 			APIPort:             p.options.APIPort,

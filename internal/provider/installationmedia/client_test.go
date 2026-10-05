@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package imagefactory_test
+package installationmedia_test
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/imagefactory"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/installationmedia"
 )
 
 func TestAgentModeTalosVersion(t *testing.T) {
@@ -33,7 +33,7 @@ func TestAgentModeTalosVersion(t *testing.T) {
 	}
 
 	// an Omni that labels no version as its default
-	version, err := imagefactory.AgentModeTalosVersion(ctx, st, "")
+	version, err := installationmedia.AgentModeTalosVersion(ctx, st, "")
 	require.NoError(t, err)
 	assert.Equal(t, omniconstants.DefaultTalosVersion, version)
 
@@ -46,11 +46,11 @@ func TestAgentModeTalosVersion(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	version, err = imagefactory.AgentModeTalosVersion(ctx, st, "")
+	version, err = installationmedia.AgentModeTalosVersion(ctx, st, "")
 	require.NoError(t, err)
 	assert.Equal(t, "1.14.0", version)
 
-	version, err = imagefactory.AgentModeTalosVersion(ctx, st, "v1.13.10")
+	version, err = installationmedia.AgentModeTalosVersion(ctx, st, "v1.13.10")
 	require.NoError(t, err)
 	assert.Equal(t, "v1.13.10", version)
 }

@@ -71,8 +71,8 @@ sanboot --no-describe --drive 0x80
 	bootScriptName = "boot.ipxe"
 )
 
-// ImageFactoryClient represents an image factory client which ensures a schematic exists on image factory, and returns the PXE URL to it.
-type ImageFactoryClient interface {
+// InstallationMediaClient resolves a boot request into an iPXE URL through Omni.
+type InstallationMediaClient interface {
 	SchematicIPXEURL(ctx context.Context, agentMode bool, talosVersion, arch string, extensions, extraKernelArgs []string) (string, error)
 }
 
@@ -89,16 +89,16 @@ type HandlerOptions struct {
 
 // Handler represents an iPXE handler.
 type Handler struct {
-	imageFactoryClient ImageFactoryClient
-	reader             controller.Reader
-	logger             *zap.Logger
-	pxeBootEventCh     chan<- controllers.PXEBootEvent
-	files              map[string][]byte
-	bootFromDiskMethod BootFromDiskMethod
-	defaultKernelArgs  []string
-	agentKernelArgs    []string
-	initScript         []byte
-	options            HandlerOptions
+	installationMediaClient InstallationMediaClient
+	reader                  controller.Reader
+	logger                  *zap.Logger
+	pxeBootEventCh          chan<- controllers.PXEBootEvent
+	files                   map[string][]byte
+	bootFromDiskMethod      BootFromDiskMethod
+	defaultKernelArgs       []string
+	agentKernelArgs         []string
+	initScript              []byte
+	options                 HandlerOptions
 }
 
 // ServeHTTP serves the iPXE request.
@@ -260,7 +260,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 
 		var ipxeURL string
 
-		ipxeURL, err = handler.imageFactoryClient.SchematicIPXEURL(ctx, false, talosVersion, arch, extensions, extraKernelArgs)
+		ipxeURL, err = handler.installationMediaClient.SchematicIPXEURL(ctx, false, talosVersion, arch, extensions, extraKernelArgs)
 		if err != nil {
 			return bootDecision{statusCode: http.StatusInternalServerError}, fmt.Errorf("failed to get schematic IPXE URL: %w", err)
 		}
@@ -307,7 +307,7 @@ func (handler *Handler) bootIntoAgentMode(ctx context.Context, arch string, extr
 }
 
 func (handler *Handler) bootViaFactoryIPXEScript(ctx context.Context, agentMode bool, arch string, kernelArgs []string) (string, int, error) {
-	ipxeURL, err := handler.imageFactoryClient.SchematicIPXEURL(ctx, agentMode, "", arch, nil, kernelArgs)
+	ipxeURL, err := handler.installationMediaClient.SchematicIPXEURL(ctx, agentMode, "", arch, nil, kernelArgs)
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to get schematic IPXE URL: %w", err)
 	}
@@ -412,7 +412,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r controller.Reader,
+func NewHandler(installationMediaClient InstallationMediaClient, machineConfig []byte, r controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
 ) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
@@ -480,16 +480,16 @@ func NewHandler(imageFactoryClient ImageFactoryClient, machineConfig []byte, r c
 	agentKernelArgs := slices.Concat(defaultKernelArgs, agentExtraKernelArgs)
 
 	return &Handler{
-		pxeBootEventCh:     pxeBootEventCh,
-		reader:             r,
-		imageFactoryClient: imageFactoryClient,
-		files:              files,
-		options:            options,
-		defaultKernelArgs:  defaultKernelArgs,
-		agentKernelArgs:    agentKernelArgs,
-		bootFromDiskMethod: bootFromDiskMethod,
-		initScript:         initScript,
-		logger:             logger,
+		pxeBootEventCh:          pxeBootEventCh,
+		reader:                  r,
+		installationMediaClient: installationMediaClient,
+		files:                   files,
+		options:                 options,
+		defaultKernelArgs:       defaultKernelArgs,
+		agentKernelArgs:         agentKernelArgs,
+		bootFromDiskMethod:      bootFromDiskMethod,
+		initScript:              initScript,
+		logger:                  logger,
 	}, nil
 }
 

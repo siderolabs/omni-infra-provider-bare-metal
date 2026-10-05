@@ -24,10 +24,10 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
 )
 
-// stubImageFactory returns a fixed PXE URL so the agent-mode boot path produces a body without network access.
-type stubImageFactory struct{}
+// stubInstallationMedia returns a fixed PXE URL so the agent-mode boot path produces a body without network access.
+type stubInstallationMedia struct{}
 
-func (stubImageFactory) SchematicIPXEURL(context.Context, bool, string, string, []string, []string) (string, error) {
+func (stubInstallationMedia) SchematicIPXEURL(context.Context, bool, string, string, []string, []string) (string, error) {
 	return "https://factory.example/pxe/abc", nil
 }
 
@@ -45,7 +45,7 @@ func serveBoot(ctx context.Context, h *ipxe.Handler, uuid string) *httptest.Resp
 // Content-Length and hands the PXE boot event to the channel.
 func TestBootScriptServesScriptAndReportsBootEvent(t *testing.T) {
 	ch := make(chan controllers.PXEBootEvent, 1)
-	h := ipxe.NewTestHandler(stubImageFactory{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
+	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
 
 	rec := serveBoot(t.Context(), h, "machine-0")
 
@@ -71,7 +71,7 @@ func TestBootScriptDoesNotBlockUnderHerd(t *testing.T) {
 	const herd = 300
 
 	ch := make(chan controllers.PXEBootEvent) // unbuffered and undrained: sends can never succeed
-	h := ipxe.NewTestHandler(stubImageFactory{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
+	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
 
 	var wg sync.WaitGroup
 
