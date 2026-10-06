@@ -5,16 +5,18 @@ project_name = "Omni Infra Provider Bare Metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.12.0"
+previous = "v0.13.0"
 pre_release = false
 
-[notes.boot-media]
-title = "Boot Media Through Omni"
+[notes.agent-mode-talos-version]
+title = "Agent Mode Talos Version From Omni"
 description = """\
-Previously, the provider pointed at the image factory itself, through the `--image-factory-base-url` and `--image-factory-pxe-base-url` flags.
-This only worked with the public image factory. The factory Omni is configured with was ignored, together with the credentials it needs.
+The provider now boots agent mode with the Talos version Omni uses as its default, instead of a version hardcoded in the provider.
+When Omni moves its default, agent mode follows within 15 minutes, without a provider release.
+An Omni which does not expose its default yet falls back to the default of the Omni client the provider is built with, currently Talos 1.13.10.
 
-The provider now asks Omni for the boot media. This way, a machine boots from the image factory which serves its Talos version, and an image factory that authenticates its downloads works as well.
+The `--agent-mode-talos-version` flag still overrides it.
 
-Both flags are removed.
+Talos 1.14.0 and 1.14.1 in agent mode cannot wipe disks which hold software RAID (MD) arrays.
+If Omni's default is one of those and such machines exist, set `--agent-mode-talos-version=v1.14.2`.
 """
