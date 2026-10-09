@@ -9,24 +9,24 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/insomniacslk/dhcp v0.0.0-20260901064844-234b97448fae
-	github.com/jhump/grpctunnel v0.3.0
-	github.com/klauspost/compress v1.20.0
+	github.com/jhump/grpctunnel v0.4.0
+	github.com/klauspost/compress v1.20.1
 	github.com/pin/tftp/v3 v3.2.0
 	github.com/planetscale/vtprotobuf v0.6.1-0.20260702190614-8ae5a48058df
 	github.com/siderolabs/crypto v0.6.5
 	github.com/siderolabs/gen v0.8.8
 	github.com/siderolabs/go-zbin v0.1.0
-	github.com/siderolabs/image-factory v1.7.1
+	github.com/siderolabs/image-factory v1.7.2
 	github.com/siderolabs/net v0.4.0
-	github.com/siderolabs/omni/client v1.12.2
+	github.com/siderolabs/omni/client v1.12.4
 	github.com/siderolabs/talos v1.15.0-alpha.0.0.20260908133727-5c5fd29e95f7
 	github.com/siderolabs/talos-metal-agent v0.1.7
 	github.com/siderolabs/talos/pkg/machinery v1.15.0-alpha.0.0.20260908133727-5c5fd29e95f7
 	github.com/spf13/cobra v1.10.2
-	github.com/stmcginnis/gofish v0.26.0
+	github.com/stmcginnis/gofish v0.27.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 )
