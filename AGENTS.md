@@ -108,7 +108,8 @@ The exact predicates live in `internal/provider/machine`, so treat this as the i
 - Provider to machines: DHCP proxy (`internal/provider/dhcp`), TFTP (`internal/provider/tftp`), and the HTTP iPXE handler (`internal/provider/ipxe`).
 - Provider to Image Factory: none directly, since `internal/provider/installationmedia` goes through the Omni client to ensure the boot asset and get the iPXE URL back.
 - Provider to BMC: IPMI, Redfish, or API backends behind one `Client` interface (`internal/provider/bmc`), with `bmc/pxe` holding the BIOS/UEFI PXE-boot abstraction.
-  The backend is chosen per machine: the API backend if the machine has an API power management config, otherwise Redfish when enabled and probed as available (cached per address), otherwise IPMI.
+  The backend is chosen per machine: the API backend if the machine has an API power management config, otherwise Redfish when enabled and probed as available (cached per machine and address), otherwise IPMI.
+  A Redfish service can expose several systems (for example an emulator fronting several machines), so the Redfish client operates on the one whose UUID matches the machine ID (the SMBIOS UUID Talos reports), and fails when none matches.
 
 The COSI controllers live in `internal/provider/controllers` and their internal resources in `internal/provider/resources`.
 The main ones are `MachineStatusController` (polls BMC power state), `BMCConfigurationController` (provisions IPMI creds via the agent), `PowerOperationController` (issues BMC power commands), `RebootStatusController` (reboots and one-time PXE), `WipeStatusController` (drives `WipeDisks`), and `InfraMachineStatusController` (syncs state up to Omni).

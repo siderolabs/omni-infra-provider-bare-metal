@@ -76,7 +76,7 @@ func (factory *ClientFactory) GetClient(ctx context.Context, config *resources.B
 
 	if useRedfish {
 		logger = logger.With(zap.String("bmc_client", "redfish"))
-		redfishClient := redfish.NewClient(factory.options.RedfishOptions, spec.Ipmi.Address, spec.Ipmi.Username, spec.Ipmi.Password, logger)
+		redfishClient := redfish.NewClient(factory.options.RedfishOptions, spec.Ipmi.Address, spec.Ipmi.Username, spec.Ipmi.Password, config.Metadata().ID(), logger)
 
 		return &loggingClient{client: redfishClient, logger: logger}, nil
 	}
@@ -110,7 +110,7 @@ func (factory *ClientFactory) redfishAvailable(ctx context.Context, machineID st
 
 	logger.Debug("probe redfish availability", zap.String("machine", machineID), zap.String("address", address))
 
-	redfishClient := redfish.NewClient(factory.options.RedfishOptions, address, ipmiInfo.Username, ipmiInfo.Password, logger)
+	redfishClient := redfish.NewClient(factory.options.RedfishOptions, address, ipmiInfo.Username, ipmiInfo.Password, machineID, logger)
 
 	if _, err := redfishClient.IsPoweredOn(ctx); err != nil {
 		logger.Debug("redfish is not available", zap.String("machine", machineID), zap.String("address", address), zap.Error(err))

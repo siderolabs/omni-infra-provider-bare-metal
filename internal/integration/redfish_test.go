@@ -30,6 +30,7 @@ var (
 	redfishUseHTTPS                  = flag.Bool("redfish-use-https", true, "Use HTTPS for Redfish")
 	redfishInsecureSkipTLS           = flag.Bool("redfish-insecure-skip-tls", true, "Skip TLS verification for Redfish")
 	redfishSetBootSourceOverrideMode = flag.Bool("redfish-set-boot-source-override-mode", true, "Set boot source override mode for Redfish")
+	redfishMachineID                 = flag.String("redfish-machine-id", "", "Machine ID (SMBIOS UUID) of the system to use if the Redfish service exposes more than one")
 )
 
 func TestRedfish(t *testing.T) {
@@ -45,6 +46,7 @@ func TestRedfish(t *testing.T) {
 		*bmcAddress,
 		*bmcUsername,
 		*bmcPassword,
+		*redfishMachineID,
 		zaptest.NewLogger(t),
 	)
 
