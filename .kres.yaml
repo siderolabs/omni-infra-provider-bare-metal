@@ -7,7 +7,7 @@ spec:
 kind: common.SourceAssets
 spec:
   images:
-    - ref: ghcr.io/siderolabs/ipxe:v1.14.0-alpha.0-3-ge4d0113
+    - ref: ghcr.io/siderolabs/ipxe:v1.15.0-alpha.0-63-g6e225ae
       copies:
         - platform: linux/amd64
           source: /usr/libexec/ipxe.efi
@@ -43,7 +43,7 @@ spec:
     PLATFORM: linux/amd64,linux/arm64
   copyFrom:
     -
-      stage: ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.13.6-agent-v0.1.6 # to be used with --use-local-boot-assets for local development
+      stage: ghcr.io/siderolabs/talos-metal-agent-boot-assets:v1.14.1-agent-v0.1.7 # to be used with --use-local-boot-assets for local development
       # stage: 127.0.0.1:5005/siderolabs/talos-metal-agent-boot-assets:v0.0.1-local # for local development, to be replaced with the line above and rekres-ed
       source: /
       destination: /assets
