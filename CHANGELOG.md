@@ -1,3 +1,246 @@
+## [Omni Infra Provider Bare Metal 0.14.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.14.1) (2026-10-27)
+
+Welcome to the v0.14.1 release of Omni Infra Provider Bare Metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Maja Bojarska
+* Noel Georgi
+* Mateusz Urbanek
+* Justin Garrison
+* Orzelius
+* Utku Ozdemir
+* Andy Longwill
+* immanuwell
+* Aleksei Sviridkin
+* Alexander Soelberg Heidarsson
+* Brian Topping
+* Dmitrii Sharshakov
+* GeertJohan
+* Ian Atha
+* Jarrad S
+* Karthik Chowdary
+* Klesev Dimitrij
+* Louis Deconinck
+* Oguz Kilcan
+* leppeK
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`b381ac5`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/b381ac5a8c64df094d2de56193c71e405152e7b8) fix: select the Redfish system matching the machine UUID
+* [`77f3c51`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/77f3c51b48ed92e5ce959f5a42e6412e8db294d2) chore: bump deps, rekres
+* [`51b8c60`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/51b8c609c04f70e733fb3bd54851c0151665d70b) fix: send the server identifier in DHCP proxy replies
+</p>
+</details>
+
+### Changes from siderolabs/image-factory
+<details><summary>11 commits</summary>
+<p>
+
+* [`f3d984d`](https://github.com/siderolabs/image-factory/commit/f3d984d6c191252c256cd14923797feb6ac4f610) release(v1.7.2): prepare release
+* [`79b67d7`](https://github.com/siderolabs/image-factory/commit/79b67d765451270b294ca170fd3e220e308682d6) chore: add cdn hmac verification
+* [`a54d48a`](https://github.com/siderolabs/image-factory/commit/a54d48a6bfeb988ee13aff65d52d811ba17ca119) refactor(http): remove shared dependency bag
+* [`983ec95`](https://github.com/siderolabs/image-factory/commit/983ec95bd3e69d16cf82de88f349262d0250545b) refactor(http): isolate registry services
+* [`015a950`](https://github.com/siderolabs/image-factory/commit/015a9509fb6e247394b2a0e086307be6f159f1e3) refactor(http): isolate OCI routing
+* [`58b4086`](https://github.com/siderolabs/image-factory/commit/58b408659489dc11e9889a87256d6ea91f2c6c7b) refactor(http): isolate browser adapters
+* [`df928e0`](https://github.com/siderolabs/image-factory/commit/df928e0dea688d58cc73e708bef23ac8aba9be7b) refactor(http): isolate image services
+* [`7c5173e`](https://github.com/siderolabs/image-factory/commit/7c5173e95cd99e86c9aeb46804c45ff234efc567) refactor(http): unify route authentication
+* [`55a9fff`](https://github.com/siderolabs/image-factory/commit/55a9fff0433c462cbebd793ec5984242c058ae01) refactor(http): isolate endpoint owners
+* [`ae77d98`](https://github.com/siderolabs/image-factory/commit/ae77d98659416a1ae6b4371444edd3bf56aa4074) feat(http): declare route ownership
+* [`be369f1`](https://github.com/siderolabs/image-factory/commit/be369f1f21b36957fa91102c63989f23f958e25a) refactor(http): declare route metadata
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>160 commits</summary>
+<p>
+
+* [`63b430276`](https://github.com/siderolabs/talos/commit/63b43027679fc90af7b0d79e77ee29c47e531889) release(v1.15.0-alpha.1): prepare release
+* [`2682d461e`](https://github.com/siderolabs/talos/commit/2682d461e98fa27c393e608fea174de24297c0fa) feat: provision blank virtual machine disks in storage pools
+* [`b834e3cb6`](https://github.com/siderolabs/talos/commit/b834e3cb6ea6a0c6f2846d76bb589576dca28ce9) fix: remove the NUMANodes flag from cluster create qemu cmd
+* [`53c484f96`](https://github.com/siderolabs/talos/commit/53c484f96bd54b0d02c31f430b44eb35ba62b080) feat: configurable video device for virtual machines
+* [`340df0456`](https://github.com/siderolabs/talos/commit/340df0456e67d0c7b7ee0b8cf4734753e386a1b3) feat: bump kubernetes to v1.38.0-alpha.2
+* [`751f65514`](https://github.com/siderolabs/talos/commit/751f65514fe37f2198174703b88e769ca753975c) feat: show guest VM IPs from qemu-guest-agent
+* [`3e41f2501`](https://github.com/siderolabs/talos/commit/3e41f2501d0440972cfd3188c20adba67690aaa0) feat: bump deps
+* [`b9e82ebdc`](https://github.com/siderolabs/talos/commit/b9e82ebdcf950819fcf9942c9f94dc18924524f8) fix: vm console queue overflows on read
+* [`3c0838b39`](https://github.com/siderolabs/talos/commit/3c0838b392d30403e8014380ad16522305ca878e) test: isolate concurrent IPv4 route scope fixtures
+* [`0e17fa324`](https://github.com/siderolabs/talos/commit/0e17fa3246e742844fb621978a22db3cfb67dfe8) test: bound NUMA reconciliation triggers by suite lifetime
+* [`ee6a6bd8a`](https://github.com/siderolabs/talos/commit/ee6a6bd8a64214282831d7de42839fed29ac01b3) test: synchronize VNC cancellation coverage
+* [`b5f476dda`](https://github.com/siderolabs/talos/commit/b5f476ddac895cce9c3bd07c365290bb91a29cfe) feat: reconcile CPU partition policy
+* [`df0193f5e`](https://github.com/siderolabs/talos/commit/df0193f5ee8c09f4e1e7e55b61315afc60c8b8de) feat: add authenticated VNC access to virtual machines
+* [`b4178e11a`](https://github.com/siderolabs/talos/commit/b4178e11ae5971cbf6bed71c9b0e447866b7012e) test: distinguish concurrent foreign route fixtures
+* [`44c569644`](https://github.com/siderolabs/talos/commit/44c569644d8f0780747fb665185fe91fdb886db0) chore: add VM serial console release notes
+* [`4e2e4f308`](https://github.com/siderolabs/talos/commit/4e2e4f3080263005f23a0b350f20e291607f0be8) feat: add host NUMA topology and validate VM placement
+* [`b277651ca`](https://github.com/siderolabs/talos/commit/b277651ca2766621b2873c30df9eddcecb4c1fcc) feat: attach qemu-guest channel to virtual machines
+* [`051a4bf6d`](https://github.com/siderolabs/talos/commit/051a4bf6d7099e1c2faac35809dd4770a7e5a080) test: wait for device removal before testing disk recreation
+* [`04dde9148`](https://github.com/siderolabs/talos/commit/04dde9148412a96eae772e8bd13e87ee909c81f0) test: make DNS bind failure independent of interface addresses
+* [`4948088b0`](https://github.com/siderolabs/talos/commit/4948088b0429fa1086c0a36ddbdad6fd36cc59a6) feat: add aggregate workload memory limits
+* [`1227b2b84`](https://github.com/siderolabs/talos/commit/1227b2b842e204a7093833460603059cc3f6d2fa) feat: provision cloud-init seed assets for virtual machines
+* [`8fca67333`](https://github.com/siderolabs/talos/commit/8fca673334e5a6f58772a79a506a9a887c880837) test: talos container status coverage
+* [`5ca54ad2e`](https://github.com/siderolabs/talos/commit/5ca54ad2e82e7f59f03f422c7b90b395ebf7c86e) feat: plan safe CPU partition updates
+* [`eb958e61e`](https://github.com/siderolabs/talos/commit/eb958e61eacf0426043205a4e902d739dc6da61b) test: improve hypervisor unit tests stability
+* [`4194ca142`](https://github.com/siderolabs/talos/commit/4194ca1426e005b07d4401c39a6bffb4d2d1f1dc) feat: persist VM serial logs and add explicit log kind selection
+* [`527a272c5`](https://github.com/siderolabs/talos/commit/527a272c597e2415c3a285b5b92df6c897bb7380) feat: content lib. locking, vm resource chaining
+* [`cf07b8a7f`](https://github.com/siderolabs/talos/commit/cf07b8a7f3f1e65dda4ec3f8c31f3b3e512c5dbc) feat: impl. VirtualMachineConfig - guest
+* [`e18d5ce09`](https://github.com/siderolabs/talos/commit/e18d5ce093d98f6076f220dbf88bc4dc45be7651) feat: add CPU partition cgroup operations
+* [`6b1edb94d`](https://github.com/siderolabs/talos/commit/6b1edb94d01a00041af24b786f234aad7b0d0a62) test: boot stock Alpine ISO over serial console
+* [`3663614ba`](https://github.com/siderolabs/talos/commit/3663614ba772f02acce10ed0d06405d48e8f5b2d) feat: rework route configuration
+* [`da3c10225`](https://github.com/siderolabs/talos/commit/da3c10225b5cd2d8960f2b5c9a8bbeb8c1e4f18a) fix: clean up mountpoints on unmount
+* [`738f1ab8f`](https://github.com/siderolabs/talos/commit/738f1ab8f7185c7a3b73ae1ed8f88f1b3f9e02e2) fix: roll back stacked try configs to the config before the first try
+* [`e880b96c0`](https://github.com/siderolabs/talos/commit/e880b96c0cb450aea8418682bf72948f3ccca51e) feat: add CPU partition configuration
+* [`bdfe7bd2b`](https://github.com/siderolabs/talos/commit/bdfe7bd2beea1c929c2b630775618eb33edbae9a) test: coverage for explicit vm stop, before delete
+* [`d63f6c38b`](https://github.com/siderolabs/talos/commit/d63f6c38bc1fce60d1afb20be4a809592bb6f17e) feat: add CPU partition resource types
+* [`a5aa41488`](https://github.com/siderolabs/talos/commit/a5aa414883d7bf46317fd299152eb9c218de62ab) test(ci): add hypervisor short pipeline
+* [`e7b50c50d`](https://github.com/siderolabs/talos/commit/e7b50c50d9b1709778a11749e221654d7db42420) feat: vm disk provisioning from iso
+* [`7396302ba`](https://github.com/siderolabs/talos/commit/7396302bafea72946e4c3bc81aaa45f5c6c3c082) feat: set vm domaincpu to host-model
+* [`83a80df90`](https://github.com/siderolabs/talos/commit/83a80df9057b5e1b16e0cbd480230416b9aa123f) fix: verify the claim for the legacy bundle image verification
+* [`95c86b810`](https://github.com/siderolabs/talos/commit/95c86b8100b06f43a8ee603f41ec0e00da558d6b) fix: correct handling of DHCP changing address
+* [`e1386c60d`](https://github.com/siderolabs/talos/commit/e1386c60db3c687ff2c90f1a4e80308a22d83c6e) fix: image verification test
+* [`b77b8b8bc`](https://github.com/siderolabs/talos/commit/b77b8b8bc8d5e599ca4186adca299c0caba01ea4) feat: add hypervisor VM serial console streaming
+* [`87e039ea9`](https://github.com/siderolabs/talos/commit/87e039ea967f8a9014197a711c77b97ce67d2080) fix: make GenerateClientConfiguration API work in K8s-less mode
+* [`bf9d68ed6`](https://github.com/siderolabs/talos/commit/bf9d68ed69c1c690fe2cda947e0160dd56dfd24a) feat: update Kubernetes to 1.38.0-alpha.1
+* [`a003bd22b`](https://github.com/siderolabs/talos/commit/a003bd22bb9a8261c72227eaa9bb021c3d273984) fix: restore source names for pseudo filesystem mounts
+* [`b3736b9a9`](https://github.com/siderolabs/talos/commit/b3736b9a92c44c9863b7f608af81ef337efc41e6) fix: network on azure (and might fix some other platforms)
+* [`41e63cb24`](https://github.com/siderolabs/talos/commit/41e63cb241463eece15b6b914cbe049d21402175) fix: skip impersonation tests without Kubernetes
+* [`ef5bdc8dc`](https://github.com/siderolabs/talos/commit/ef5bdc8dcd1bc7adcd4422d7322589aa3c757d74) fix: gate libvirt dial on virtqemud readiness
+* [`53fa44cbf`](https://github.com/siderolabs/talos/commit/53fa44cbfa6f3dc92d0784db9dea0b65404b5dae) fix: add validation for the PTP device name
+* [`b6a32fc16`](https://github.com/siderolabs/talos/commit/b6a32fc1642f02a7b7e59744667126949de88808) fix: reject impersonation header without impersonator role
+* [`76e761d83`](https://github.com/siderolabs/talos/commit/76e761d83f7f894021613c6041aa77b21632851a) fix: validate ExtensionServiceConfig name
+* [`21b74679f`](https://github.com/siderolabs/talos/commit/21b74679fde83dc4d6025cb1f7c2e92a2f525ce5) feat: add support for chunked fstrim
+* [`5b7c96d75`](https://github.com/siderolabs/talos/commit/5b7c96d7533cd2989c3c2f25c7f4d71015f0f89f) feat: override the kubelet's image GC thresholds
+* [`7e972eecf`](https://github.com/siderolabs/talos/commit/7e972eecfff99e495dc41d89f5ef67466c373348) feat: impl. hypervisor network tap
+* [`90e22ed5b`](https://github.com/siderolabs/talos/commit/90e22ed5ba47f56944a76161298589387e1e7bcf) feat: update etcd to 3.7.2
+* [`2363acc1e`](https://github.com/siderolabs/talos/commit/2363acc1e6fdb24b752cb7bb5c08a1953322a80f) fix: hv domain status ctrl must use openpersistent
+* [`6d70efe9f`](https://github.com/siderolabs/talos/commit/6d70efe9fb617e7d17b03026f3f8f6f101481a63) feat: bring in Linux 6.18.54, runc 1.5.2
+* [`6b333c145`](https://github.com/siderolabs/talos/commit/6b333c145f80ae3be593b0f54af9678d799b3316) fix: don't overwrite currently booted on upgrade for GRUB
+* [`1ea1724bb`](https://github.com/siderolabs/talos/commit/1ea1724bbe88037f9c02d19191d172225ebde699) feat: add virtual machine CPU pinning and NUMA placement
+* [`cb9852c4e`](https://github.com/siderolabs/talos/commit/cb9852c4e1a60bf3eec0763966f4ff2cfc087396) feat: add VirtualMachineStatus resource
+* [`13426fd28`](https://github.com/siderolabs/talos/commit/13426fd28a74bb4cd9b4c017282ac0c24239400d) test: avoid racing CPU scaling sysfs writes
+* [`cad70acb2`](https://github.com/siderolabs/talos/commit/cad70acb2385e3b7cc7af42ae715ad2e859428d5) feat: add ignoreCtrlAltDelete to SecurityProfileConfig
+* [`494abedf6`](https://github.com/siderolabs/talos/commit/494abedf6c249b5fea4745c91d5a1b4a5faa493a) docs: clarify the KMS endpoint scheme
+* [`fede90e81`](https://github.com/siderolabs/talos/commit/fede90e815ec20e240e2d4bf308de9dae2d13680) feat: talosctl dashboard container support
+* [`691a26f18`](https://github.com/siderolabs/talos/commit/691a26f182d7c95aacc419cf9582565ae6989f5f) fix: installer-with-extension image tag handling
+* [`92fdb5b08`](https://github.com/siderolabs/talos/commit/92fdb5b08c5bd23632323da3d6e249f9bb82e19c) test: fix OOM kills in TinkSuite
+* [`bfa1ef264`](https://github.com/siderolabs/talos/commit/bfa1ef264848028b692f01f6a11b0673e7a22388) fix: drop devices from the last observed generation if they are gone
+* [`8c90991bd`](https://github.com/siderolabs/talos/commit/8c90991bdbba1145bc3148db82771ab1e2d817b2) feat: add LVFS metadata parsing and PKCS7 verification
+* [`3f3a1e01a`](https://github.com/siderolabs/talos/commit/3f3a1e01a41797bfe4f5a65b7f30224de6a21c78) fix: type VM CPU limits for 32-bit talosctl builds
+* [`6a1ff6688`](https://github.com/siderolabs/talos/commit/6a1ff6688133f7c66260e60d4a1ce833b1b536af) feat: place virtual machines in a Talos-owned cgroup partition
+* [`6ced93742`](https://github.com/siderolabs/talos/commit/6ced9374280dd995cc25ed31f0e2e5bbbf347b69) feat: handle the change in kubelet's CPU and memory policies
+* [`0438aa72d`](https://github.com/siderolabs/talos/commit/0438aa72df56a703ce602eaa7b280d23cf34f4a2) chore: mark generated code and reference docs as generated
+* [`d5393f3ef`](https://github.com/siderolabs/talos/commit/d5393f3efd67e79ac2682dc225314ac047e7030a) feat: reconcile virtual machine domains with libvirt
+* [`b230c581a`](https://github.com/siderolabs/talos/commit/b230c581ab80e8841471d62529524d1f092644cf) feat: update containerd to 2.3.6
+* [`0e7245da4`](https://github.com/siderolabs/talos/commit/0e7245da4750584eef224895a18f8b658b66eb31) fix: reject extra config merge paths
+* [`f3aa7374c`](https://github.com/siderolabs/talos/commit/f3aa7374c700b01555f6054dcabd4221fc35b8b4) feat: add CPU frequency scaling controller
+* [`cd48649d2`](https://github.com/siderolabs/talos/commit/cd48649d21dc9e7529e7d95f0ac47f4a62db33b4) chore: fix build of talosctl on non-Linux
+* [`ab6af70d1`](https://github.com/siderolabs/talos/commit/ab6af70d11516952ce8788e01d205f9aca274569) test: fix the md-boot pipeline
+* [`59ff84267`](https://github.com/siderolabs/talos/commit/59ff84267cd6b21dc6404cadcb6b40a86856ec37) feat: detect and publish hybrid ISO partitions
+* [`0e3511020`](https://github.com/siderolabs/talos/commit/0e3511020af9a24331c7dc108234abf3d59dfce2) test: add a test exercising partitions on top of DM devices
+* [`6304eeb40`](https://github.com/siderolabs/talos/commit/6304eeb4091aa9699dfcc469cecc145f26fc555f) fix: relax the validation for block device wipe
+* [`0553b3e51`](https://github.com/siderolabs/talos/commit/0553b3e514c33a86a9f93ac1d50b9809f7ea6616) feat: support partitions on device mapper devices
+* [`0962b72d6`](https://github.com/siderolabs/talos/commit/0962b72d6c3b50a64c80b70e58536d465c540d70) fix: disable storagepool controllers in container mode
+* [`5592dc59a`](https://github.com/siderolabs/talos/commit/5592dc59a827d0da975f1888fa7257d203eb66cf) feat: impl. virtualmachineconfig - networking
+* [`3c9c65f0f`](https://github.com/siderolabs/talos/commit/3c9c65f0fc75497915eb22daaaf7cc2e54f2635e) chore: validate VM domain XML against libvirt schema
+* [`a61097889`](https://github.com/siderolabs/talos/commit/a61097889209e2aae6f62a348ee081c3d72c4f53) feat: add libvirt storage pool configuration
+* [`515a590ea`](https://github.com/siderolabs/talos/commit/515a590ea96ffc8b871f7e93826dd668aa50456c) fix: pass boot partition UUID on kexec
+* [`b6ec9e7d8`](https://github.com/siderolabs/talos/commit/b6ec9e7d8d30fdf00b7ef1a3ed48b734c7e3e7e5) feat: translate virtual machine configuration into domain specs
+* [`a40182833`](https://github.com/siderolabs/talos/commit/a40182833f906fcfe93974ba90845cb525774dbf) refactor: hypervisor test pipeline
+* [`fa69d23b5`](https://github.com/siderolabs/talos/commit/fa69d23b55b11c54b6dc313d11cbdf7d149a48f5) chore: drop some talosctl gen subcommands
+* [`6fe8bafa5`](https://github.com/siderolabs/talos/commit/6fe8bafa5a91b91d0236849bec83c2c018dcaf79) fix: perform stricter validation of hostnames/search domains
+* [`ef123b413`](https://github.com/siderolabs/talos/commit/ef123b41396fe0a22f82bef8f7fba0a0db4a2746) feat: update Linux to 6.18.53
+* [`2976d533f`](https://github.com/siderolabs/talos/commit/2976d533fcc9e3f2e42bafca9e1644eeb0c3a570) refactor: add enums for vm conf str-fields
+* [`53ec6047e`](https://github.com/siderolabs/talos/commit/53ec6047e8d1b87ef60a2f85b18a159b7282cd56) test: bump Go version for cloud images
+* [`b56f98033`](https://github.com/siderolabs/talos/commit/b56f980331f1432f851c40d432e3f3cb0b7ca7e6) test: fix cilium triggered test
+* [`f11bd1c0a`](https://github.com/siderolabs/talos/commit/f11bd1c0a92ebdf302b97cde831fb2fec5d7920b) fix: handle correctly routes without outlinkname set
+* [`ab3d78b44`](https://github.com/siderolabs/talos/commit/ab3d78b44ff471d7b45466c282748a8d922eae05) feat: impl. virtualmachineconfig powerstate
+* [`ed7111fbb`](https://github.com/siderolabs/talos/commit/ed7111fbbfdfef40fd8b5c437bbba6c105ad74b7) feat: provide SecureBoot fingerprints used during boot
+* [`5248bba87`](https://github.com/siderolabs/talos/commit/5248bba87877181dc505600e49d667e0629fcaa0) docs: update bug issue template
+* [`ee0a723be`](https://github.com/siderolabs/talos/commit/ee0a723be89bf990bea2bc353650eeafe4bfcc4a) fix: do not disclose pre-shared Wireguard key in LinkStatus
+* [`56f9c6a08`](https://github.com/siderolabs/talos/commit/56f9c6a085546020f7f7127a6fbd5475d9fa85e7) chore: clean up unused settings in LVM reconcile controllers
+* [`a314372a1`](https://github.com/siderolabs/talos/commit/a314372a152e310b050b0afbd2e250d3d51c35eb) feat: impl. virtualmachineconfig - firmware
+* [`5f0b06335`](https://github.com/siderolabs/talos/commit/5f0b0633512788a7507684fb8d447ae8234639ed) feat: impl. virtualmachineconfig - console
+* [`34c306f32`](https://github.com/siderolabs/talos/commit/34c306f32c97c071de16763d7a72818b644ebac1) fix: report selected context in talosctl config info
+* [`36bed8610`](https://github.com/siderolabs/talos/commit/36bed861078a27fde49d293708fee531476f555a) fix: retry transient LVM reconciliation failures
+* [`93c711852`](https://github.com/siderolabs/talos/commit/93c711852fa26c72a8cb7b7b8cfba860a227891f) feat: impl. virtualmachineconfig - disks
+* [`f188ff448`](https://github.com/siderolabs/talos/commit/f188ff4481bb5770ac5905fff983af8803ee1fb5) feat: content library upload verification
+* [`4ecd21a54`](https://github.com/siderolabs/talos/commit/4ecd21a540d9a94afbf7b098557b4dabc139ccae) docs: add a note about the dev command to the qemu command
+* [`df493c685`](https://github.com/siderolabs/talos/commit/df493c6855dc35215c7727b22c65fb3f465b95e8) fix: ignore missing device nodes for inotify
+* [`a4b38516b`](https://github.com/siderolabs/talos/commit/a4b38516b3074da60dbced3e8ad1b44ef3f38da2) chore: automatic linting fixes
+* [`dfabc0ed7`](https://github.com/siderolabs/talos/commit/dfabc0ed73648107dbec1d56cfdc9438e1868527) chore: update dependencies
+* [`8cf987052`](https://github.com/siderolabs/talos/commit/8cf987052eb7ff0ae496d6ce0577064046ec2955) chore: bump CSI helm charts
+* [`d2de8e21c`](https://github.com/siderolabs/talos/commit/d2de8e21cfcb31094bf6c4c95d16dd96eef9f5fc) fix: preserve hostname under Docker (in container mode)
+* [`f04a3438e`](https://github.com/siderolabs/talos/commit/f04a3438e0009a506f88923673006d3c951fa5a4) feat: add macsec module
+* [`4d024ecf8`](https://github.com/siderolabs/talos/commit/4d024ecf861f3f8085af34bb654069c780ebbf81) feat: add virtualmachineconfig
+* [`571c4665d`](https://github.com/siderolabs/talos/commit/571c4665de6ea9936274f9da3d2fa8208fd4ba22) refactor: move size types to config/types/meta
+* [`cc815177d`](https://github.com/siderolabs/talos/commit/cc815177d5cb80aa8c937d1f514df78e1ea91560) fix: apply config patches last in talosctl cluster create
+* [`9d5901f7d`](https://github.com/siderolabs/talos/commit/9d5901f7d2a07664bccb41589ddef469c4bccbdf) feat: content library api, talosctl support
+* [`657a95a68`](https://github.com/siderolabs/talos/commit/657a95a68415a0c62f4616545ee77828354b63a4) chore: implement controller/resource tracer
+* [`a26d35862`](https://github.com/siderolabs/talos/commit/a26d35862a56b7ccaed943866534a0c70c9086ed) docs: clarify admission control and flannel config docs
+* [`5d1981eca`](https://github.com/siderolabs/talos/commit/5d1981eca996171fca0447d78564fda73a914fc1) feat: add contentlibrary resources, ctrl
+* [`b46b3b872`](https://github.com/siderolabs/talos/commit/b46b3b8726dd796647b97647b867cc4ce7f26d20) feat: implement boot device wait in volume manager
+* [`35d67a3a5`](https://github.com/siderolabs/talos/commit/35d67a3a59a0449a35a31b330f4d88e02b1865c8) test: fix the aws-arm64 test
+* [`956c739c9`](https://github.com/siderolabs/talos/commit/956c739c98b0a11aef8d4a5f5f8e049dd3928dc6) refactor: container dependency status spec
+* [`05f60de61`](https://github.com/siderolabs/talos/commit/05f60de61060a4cac421727dd4f0268a6c16191d) feat: report LLDP neighbors on physical links
+* [`2d2567ba8`](https://github.com/siderolabs/talos/commit/2d2567ba824e3768c74a1a5bd7ab068b6117bbf2) fix: use correct conditions on CRI <> sandboxd dependency
+* [`acdcc9cda`](https://github.com/siderolabs/talos/commit/acdcc9cda90ce2c72e9c341da967bd6a0d9ad329) feat: update Linux to 6.18.52
+* [`6e59bd86c`](https://github.com/siderolabs/talos/commit/6e59bd86c0cba38e255aee136a83ddca89a7c740) feat: update SideroLink library to v0.3.18
+* [`2f5cc2fb0`](https://github.com/siderolabs/talos/commit/2f5cc2fb0d258472fa7689d818c49633d491543f) fix: extend the USB settle code for more code paths
+* [`0e1fdd26a`](https://github.com/siderolabs/talos/commit/0e1fdd26a1a6905ba3b3e9949e84887741981357) feat: impl container status controller
+* [`64c3de56b`](https://github.com/siderolabs/talos/commit/64c3de56b191a5dae473ed245be3a892ebf2e5a3) chore: pass kernel version down to VEX generator
+* [`8fe31217d`](https://github.com/siderolabs/talos/commit/8fe31217db634b5a9de6e8a679d6e4e531029f8b) chore: update dockerfile syntax
+* [`fe4bd64c9`](https://github.com/siderolabs/talos/commit/fe4bd64c98764b8cab8ca756115ffbb74d72bfb4) chore: update integration k8s helm charts
+* [`0129eac91`](https://github.com/siderolabs/talos/commit/0129eac9121663a8eac02e3a51c5abf39749d567) chore: update helm, cilium cli
+* [`817a479c6`](https://github.com/siderolabs/talos/commit/817a479c6971e450be527691d3a317b08cf2ce6e) chore: update tools and pkgs
+* [`d66c60a98`](https://github.com/siderolabs/talos/commit/d66c60a9850ec31492a44d8c5288827a46248b20) fix: prevent sandboxd signal dispositions leaking into services
+* [`64f8f83c1`](https://github.com/siderolabs/talos/commit/64f8f83c1b1308d2e9d5e00e6c9bc9766a504a16) test: peer passively with the MetalLB speaker
+* [`75eea7897`](https://github.com/siderolabs/talos/commit/75eea78971cfdb9d3415b8339ba2176e31c4df01) test: stop ARP flux breaking the BGP VRF test
+* [`bebcad562`](https://github.com/siderolabs/talos/commit/bebcad562f213b542c5e5c153138ca07ca9f9624) fix: rebuild the BGP server when its VRF is recreated
+* [`175925220`](https://github.com/siderolabs/talos/commit/1759252207ffea9f56f3193340f05473e5949a35) fix: create GRUB bootloader ISOs only for BIOS
+* [`78a70ed5e`](https://github.com/siderolabs/talos/commit/78a70ed5ed5eba66a4130a5e9529645f87248e67) test: check owned mounts in hostns cleanup tests
+* [`ba50b647f`](https://github.com/siderolabs/talos/commit/ba50b647f78fe04773174c51202da504031aef4d) test: skip the macvlan DHCP test on full-CLOS clusters
+* [`7f5327d5b`](https://github.com/siderolabs/talos/commit/7f5327d5bb4db97edb6407bfdc1ee8f19d9a7b6a) fix: guard against nil config document slices
+* [`2e23abc13`](https://github.com/siderolabs/talos/commit/2e23abc139c7ad2497c3950c1dceb7cefa6f1bd2) fix: reconnect the WireGuard over gRPC tunnel after a failure
+* [`a1d2ce2a7`](https://github.com/siderolabs/talos/commit/a1d2ce2a70f9930dd3186cc9d0195b6e84381fa9) feat: support disk smart config and status
+* [`cc92d40a7`](https://github.com/siderolabs/talos/commit/cc92d40a77b6f442122a512b1f7459539fd8f028) fix: tighten the validation of v1alpha1 configs vs. migration
+* [`66c7d4505`](https://github.com/siderolabs/talos/commit/66c7d4505523f82a00a84bca3c3b95c3038f61aa) docs: clarify the kube-apiserver extra args and new config
+* [`5d2fa54ee`](https://github.com/siderolabs/talos/commit/5d2fa54eeeb9d2c2478a5b071a399bf20415c8a3) test: test Cilium with SELinux enforcing mode
+* [`8a615bf5a`](https://github.com/siderolabs/talos/commit/8a615bf5a3f2508c1b2bc3e44e7975d8c874f593) docs: correct the UnattendedInstallConfig name in the schema
+* [`4327e1083`](https://github.com/siderolabs/talos/commit/4327e108368dbc68b3dc50be226de1ce0b3f44ea) fix: make --insecure reachable for talosctl meta subcommands
+* [`f715d06a4`](https://github.com/siderolabs/talos/commit/f715d06a41bc169be71b422e9cd060595e85f9a8) fix: ignore apply config dry-run for try mode
+* [`850a4384b`](https://github.com/siderolabs/talos/commit/850a4384b05e112c487070dfafe6630c1ec8850a) test: add a way to provision extra DHCP entries in the test
+* [`8537cf06b`](https://github.com/siderolabs/talos/commit/8537cf06b65cfb958a407b0993f37fae6882008d) fix: drop logical links if they no longer declare as logical
+* [`b8aa858d9`](https://github.com/siderolabs/talos/commit/b8aa858d949a075402804382ed904a8e38d583e7) fix: resolve volume devices in shared selector helper
+* [`64355d0e3`](https://github.com/siderolabs/talos/commit/64355d0e30a59ace25d8112326c07e4855fda1e9) fix: create LVM physical volumes on the decrypted device
+* [`189086bd6`](https://github.com/siderolabs/talos/commit/189086bd6d0886619859c54eadb55106b58fb8e5) fix: bump history max cap to 1536
+* [`ee71f190e`](https://github.com/siderolabs/talos/commit/ee71f190eb6a25f55fcd13748dc01d24f6200da2) feat: upate Linux to 6.18.50
+* [`b735fd683`](https://github.com/siderolabs/talos/commit/b735fd68373a8b0738f235fb06728e406879df38) feat: add NixOS OVMF search path
+* [`f593732fa`](https://github.com/siderolabs/talos/commit/f593732fa3c8d4f45fadd13f81b21ad5b6a40135) fix: support ARMv7 talosctl builds
+* [`682a0c96d`](https://github.com/siderolabs/talos/commit/682a0c96d808dcb3e890fb06e8270bd4f1ce1e74) fix: gate NFS server behind linux build tag
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/insomniacslk/dhcp**               234b97448fae -> c6bb46ad3f3a
+* **github.com/jhump/grpctunnel**                v0.3.0 -> v0.4.0
+* **github.com/klauspost/compress**              v1.20.0 -> v1.20.3
+* **github.com/siderolabs/image-factory**        v1.7.1 -> v1.7.2
+* **github.com/siderolabs/omni/client**          v1.12.2 -> v1.12.4
+* **github.com/siderolabs/talos**                5c5fd29e95f7 -> v1.15.0-alpha.1
+* **github.com/siderolabs/talos/pkg/machinery**  5c5fd29e95f7 -> v1.15.0-alpha.1
+* **github.com/stmcginnis/gofish**               v0.26.0 -> v0.27.0
+* **golang.org/x/sync**                          v0.23.0 -> v0.24.0
+* **google.golang.org/grpc**                     v1.84.0 -> v1.85.0
+
+Previous release can be found at [v0.14.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.14.0)
+
 ## [Omni Infra Provider Bare Metal 0.14.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.14.0) (2026-10-06)
 
 Welcome to the v0.14.0 release of Omni Infra Provider Bare Metal!

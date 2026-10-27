@@ -5,18 +5,5 @@ project_name = "Omni Infra Provider Bare Metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.13.0"
+previous = "v0.14.0"
 pre_release = false
-
-[notes.agent-mode-talos-version]
-title = "Agent Mode Talos Version From Omni"
-description = """\
-The provider now boots agent mode with the Talos version Omni uses as its default, instead of a version hardcoded in the provider.
-When Omni moves its default, agent mode follows within 15 minutes, without a provider release.
-An Omni which does not expose its default yet falls back to the default of the Omni client the provider is built with, currently Talos 1.13.10.
-
-The `--agent-mode-talos-version` flag still overrides it.
-
-Talos 1.14.0 and 1.14.1 in agent mode cannot wipe disks which hold software RAID (MD) arrays.
-If Omni's default is one of those and such machines exist, set `--agent-mode-talos-version=v1.14.2`.
-"""
