@@ -89,6 +89,7 @@ func TestOfferDHCP(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, dhcpv4.MessageTypeOffer, resp.MessageType())
+		assert.Equal(t, apiAddr, resp.ServerIdentifier().String())
 		assert.Equal(t, "snp.efi", resp.BootFileNameOption())
 		assert.Equal(t, "snp.efi", resp.BootFileName)
 		assert.NotNil(t, resp.GetOneOption(dhcpv4.OptionClassIdentifier))
@@ -102,6 +103,7 @@ func TestOfferDHCP(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, dhcpv4.MessageTypeAck, resp.MessageType())
+		assert.Equal(t, apiAddr, resp.ServerIdentifier().String())
 		assert.Equal(t, "snp.efi", resp.BootFileNameOption())
 		assert.Equal(t, "snp.efi", resp.BootFileName)
 		assert.NotNil(t, resp.GetOneOption(dhcpv4.OptionClassIdentifier))
