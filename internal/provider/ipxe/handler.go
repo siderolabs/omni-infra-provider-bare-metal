@@ -33,6 +33,8 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/machine"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/config"
+	pkgipxe "github.com/siderolabs/omni-infra-provider-bare-metal/pkg/ipxe"
 )
 
 const (
@@ -59,16 +61,6 @@ sanboot --no-describe --drive 0x80
 
 	archAmd64 = "amd64"
 	archArm64 = "arm64"
-
-	// initScriptName is the name of the iPXE init script served by the HTTP server.
-	//
-	// Some UEFIs with built-in iPXE require the script URL to be in the form of a filename ending with ".ipxe", hence we serve it under this path.
-	initScriptName = "init.ipxe"
-
-	// bootScriptName is the name of the iPXE boot script served by the HTTP server.
-	//
-	// Some UEFIs with built-in iPXE require the script URL to be in the form of a filename ending with ".ipxe", hence we serve it under this path.
-	bootScriptName = "boot.ipxe"
 )
 
 // InstallationMediaClient resolves a boot request into an iPXE URL through Omni.
@@ -101,26 +93,12 @@ type Handler struct {
 	options                 HandlerOptions
 }
 
-// ServeHTTP serves the iPXE request.
+// ServeHTTP serves the iPXE boot script request, with the boot decision for the machine.
 //
 // URL pattern: http://ip-of-this-provider:50042/ipxe/boot.ipxe?uuid=${uuid}&mac=${net${idx}/mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial}&arch=${buildarch}
 //
 // Implements http.Handler interface.
 func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.PathValue("script") {
-	default:
-		handler.logger.Error("invalid iPXE script", zap.String("script", req.PathValue("script")))
-
-		w.WriteHeader(http.StatusNotFound)
-
-		return
-	case initScriptName:
-		handler.handleInitScript(w)
-
-		return
-	case bootScriptName:
-	}
-
 	ctx := req.Context()
 	query := req.URL.Query()
 	uuid := query.Get("uuid")
@@ -163,14 +141,6 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case handler.pxeBootEventCh <- controllers.PXEBootEvent{MachineID: uuid}:
 	default:
 		handler.logger.Warn("dropped PXE boot event, channel full", zap.String("uuid", uuid))
-	}
-}
-
-func (handler *Handler) handleInitScript(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/plain")
-
-	if _, err := w.Write(handler.initScript); err != nil {
-		handler.logger.Error("failed to write init script", zap.Error(err))
 	}
 }
 
@@ -420,25 +390,29 @@ func NewHandler(installationMediaClient InstallationMediaClient, machineConfig [
 		return nil, fmt.Errorf("failed to parse boot from disk method: %w", err)
 	}
 
-	initScript, err := buildInitScript(options.APIAdvertiseAddress, options.APIPort)
+	initScript, err := pkgipxe.BuildInitScript(options.APIAdvertiseAddress, options.APIPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build init script: %w", err)
 	}
 
+	var customCAPEM []byte
+
+	if options.TLS.CustomIPXECACertFile != "" {
+		if customCAPEM, err = os.ReadFile(options.TLS.CustomIPXECACertFile); err != nil {
+			return nil, fmt.Errorf("failed to read custom iPXE CA file: %w", err)
+		}
+	}
+
 	logger.Info("patch iPXE binaries")
 
-	files, err := patchBinaries(initScript, options.TLS.CustomIPXECACertFile, logger)
+	files, err := pkgipxe.PatchBinaries(Binaries(), initScript, customCAPEM, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	logger.Info("successfully patched iPXE binaries")
 
-	apiHostPort := net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.APIPort))
-	talosConfigURL := fmt.Sprintf("http://%s/%s?u=${uuid}", apiHostPort, providerconstants.ConfigURLPath)
-	defaultKernelArgs := []string{
-		fmt.Sprintf("%s=%s", constants.KernelParamConfig, talosConfigURL),
-	}
+	defaultKernelArgs := []string{config.KernelArg(options.APIAdvertiseAddress, options.APIPort)}
 
 	var providerAddress string
 
@@ -520,6 +494,11 @@ func compressInlineConfig(config []byte, logger *zap.Logger) (string, error) {
 	configBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	return configBase64, nil
+}
+
+// InitScript returns the iPXE init script embedded into the patched iPXE binaries.
+func (handler *Handler) InitScript() []byte {
+	return handler.initScript
 }
 
 // PatchedFiles returns the patched iPXE binaries to be served over TFTP and HTTP, keyed by the names

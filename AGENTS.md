@@ -105,7 +105,7 @@ The exact predicates live in `internal/provider/machine`, so treat this as the i
 
 - Provider to Omni: COSI runtime over gRPC, authed via `OMNI_SERVICE_ACCOUNT_KEY`, watching and writing `infra.*` resources.
 - Provider to agent: reverse gRPC tunnel on the API port, affinity-routed by machine UUID (`internal/provider/agent`).
-- Provider to machines: DHCP proxy (`internal/provider/dhcp`), TFTP (`internal/provider/tftp`), and the HTTP iPXE handler (`internal/provider/ipxe`).
+- Provider to machines: DHCP proxy (`pkg/dhcp`), TFTP (`pkg/tftp`), iPXE binary patching and script and file serving (`pkg/ipxe`), the Talos machine config server (`pkg/config`), and the boot decisions behind the iPXE boot script (`internal/provider/ipxe`).
 - Provider to Image Factory: none directly, since `internal/provider/installationmedia` goes through the Omni client to ensure the boot asset and get the iPXE URL back.
 - Provider to BMC: IPMI, Redfish, or API backends behind one `Client` interface (`internal/provider/bmc`), with `bmc/pxe` holding the BIOS/UEFI PXE-boot abstraction.
   The backend is chosen per machine: the API backend if the machine has an API power management config, otherwise Redfish when enabled and probed as available (cached per machine and address), otherwise IPMI.
@@ -113,6 +113,17 @@ The exact predicates live in `internal/provider/machine`, so treat this as the i
 
 The COSI controllers live in `internal/provider/controllers` and their internal resources in `internal/provider/resources`.
 The main ones are `MachineStatusController` (polls BMC power state), `BMCConfigurationController` (provisions IPMI creds via the agent), `PowerOperationController` (issues BMC power commands), `RebootStatusController` (reboots and one-time PXE), `WipeStatusController` (drives `WipeDisks`), and `InfraMachineStatusController` (syncs state up to Omni).
+
+## Public PXE packages
+
+`pkg/dhcp`, `pkg/tftp`, `pkg/ipxe` and `pkg/config` are a library shared with booter, which imports them, so a fix to the PXE stack lands here once and booter picks it up with a dependency bump.
+They hold the DHCP proxy, the TFTP server, the iPXE binary patching, the HTTP handlers for the iPXE scripts and the patched files, and the Talos machine config server with its `talos.config` kernel argument, together with the file names and URL paths the DHCP replies, the init script and the kernel argument point at.
+Each consumer only supplies the boot decision behind the iPXE boot script and the machine config to serve.
+Keep them free of Omni, COSI and provider concepts: boot decisions, gRPC, TLS and local boot assets stay in `internal/`.
+Export only what a consumer uses in production code, and reach anything else from tests through `export_test.go`.
+
+The iPXE binaries are not part of the library: `pkg/ipxe.PatchBinaries` takes them as an `fs.FS`, and each consumer embeds its own copy from the iPXE image it pins in its `.kres.yaml` (here `internal/provider/ipxe.Binaries`).
+The library cannot embed them itself, because they are git-ignored, so the module that other projects download does not contain them.
 
 ## Omni integration and state
 
@@ -217,6 +228,7 @@ Reference issues inline as sentences, for example `Closes siderolabs/omni-infra-
 
 - `siderolabs/booter` is a minimal spin-off carved out of this provider.
   It keeps only the DHCP proxy and the PXE boot serving, with no Omni dependency and no BMC management, to easily PXE-boot Talos machines in any subnet.
+  It imports the public PXE packages of this repo for that.
 - `siderolabs/omni-infra-provider-proxmox` is a good reference for a dynamic provider built on the SDK.
 - Sidero Metal (`siderolabs/sidero`) is the predecessor, kept in maintenance mode.
 

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/dhcp"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/dhcp"
 )
 
 func TestIsBootDHCP(t *testing.T) {

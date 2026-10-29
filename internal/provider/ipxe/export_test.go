@@ -11,15 +11,6 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
 )
 
-// BootScriptName exposes the boot script path to tests.
-var BootScriptName = bootScriptName
-
-// PatchBinaries exposes patchBinaries to tests.
-var PatchBinaries = patchBinaries
-
-// PatchBytes exposes patchBytes to tests.
-var PatchBytes = patchBytes
-
 // NewTestHandler builds a Handler with only the fields needed to exercise the boot path in ServeHTTP.
 func NewTestHandler(installationMediaClient InstallationMediaClient, reader controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, logger *zap.Logger,

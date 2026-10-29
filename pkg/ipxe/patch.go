@@ -7,28 +7,14 @@ package ipxe
 import (
 	"bytes"
 	"crypto/sha256"
-	"embed"
 	"encoding/pem"
 	"fmt"
-	"os"
+	"io/fs"
 	"text/template"
 
 	"github.com/siderolabs/go-zbin/zbin"
 	"go.uber.org/zap"
-
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
 )
-
-// dataFS holds the iPXE binaries embedded into the provider binary.
-//
-// The docker build populates the data directory from the iPXE image stages, and a native build
-// populates it with "make fetch-source-assets". The files are listed explicitly, so a binary can
-// never be built without them.
-//
-//go:embed data/amd64/ipxe.efi data/amd64/snp.efi
-//go:embed data/amd64/kpxe/undionly.kpxe.bin data/amd64/kpxe/undionly.kpxe.zinfo
-//go:embed data/arm64/ipxe.efi data/arm64/snp.efi
-var dataFS embed.FS
 
 // bootTemplate is embedded into iPXE binary when that binary is sent to the node.
 //
@@ -87,7 +73,11 @@ set x:int32 0
 	reboot
 `))
 
-func buildInitScript(endpoint string, port int) ([]byte, error) {
+// BuildInitScript builds the iPXE script to embed into the binaries with PatchBinaries.
+//
+// The script chains to the boot script under ScriptsURLPath at http://endpoint:port, so the HTTP server at that address
+// must serve ScriptsHandler.
+func BuildInitScript(endpoint string, port int) ([]byte, error) {
 	var buf bytes.Buffer
 
 	if err := bootTemplate.Execute(&buf, struct {
@@ -96,7 +86,7 @@ func buildInitScript(endpoint string, port int) ([]byte, error) {
 		Port       int
 	}{
 		Endpoint:   endpoint,
-		ScriptPath: constants.IPXEURLPath + "/" + bootScriptName,
+		ScriptPath: ScriptsURLPath + "/" + bootScriptName,
 		Port:       port,
 	}); err != nil {
 		return nil, err
@@ -105,24 +95,23 @@ func buildInitScript(endpoint string, port int) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// patchBinaries patches the embedded iPXE binaries with the new embedded script and optionally a new
-// CA fingerprint, and returns them keyed by every name they are served under, over both TFTP and HTTP.
+// PatchBinaries patches the iPXE binaries with the given init script and, when customCAPEM is not empty, replaces the
+// iPXE root CA they trust with the PEM-encoded CA certificate in it. It returns the binaries keyed by every name they are
+// served under, over both TFTP and HTTP.
 //
-// This relies on special build in `pkgs/ipxe` where a placeholder iPXE script is embedded.
+// The binaries come from the ghcr.io/siderolabs/ipxe image, a special build where a placeholder iPXE script is
+// embedded, laid out as in that image's /usr/libexec: amd64/ipxe.efi, amd64/snp.efi, amd64/kpxe/undionly.kpxe.bin,
+// amd64/kpxe/undionly.kpxe.zinfo, arm64/ipxe.efi and arm64/snp.efi.
 // EFI iPXE binaries are uncompressed, so these are patched directly.
 // BIOS amd64 undionly.pxe is compressed, so we instead patch uncompressed version and compress it back.
-func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) (map[string][]byte, error) {
+func PatchBinaries(binaries fs.FS, initScript, customCAPEM []byte, logger *zap.Logger) (map[string][]byte, error) {
 	var customCAHash []byte
 
-	if customCAFile != "" {
-		logger.Info("load custom CA file", zap.String("file", customCAFile))
-
+	if len(customCAPEM) > 0 {
 		var err error
-		if customCAHash, err = getCAHash(customCAFile); err != nil {
-			return nil, fmt.Errorf("failed to get CA hash from %q: %w", customCAFile, err)
+		if customCAHash, err = getCAHash(customCAPEM); err != nil {
+			return nil, fmt.Errorf("failed to get custom CA hash: %w", err)
 		}
-
-		logger.Info("loaded custom CA file", zap.String("file", customCAFile))
 	}
 
 	files := map[string][]byte{}
@@ -132,9 +121,9 @@ func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) (
 		{name: "arm64", suffix: "-arm64"},
 	} {
 		for _, name := range []string{"ipxe", "snp"} {
-			source := "data/" + arch.name + "/" + name + ".efi"
+			source := arch.name + "/" + name + ".efi"
 
-			contents, err := dataFS.ReadFile(source)
+			contents, err := fs.ReadFile(binaries, source)
 			if err != nil {
 				return nil, err
 			}
@@ -151,12 +140,12 @@ func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) (
 		}
 	}
 
-	bin, err := dataFS.ReadFile("data/amd64/kpxe/undionly.kpxe.bin")
+	bin, err := fs.ReadFile(binaries, "amd64/kpxe/undionly.kpxe.bin")
 	if err != nil {
 		return nil, err
 	}
 
-	zinfo, err := dataFS.ReadFile("data/amd64/kpxe/undionly.kpxe.zinfo")
+	zinfo, err := fs.ReadFile(binaries, "amd64/kpxe/undionly.kpxe.zinfo")
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +160,7 @@ func patchBinaries(initScript []byte, customCAFile string, logger *zap.Logger) (
 		return nil, fmt.Errorf("failed to compress undionly.kpxe: %w", err)
 	}
 
-	// The go:embed directive accepts zero-length files, and an empty directive stream compresses to an empty
+	// A zero-length file is a valid embedded file, and an empty directive stream compresses to an empty
 	// output without an error, which would be served as a "successful" zero-byte boot file.
 	if len(compressed) == 0 {
 		return nil, fmt.Errorf("compressing undionly.kpxe produced an empty file")
@@ -188,19 +177,14 @@ var (
 	placeholderEnd   = []byte("# *PLACEHOLDER END*")
 )
 
-func getCAHash(customCAPEMFile string) ([]byte, error) {
-	pemBytes, err := os.ReadFile(customCAPEMFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read custom CA file %q: %w", customCAPEMFile, err)
-	}
-
-	block, _ := pem.Decode(pemBytes)
+func getCAHash(customCAPEM []byte) ([]byte, error) {
+	block, _ := pem.Decode(customCAPEM)
 	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block from %q", customCAPEMFile)
+		return nil, fmt.Errorf("failed to decode PEM block")
 	}
 
 	if block.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("expected PEM type 'CERTIFICATE', got %q in %q", block.Type, customCAPEMFile)
+		return nil, fmt.Errorf("expected PEM type 'CERTIFICATE', got %q", block.Type)
 	}
 
 	hash := sha256.Sum256(block.Bytes)

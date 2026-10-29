@@ -6,15 +6,16 @@ package ipxe_test
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
+	"crypto/sha256"
+	"encoding/pem"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	provideripxe "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/ipxe"
 )
 
 // TestPatchBinariesKeySet locks the contract between the served file names and the names the DHCP
@@ -22,7 +23,7 @@ import (
 func TestPatchBinariesKeySet(t *testing.T) {
 	script := []byte("#!ipxe\nchain http://example.org/boot")
 
-	files, err := ipxe.PatchBinaries(script, "", zaptest.NewLogger(t))
+	files, err := ipxe.PatchBinaries(provideripxe.Binaries(), script, nil, zaptest.NewLogger(t))
 	require.NoError(t, err)
 
 	expected := []string{
@@ -44,6 +45,21 @@ func TestPatchBinariesKeySet(t *testing.T) {
 
 	// the EFI binaries are patched uncompressed, so the script must appear in them verbatim
 	assert.True(t, bytes.Contains(files["snp.efi"], script))
+}
+
+func TestPatchBinariesCustomCA(t *testing.T) {
+	// The CA hash is the SHA-256 of the DER bytes in the PEM block, which are not parsed further.
+	der := []byte("custom CA certificate")
+	customCAPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	customCAHash := sha256.Sum256(der)
+
+	files, err := ipxe.PatchBinaries(provideripxe.Binaries(), []byte("#!ipxe"), customCAPEM, zaptest.NewLogger(t))
+	require.NoError(t, err)
+
+	assert.True(t, bytes.Contains(files["snp.efi"], customCAHash[:]), "the custom CA hash is not in the patched binary")
+
+	_, err = ipxe.PatchBinaries(provideripxe.Binaries(), []byte("#!ipxe"), []byte("not PEM"), zaptest.NewLogger(t))
+	assert.ErrorContains(t, err, "failed to decode PEM block")
 }
 
 func TestPatchBytes(t *testing.T) {
@@ -74,56 +90,5 @@ func TestPatchBytes(t *testing.T) {
 
 		_, err := ipxe.PatchBytes(bytes.Clone(placeholder), script, nil, logger)
 		assert.ErrorContains(t, err, "larger than placeholder space")
-	})
-}
-
-func TestValidateBootAssets(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-
-	writeAssets := func(t *testing.T, dir, arch string, size int) {
-		t.Helper()
-
-		for _, name := range []string{"kernel-" + arch, "initramfs-metal-" + arch + ".xz", "cmdline-metal-" + arch} {
-			require.NoError(t, os.WriteFile(filepath.Join(dir, name), bytes.Repeat([]byte{'x'}, size), 0o644))
-		}
-	}
-
-	t.Run("single complete arch is enough", func(t *testing.T) {
-		dir := t.TempDir()
-		writeAssets(t, dir, "amd64", 16)
-
-		assert.NoError(t, ipxe.ValidateBootAssets(dir, logger))
-	})
-
-	t.Run("both arches complete", func(t *testing.T) {
-		dir := t.TempDir()
-		writeAssets(t, dir, "amd64", 16)
-		writeAssets(t, dir, "arm64", 16)
-
-		assert.NoError(t, ipxe.ValidateBootAssets(dir, logger))
-	})
-
-	t.Run("empty directory", func(t *testing.T) {
-		assert.ErrorContains(t, ipxe.ValidateBootAssets(t.TempDir(), logger), "no complete set")
-	})
-
-	t.Run("missing directory", func(t *testing.T) {
-		assert.ErrorContains(t, ipxe.ValidateBootAssets(filepath.Join(t.TempDir(), "nope"), logger), "no complete set")
-	})
-
-	t.Run("empty files are unusable", func(t *testing.T) {
-		dir := t.TempDir()
-		writeAssets(t, dir, "amd64", 0)
-
-		assert.ErrorContains(t, ipxe.ValidateBootAssets(dir, logger), "is empty")
-	})
-
-	t.Run("directory in place of a file", func(t *testing.T) {
-		dir := t.TempDir()
-		writeAssets(t, dir, "amd64", 16)
-		require.NoError(t, os.Remove(filepath.Join(dir, "kernel-amd64")))
-		require.NoError(t, os.Mkdir(filepath.Join(dir, "kernel-amd64"), 0o755))
-
-		assert.ErrorContains(t, ipxe.ValidateBootAssets(dir, logger), "not a regular file")
 	})
 }

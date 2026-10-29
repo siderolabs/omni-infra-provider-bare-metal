@@ -35,9 +35,7 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc"
 	bmcapi "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/api"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/bmc/pxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/config"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/controllers"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/dhcp"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/installationmedia"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ip"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
@@ -45,10 +43,13 @@ import (
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/meta"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/resources"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tftp"
 	tls "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/tls"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/util"
 	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/version"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/config"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/dhcp"
+	pkgipxe "github.com/siderolabs/omni-infra-provider-bare-metal/pkg/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/tftp"
 )
 
 //go:embed data/icon.svg
@@ -189,10 +190,7 @@ func (p *Provider) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create iPXE handler: %w", err)
 	}
 
-	configHandler, err := config.NewHandler(machineConfig, p.logger.With(zap.String("component", "config_handler")))
-	if err != nil {
-		return fmt.Errorf("failed to create config handler: %w", err)
-	}
+	configHandler := config.NewHandler(machineConfig, p.logger.With(zap.String("component", "config_handler")))
 
 	parsedMachineLabels, err := p.parseLabels()
 	if err != nil {
@@ -211,7 +209,9 @@ func (p *Provider) Run(ctx context.Context) error {
 		assetsDir = p.options.BootAssetsPath
 	}
 
-	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, assetsDir, certs, configHandler, ipxeHandler, ipxeHandler.PatchedFiles(),
+	scriptsHandler := pkgipxe.ScriptsHandler(ipxeHandler.InitScript(), ipxeHandler)
+
+	srvr := server.New(ctx, p.options.APIListenAddress, p.options.APIPort, p.options.TLS.APIPort, assetsDir, certs, configHandler, scriptsHandler, ipxeHandler.PatchedFiles(),
 		agentClient.TunnelServiceServer(), p.logger.With(zap.String("component", "server")))
 
 	healthCheckController, err := providercontrollers.NewProviderHealthStatusController(meta.ProviderID.String(), providercontrollers.ProviderHealthStatusOptions{})

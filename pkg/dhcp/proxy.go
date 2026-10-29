@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	// Port67 is the standard DHCP server port, used for broadcast DHCPDISCOVER.
-	Port67 = 67
-	// Port4011 is the PXE proxy DHCP port, used for unicast DHCPREQUEST.
-	Port4011 = 4011
+	// port67 is the standard DHCP server port, used for broadcast DHCPDISCOVER.
+	port67 = 67
+	// port4011 is the PXE proxy DHCP port, used for unicast DHCPREQUEST.
+	port4011 = 4011
 )
 
 // Proxy is a DHCP proxy server, adding PXE boot options to the DHCP responses.
@@ -56,7 +56,7 @@ func NewProxy(apiAdvertiseAddress string, apiPort int, proxyIfaceOrIP string, di
 // proxy DHCP flow, and responds with DHCPACK.
 //
 // When disableBroadcastListener is true, only port 4011 is used. This is for deployments
-// where the provider runs on the same host as the DHCP server and cannot bind to port 67.
+// where the proxy runs on the same host as the DHCP server and cannot bind to port 67.
 func (p *Proxy) Run(ctx context.Context) error {
 	iface, err := p.determineInterface(p.proxyIfaceOrIP)
 	if err != nil {
@@ -66,17 +66,17 @@ func (p *Proxy) Run(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	if !p.disableBroadcastListener {
-		p.logger.Info("starting DHCP proxy broadcast listener on port 67")
+		p.logger.Info("starting DHCP proxy broadcast listener on port 67", zap.String("interface", iface))
 
 		eg.Go(func() error {
-			return p.runServer(ctx, iface, Port67)
+			return p.runServer(ctx, iface, port67)
 		})
 	}
 
-	p.logger.Info("starting DHCP proxy direct listener on port 4011")
+	p.logger.Info("starting DHCP proxy direct listener on port 4011", zap.String("interface", iface))
 
 	eg.Go(func() error {
-		return p.runServer(ctx, iface, Port4011)
+		return p.runServer(ctx, iface, port4011)
 	})
 
 	return eg.Wait()
@@ -172,7 +172,7 @@ func (p *Proxy) handlePacket(port int) func(conn net.PacketConn, peer net.Addr, 
 			return
 		}
 
-		resp, err := OfferDHCP(m, p.apiAdvertiseAddress, p.apiPort, fwtype, port)
+		resp, err := offerDHCP(m, p.apiAdvertiseAddress, p.apiPort, fwtype, port)
 		if err != nil {
 			logger.Error("failed to construct ProxyDHCP response", zap.Error(err))
 
@@ -197,7 +197,7 @@ func isBootDHCP(pkt *dhcpv4.DHCPv4, port int) error {
 	var expectedType dhcpv4.MessageType
 
 	switch port {
-	case Port4011:
+	case port4011:
 		expectedType = dhcpv4.MessageTypeRequest
 	default:
 		expectedType = dhcpv4.MessageTypeDiscover
@@ -214,25 +214,25 @@ func isBootDHCP(pkt *dhcpv4.DHCPv4, port int) error {
 	return nil
 }
 
-func validateDHCP(m *dhcpv4.DHCPv4) (fwtype Firmware, err error) {
+func validateDHCP(m *dhcpv4.DHCPv4) (fwtype firmware, err error) {
 	arches := m.ClientArch()
 
 	for _, arch := range arches {
 		switch arch { //nolint:exhaustive
 		case iana.INTEL_X86PC:
-			fwtype = FirmwareX86PC
+			fwtype = firmwareX86PC
 		case iana.EFI_IA32, iana.EFI_X86_64, iana.EFI_BC:
-			fwtype = FirmwareX86EFI
+			fwtype = firmwareX86EFI
 		case iana.EFI_ARM64, iana.UBOOT_ARM64:
-			fwtype = FirmwareARMEFI
+			fwtype = firmwareARMEFI
 		case iana.EFI_X86_HTTP, iana.EFI_X86_64_HTTP:
-			fwtype = FirmwareX86HTTP
+			fwtype = firmwareX86HTTP
 		case iana.EFI_ARM64_HTTP, iana.UBOOT_ARM64_HTTP:
-			fwtype = FirmwareARMHTTP
+			fwtype = firmwareARMHTTP
 		}
 	}
 
-	if fwtype == FirmwareUnsupported {
+	if fwtype == firmwareUnsupported {
 		return 0, fmt.Errorf("unsupported client arch: %v", xslices.Map(arches, func(a iana.Arch) string { return a.String() }))
 	}
 
@@ -246,8 +246,8 @@ func validateDHCP(m *dhcpv4.DHCPv4) (fwtype Firmware, err error) {
 		// that uses iPXE as the PXE "ROM"), special handling is
 		// needed because in this mode the client is using iPXE native
 		// drivers and chainloading to a UNDI stack won't work.
-		if userClasses[0] == "iPXE" && fwtype == FirmwareX86PC {
-			fwtype = FirmwareX86Ipxe
+		if userClasses[0] == "iPXE" && fwtype == firmwareX86PC {
+			fwtype = firmwareX86Ipxe
 		}
 	}
 
@@ -270,18 +270,22 @@ func validateDHCP(m *dhcpv4.DHCPv4) (fwtype Firmware, err error) {
 	return fwtype, nil
 }
 
-// OfferDHCP constructs the DHCP response for a PXE boot request.
+// offerDHCP constructs the DHCP response for a PXE boot request.
 //
 // On port 67, this is a DHCPOFFER in response to DHCPDISCOVER.
 // On port 4011, this is a DHCPACK in response to DHCPREQUEST.
-func OfferDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwtype Firmware, port int) (*dhcpv4.DHCPv4, error) {
+func offerDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwtype firmware, port int) (*dhcpv4.DHCPv4, error) {
 	serverIP := net.ParseIP(apiAdvertiseAddress)
+	if serverIP == nil {
+		return nil, fmt.Errorf("invalid API advertise address %q: not a valid IP", apiAdvertiseAddress)
+	}
+
 	ipPort := net.JoinHostPort(serverIP.String(), strconv.Itoa(apiPort))
 
 	var replyType dhcpv4.MessageType
 
 	switch port {
-	case Port4011:
+	case port4011:
 		replyType = dhcpv4.MessageTypeAck
 	default:
 		replyType = dhcpv4.MessageTypeOffer
@@ -317,12 +321,12 @@ func OfferDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 	// would be empty. iPXE and HTTP-boot firmwares are not included here since they process DHCP options
 	// correctly.
 	switch fwtype {
-	case FirmwareX86PC:
+	case firmwareX86PC:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
 		resp.BootFileName = "undionly.kpxe"
 		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
-	case FirmwareX86Ipxe:
+	case firmwareX86Ipxe:
 		// Almost standard PXE, but the boot filename needs to be a URL.
 		urlHost := serverIP.String()
 		if serverIP.To4() == nil { // IPv6 host must be bracketed in a URL authority per RFC 3986
@@ -330,23 +334,23 @@ func OfferDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 		}
 
 		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("tftp://%s/undionly.kpxe", urlHost)))
-	case FirmwareX86EFI:
+	case firmwareX86EFI:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
 		resp.BootFileName = "snp.efi"
 		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
-	case FirmwareARMEFI:
+	case firmwareARMEFI:
 		// This is completely standard PXE: just load a file from TFTP.
 		resp.UpdateOption(dhcpv4.OptTFTPServerName(serverIP.String()))
 		resp.BootFileName = "snp-arm64.efi"
 		resp.UpdateOption(dhcpv4.OptBootFileName(resp.BootFileName))
-	case FirmwareX86HTTP:
+	case firmwareX86HTTP:
 		// This is completely standard HTTP-boot: just load a file from HTTP.
 		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/amd64/snp.efi", ipPort)))
-	case FirmwareARMHTTP:
+	case firmwareARMHTTP:
 		// This is completely standard HTTP-boot: just load a file from HTTP.
 		resp.UpdateOption(dhcpv4.OptBootFileName(fmt.Sprintf("http://%s/tftp/arm64/snp.efi", ipPort)))
-	case FirmwareUnsupported:
+	case firmwareUnsupported:
 		fallthrough
 	default:
 		return nil, fmt.Errorf("unsupported firmware type %d", fwtype)
@@ -355,19 +359,19 @@ func OfferDHCP(req *dhcpv4.DHCPv4, apiAdvertiseAddress string, apiPort int, fwty
 	return resp, nil
 }
 
-// Firmware describes a kind of firmware attempting to boot.
+// firmware describes a kind of firmware attempting to boot.
 //
 // This should only be used for selecting the right bootloader,
 // kernel selection should key off the more generic architecture.
-type Firmware int
+type firmware int
 
 // The bootloaders that we know how to handle.
 const (
-	FirmwareUnsupported Firmware = iota // Unsupported
-	FirmwareX86PC                       // "Classic" x86 BIOS with PXE/UNDI support
-	FirmwareX86EFI                      // EFI x86
-	FirmwareARMEFI                      // EFI ARM64
-	FirmwareX86Ipxe                     // "Classic" x86 BIOS running iPXE (no UNDI support)
-	FirmwareX86HTTP                     // HTTP Boot X86
-	FirmwareARMHTTP                     // ARM64 HTTP Boot
+	firmwareUnsupported firmware = iota // Unsupported
+	firmwareX86PC                       // "Classic" x86 BIOS with PXE/UNDI support
+	firmwareX86EFI                      // EFI x86
+	firmwareARMEFI                      // EFI ARM64
+	firmwareX86Ipxe                     // "Classic" x86 BIOS running iPXE (no UNDI support)
+	firmwareX86HTTP                     // HTTP Boot X86
+	firmwareARMHTTP                     // ARM64 HTTP Boot
 )

@@ -33,7 +33,6 @@ func (stubInstallationMedia) SchematicIPXEURL(context.Context, bool, string, str
 
 func serveBoot(ctx context.Context, h *ipxe.Handler, uuid string) *httptest.ResponseRecorder {
 	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/ipxe/boot.ipxe?uuid="+uuid+"&arch=amd64", nil)
-	req.SetPathValue("script", ipxe.BootScriptName)
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)

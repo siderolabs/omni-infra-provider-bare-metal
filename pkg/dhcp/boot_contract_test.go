@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package ipxe_test
+package dhcp_test
 
 import (
 	"bytes"
@@ -17,24 +17,25 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/dhcp"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
-	"github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/server"
+	provideripxe "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/ipxe"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/dhcp"
+	"github.com/siderolabs/omni-infra-provider-bare-metal/pkg/ipxe"
 )
 
 // TestAdvertisedBootFilesAreServed binds the two halves of the PXE boot contract: every boot file
-// name and URL the DHCP proxy hands out must resolve against the patched files the provider
-// actually serves. The names appear on both sides as independent literals (and a third time in the
-// boot file selection of qemu-up), so this is the test that fails when either side drifts.
+// name and URL the DHCP proxy hands out must resolve against the patched files that are served
+// over TFTP and HTTP. The names appear on both sides as independent literals (and a third time in
+// the boot file selection of the provider's qemu-up), so this is the test that fails when either
+// side drifts.
 func TestAdvertisedBootFilesAreServed(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	script := []byte("#!ipxe\nchain http://example.org/boot")
 
-	files, err := ipxe.PatchBinaries(script, "", logger)
+	files, err := ipxe.PatchBinaries(provideripxe.Binaries(), script, nil, logger)
 	require.NoError(t, err)
 
-	notFound := http.NotFoundHandler()
-	handler := server.NewMultiHandler(notFound, notFound, notFound, "", files, logger)
+	handler := http.NewServeMux()
+	handler.Handle("/"+ipxe.FilesURLPath+"/", ipxe.FilesHandler(files))
 
 	offer := func(t *testing.T, fwtype dhcp.Firmware) *dhcpv4.DHCPv4 {
 		t.Helper()
