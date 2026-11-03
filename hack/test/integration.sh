@@ -216,7 +216,7 @@ docker run -d --network host \
   --eula-accept-name="Test User" \
   --eula-accept-email="test-user@siderolabs.com" \
   --siderolink-wireguard-advertised-addr=${GATEWAY_IP}:50180 \
-  --siderolink-api-advertised-url="grpc://${GATEWAY_IP}:8090" \
+  --machine-api-advertised-url="grpc://${GATEWAY_IP}:8090" \
   --machine-api-bind-addr=0.0.0.0:8090 \
   --siderolink-wireguard-bind-addr=0.0.0.0:50180 \
   --event-sink-port=8091 \
