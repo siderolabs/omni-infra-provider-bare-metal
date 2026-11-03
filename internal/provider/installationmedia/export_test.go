@@ -6,3 +6,6 @@ package installationmedia
 
 // AgentModeTalosVersion exposes lookupAgentModeTalosVersion to the tests.
 var AgentModeTalosVersion = lookupAgentModeTalosVersion
+
+// WithMachineConfig exposes withMachineConfig to the tests.
+var WithMachineConfig = withMachineConfig

@@ -160,21 +160,21 @@ func (p *Provider) Run(ctx context.Context) error {
 
 	agentConnectionEventCh := make(chan controllers.AgentConnectionEvent)
 
-	installationMediaClient, err := installationmedia.NewClient(omniAPIClient, p.options.AgentModeTalosVersion, p.options.SecureBootEnabled,
-		p.logger.With(zap.String("component", "installation_media_client")))
-	if err != nil {
-		return fmt.Errorf("failed to create installation media client: %w", err)
-	}
-
 	machineConfig, err := machineconfig.Build(ctx, omniState, certs, p.options.ExtraMachineConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to build machine config: %w", err)
 	}
 
+	installationMediaClient, err := installationmedia.NewClient(omniAPIClient, p.options.AgentModeTalosVersion, p.options.SecureBootEnabled,
+		machineConfig, config.KernelArg(apiAdvertiseAddress, p.options.APIPort), p.logger.With(zap.String("component", "installation_media_client")))
+	if err != nil {
+		return fmt.Errorf("failed to create installation media client: %w", err)
+	}
+
 	pxeBootEventCh := make(chan controllers.PXEBootEvent, pxeBootEventChBuffer)
 
 	ipxeHandler, err := ipxe.NewHandler(
-		installationMediaClient, machineConfig, omniState, pxeBootEventCh,
+		installationMediaClient, omniState, pxeBootEventCh,
 		ipxe.HandlerOptions{
 			APIAdvertiseAddress: apiAdvertiseAddress,
 			APIPort:             p.options.APIPort,

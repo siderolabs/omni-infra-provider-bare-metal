@@ -11,6 +11,7 @@ import (
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/cosi-project/runtime/pkg/state/impl/inmem"
 	"github.com/cosi-project/runtime/pkg/state/impl/namespaced"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 	omniconstants "github.com/siderolabs/omni/client/pkg/constants"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
 	"github.com/stretchr/testify/assert"
@@ -53,4 +54,23 @@ func TestAgentModeTalosVersion(t *testing.T) {
 	version, err = installationmedia.AgentModeTalosVersion(ctx, st, "v1.13.10")
 	require.NoError(t, err)
 	assert.Equal(t, "v1.13.10", version)
+}
+
+func TestWithMachineConfig(t *testing.T) {
+	t.Parallel()
+
+	const (
+		machineConfig   = "apiVersion: v1alpha1\nkind: SideroLinkConfig\napiUrl: https://omni.example.org:8090?jointoken=token\n"
+		configKernelArg = "talos.config=http://172.20.0.1:50042/config?u=${uuid}"
+	)
+
+	base := schematic.Schematic{Customization: schematic.Customization{ExtraKernelArgs: []string{"console=ttyS0"}}}
+
+	embedded := installationmedia.WithMachineConfig(base, "1.12.0", machineConfig, configKernelArg)
+	assert.Equal(t, machineConfig, embedded.Customization.EmbeddedMachineConfiguration)
+	assert.Equal(t, []string{"console=ttyS0"}, embedded.Customization.ExtraKernelArgs, "the machine config is not fetched from the provider from Talos 1.12 on")
+
+	fetched := installationmedia.WithMachineConfig(base, "1.11.6", machineConfig, configKernelArg)
+	assert.Empty(t, fetched.Customization.EmbeddedMachineConfiguration)
+	assert.Equal(t, []string{configKernelArg, "console=ttyS0"}, fetched.Customization.ExtraKernelArgs, "Talos below 1.12 fetches the machine config from the provider")
 }

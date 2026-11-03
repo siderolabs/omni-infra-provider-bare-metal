@@ -5,9 +5,7 @@
 package ipxe
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -16,16 +14,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
-	"github.com/klauspost/compress/zstd"
 	omnispecs "github.com/siderolabs/omni/client/api/omni/specs"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
 	agentconfig "github.com/siderolabs/talos-metal-agent/pkg/config"
-	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"go.uber.org/zap"
 
 	providerconstants "github.com/siderolabs/omni-infra-provider-bare-metal/internal/provider/constants"
@@ -87,7 +82,6 @@ type Handler struct {
 	pxeBootEventCh          chan<- controllers.PXEBootEvent
 	files                   map[string][]byte
 	bootFromDiskMethod      BootFromDiskMethod
-	defaultKernelArgs       []string
 	agentKernelArgs         []string
 	initScript              []byte
 	options                 HandlerOptions
@@ -224,7 +218,7 @@ func (handler *Handler) makeBootDecision(ctx context.Context, arch, uuid string,
 		logger.Info("boot machine: Talos over iPXE")
 
 		consoleKernelArgs := handler.consoleKernelArgs(arch)
-		extraKernelArgs := slices.Concat(handler.defaultKernelArgs, consoleKernelArgs, userExtraKernelArgs)
+		extraKernelArgs := slices.Concat(consoleKernelArgs, userExtraKernelArgs)
 		talosVersion := infraMachine.TypedSpec().Value.ClusterTalosVersion
 		extensions := infraMachine.TypedSpec().Value.Extensions
 
@@ -366,6 +360,9 @@ func (handler *Handler) bootAgentModeViaLocalIPXEScript(arch string, kernelArgs 
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to read cmdline: %w", err)
 	}
 
+	// local boot assets have no schematic to carry the machine config, so the machine fetches it from the provider
+	kernelArgs = slices.Concat([]string{config.KernelArg(handler.options.APIAdvertiseAddress, handler.options.APIPort)}, kernelArgs)
+
 	cmdlineStr := strings.TrimSpace(string(cmdline)) + " " + strings.Join(kernelArgs, " ")
 	ipxeScript := fmt.Sprintf(ipxeScriptTemplateFormatLocalAssets, kernel, cmdlineStr, initramfs)
 
@@ -382,7 +379,7 @@ func (handler *Handler) consoleKernelArgs(arch string) []string {
 }
 
 // NewHandler creates a new iPXE server.
-func NewHandler(installationMediaClient InstallationMediaClient, machineConfig []byte, r controller.Reader,
+func NewHandler(installationMediaClient InstallationMediaClient, r controller.Reader,
 	pxeBootEventCh chan<- controllers.PXEBootEvent, options HandlerOptions, logger *zap.Logger,
 ) (*Handler, error) {
 	bootFromDiskMethod, err := parseBootFromDiskMethod(options.BootFromDiskMethod)
@@ -412,23 +409,10 @@ func NewHandler(installationMediaClient InstallationMediaClient, machineConfig [
 
 	logger.Info("successfully patched iPXE binaries")
 
-	defaultKernelArgs := []string{config.KernelArg(options.APIAdvertiseAddress, options.APIPort)}
-
 	var providerAddress string
 
 	if options.TLS.Enabled {
 		providerAddress = "https://" + net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.TLS.APIPort))
-
-		var inlineConfig string
-
-		inlineConfig, err = compressInlineConfig(machineConfig, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build inline config: %w", err)
-		}
-
-		logger.Debug("built inline config", zap.String("config", inlineConfig), zap.Int("length", len(inlineConfig)))
-
-		defaultKernelArgs = append(defaultKernelArgs, fmt.Sprintf("%s=%s", constants.KernelParamConfigInline, inlineConfig))
 	} else {
 		providerAddress = net.JoinHostPort(options.APIAdvertiseAddress, strconv.Itoa(options.APIPort))
 	}
@@ -451,49 +435,17 @@ func NewHandler(installationMediaClient InstallationMediaClient, machineConfig [
 		)
 	}
 
-	agentKernelArgs := slices.Concat(defaultKernelArgs, agentExtraKernelArgs)
-
 	return &Handler{
 		pxeBootEventCh:          pxeBootEventCh,
 		reader:                  r,
 		installationMediaClient: installationMediaClient,
 		files:                   files,
 		options:                 options,
-		defaultKernelArgs:       defaultKernelArgs,
-		agentKernelArgs:         agentKernelArgs,
+		agentKernelArgs:         agentExtraKernelArgs,
 		bootFromDiskMethod:      bootFromDiskMethod,
 		initScript:              initScript,
 		logger:                  logger,
 	}, nil
-}
-
-func compressInlineConfig(config []byte, logger *zap.Logger) (string, error) {
-	var buf bytes.Buffer
-
-	zstdEncoder, err := zstd.NewWriter(&buf, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-	if err != nil {
-		return "", fmt.Errorf("failed to create zstd encoder: %w", err)
-	}
-
-	closeFunc := sync.OnceValue(zstdEncoder.Close)
-
-	defer func() {
-		if closeErr := closeFunc(); closeErr != nil {
-			logger.Error("failed to close zstd encoder", zap.Error(closeErr))
-		}
-	}()
-
-	if _, err = zstdEncoder.Write(config); err != nil {
-		return "", fmt.Errorf("failed to write zstd data: %w", err)
-	}
-
-	if err = closeFunc(); err != nil {
-		return "", fmt.Errorf("failed to close zstd encoder: %w", err)
-	}
-
-	configBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
-
-	return configBase64, nil
 }
 
 // InitScript returns the iPXE init script embedded into the patched iPXE binaries.
