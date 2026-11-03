@@ -10,7 +10,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/insomniacslk/dhcp v0.0.0-20261014062924-c6bb46ad3f3a
 	github.com/jhump/grpctunnel v0.4.0
-	github.com/klauspost/compress v1.20.3
 	github.com/pin/tftp/v3 v3.2.0
 	github.com/planetscale/vtprotobuf v0.6.1-0.20260702190614-8ae5a48058df
 	github.com/siderolabs/crypto v0.6.5
@@ -150,6 +149,7 @@ require (
 	github.com/josharian/native v1.2.0 // indirect
 	github.com/jsimonetti/rtnetlink/v2 v2.2.1-0.20260802200809-43bafec815b3 // indirect
 	github.com/jxskiss/base62 v1.1.0 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect

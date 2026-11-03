@@ -7,6 +7,7 @@ package installationmedia
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/siderolabs/omni/client/pkg/infra/provision"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"go.uber.org/zap"
 )
 
@@ -48,15 +50,24 @@ type Client struct {
 	logger                *zap.Logger
 	agentModeTalosVersion string
 	resolvedVersion       string
+	machineConfig         string
+	configKernelArg       string
 	mu                    sync.Mutex
 	secureBootEnabled     bool
 }
 
 // NewClient creates a new image factory client.
-func NewClient(omniClient *client.Client, agentModeTalosVersion string, secureBootEnabled bool, logger *zap.Logger) (*Client, error) {
+//
+// The machine config goes into the schematics of the Talos versions that support an embedded machine config. Older
+// versions get configKernelArg instead, which makes them fetch the machine config from the provider.
+func NewClient(omniClient *client.Client, agentModeTalosVersion string, secureBootEnabled bool, machineConfig []byte, configKernelArg string,
+	logger *zap.Logger,
+) (*Client, error) {
 	return &Client{
 		omniClient:            omniClient,
 		agentModeTalosVersion: agentModeTalosVersion,
+		machineConfig:         string(machineConfig),
+		configKernelArg:       configKernelArg,
 		secureBootEnabled:     secureBootEnabled,
 		logger:                logger,
 	}, nil
@@ -102,12 +113,7 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 		},
 	}
 
-	marshaled, err := sch.Marshal()
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal schematic: %w", err)
-	}
-
-	logger.Debug("generated schematic", zap.String("schematic", string(marshaled)))
+	sch = withMachineConfig(sch, talosVersion, c.machineConfig, c.configKernelArg)
 
 	media, err := infra.EnsureInstallationMedia(ctx, c.omniClient, talosVersion, sch, provision.MediaSpec{
 		Kind:          omnifactory.InstallationMediaKindPXE,
@@ -122,7 +128,9 @@ func (c *Client) SchematicIPXEURL(ctx context.Context, agentMode bool, talosVers
 
 	logger.Debug("generated schematic iPXE URL",
 		zap.String("schematic_id", media.SchematicID),
-		zap.String("image_factory_host", media.ImageFactoryHost))
+		zap.String("image_factory_host", media.ImageFactoryHost),
+		zap.Strings("extensions", extensions),
+		zap.Strings("extra_kernel_args", sch.Customization.ExtraKernelArgs))
 
 	return media.URL, nil
 }
@@ -173,4 +181,17 @@ func lookupAgentModeTalosVersion(ctx context.Context, st state.State, override s
 	}
 
 	return omniconstants.DefaultTalosVersion, nil
+}
+
+// withMachineConfig puts the machine config into the schematic from Talos 1.12 on, and makes older versions fetch it from the provider instead.
+func withMachineConfig(sch schematic.Schematic, talosVersion, machineConfig, configKernelArg string) schematic.Schematic {
+	if quirks.New(talosVersion).SupportsEmbeddedConfig() {
+		sch.Customization.EmbeddedMachineConfiguration = machineConfig
+
+		return sch
+	}
+
+	sch.Customization.ExtraKernelArgs = slices.Concat([]string{configKernelArg}, sch.Customization.ExtraKernelArgs)
+
+	return sch
 }
