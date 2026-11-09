@@ -1,3 +1,190 @@
+## [Omni Infra Provider Bare Metal 0.15.0](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.15.0) (2026-11-09)
+
+Welcome to the v0.15.0 release of Omni Infra Provider Bare Metal!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/omni-infra-provider-bare-metal/issues.
+
+### Embedded Machine Config
+
+Machines booting Talos 1.12 or later now get the provider's machine config (the SideroLink join config, the provider CA with `--tls-enabled` and the documents from `--extra-machine-config-path`) as the `embeddedMachineConfiguration` of their schematic, instead of the `talos.config` kernel argument.
+Older Talos versions and the local boot assets mode keep fetching it from the provider using `talos.config`.
+
+The `talos.config.inline` kernel argument added with `--tls-enabled` is removed, since a custom CA could push it past the 2048 byte limit of the kernel command line.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Edward Sammut Alessi
+* Mateusz Urbanek
+* Utku Ozdemir
+* Mateusz Urbanek
+* Orzelius
+* Maja Bojarska
+* immanuwell
+* Bart van der Schans
+* Brian Cappello
+* Daniel Chaplin
+* David Haines
+* Erwan Leboucher
+* Justin Garrison
+* Kyle Tse
+* Michał Małyska
+* Nicolas Brainez
+* Noel Georgi
+* Spencer Smith
+* sasha-sup
+
+### Changes
+<details><summary>4 commits</summary>
+<p>
+
+* [`fa0aa3d`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/fa0aa3d6de8cec9103ec6885288f705b1ca87536) chore: bump deps, rekres
+* [`0ef322b`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/0ef322b7301a4c5c01a6ada0e3894d7139e70bef) feat: use the embedded machine config from Talos 1.12
+* [`24deaa0`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/24deaa0147c46f4d9c3052e57481796a0841becd) test: start Omni with the machine API advertised URL flag
+* [`47026ce`](https://github.com/siderolabs/omni-infra-provider-bare-metal/commit/47026ceade31db9cfc4c6d87941e732df0d8550d) refactor: move the PXE boot stack into public packages
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>2 commits</summary>
+<p>
+
+* [`29a144d`](https://github.com/siderolabs/crypto/commit/29a144d5097f2d679814bcbaf5e94475fb40b5e6) feat: enable support for extended key usage and URI cert SANs
+* [`bac1bd3`](https://github.com/siderolabs/crypto/commit/bac1bd3bc9f9715f28867155aaeb054e297b6341) chore: rekres and bump dependencies
+</p>
+</details>
+
+### Changes from siderolabs/image-factory
+<details><summary>39 commits</summary>
+<p>
+
+* [`c9c1f39`](https://github.com/siderolabs/image-factory/commit/c9c1f3946ddb1efbe8f221639b04dd39a60ba801) release(v1.8.0): prepare release
+* [`57ba7d3`](https://github.com/siderolabs/image-factory/commit/57ba7d3e4c50a4db672f08f5868e59da6787ba6e) feat: generate sbom for factory
+* [`b611fd1`](https://github.com/siderolabs/image-factory/commit/b611fd193351c88a93afbbd6254fe9c798b017b7) fix(frontend): fix some minor design issues
+* [`b881b7e`](https://github.com/siderolabs/image-factory/commit/b881b7e0159d395a546a426c988daa9f3256df55) chore: bump talos and pks to latest
+* [`5e3e789`](https://github.com/siderolabs/image-factory/commit/5e3e7897fdb7e428f15572ccb88624558089f6ab) chore(frontend): bump frontend dependencies
+* [`3660cbc`](https://github.com/siderolabs/image-factory/commit/3660cbc8b8a13417ae8904b34f69839dc13684ac) chore: rekres
+* [`f51705f`](https://github.com/siderolabs/image-factory/commit/f51705f7f89aa0ce6e01c439f9c63c3814eadfdb) feat(frontend): add a content-security-policy
+* [`c800285`](https://github.com/siderolabs/image-factory/commit/c800285bbbd78ef623e0b998c267d4e2f1b8dba3) fix(frontend): fix content vertical padding being lost
+* [`90d098f`](https://github.com/siderolabs/image-factory/commit/90d098f51f2b1e99896881513b71a35a9df7310b) feat(frontend): move page intro into step target
+* [`c864a64`](https://github.com/siderolabs/image-factory/commit/c864a64bdefc56fcc70556d1ee6d7a0a2d387878) feat(frontend): add missing translations for a few items
+* [`a46875f`](https://github.com/siderolabs/image-factory/commit/a46875fa4fc1c7bb9031c67560b169325661fde5) feat(frontend): add visual feedback to copy buttons
+* [`a92bd19`](https://github.com/siderolabs/image-factory/commit/a92bd19a6a7b77c7e1df5d8ea672b0181c740bc9) feat(frontend): align inputs and code blocks to the design system
+* [`ab6f315`](https://github.com/siderolabs/image-factory/commit/ab6f315e8d9670ca4efeaf4520f9cb2db9d6d1e7) feat(frontend): align checkbox and radio with design system
+* [`7365309`](https://github.com/siderolabs/image-factory/commit/7365309d18e4ad8e8c72940476d92e8da848d904) feat(frontend): add dim theme to factory
+* [`bac4e58`](https://github.com/siderolabs/image-factory/commit/bac4e58af7535138504a23abc48c851ee05f6a53) feat(frontend): change language select to match theme style
+* [`5614c6c`](https://github.com/siderolabs/image-factory/commit/5614c6c89432a0fe79993e15c16ef887ecdb0644) feat(frontend): scale layout to fit the page
+* [`48eae73`](https://github.com/siderolabs/image-factory/commit/48eae737cb0baf898e5f1bb7ab43a841c282cd80) feat(frontend): add stories for all components
+* [`16d65e5`](https://github.com/siderolabs/image-factory/commit/16d65e52c09f771517a7e9d342c6673d0803b6bb) test(frontend): migrate tests to MSW
+* [`c6c073e`](https://github.com/siderolabs/image-factory/commit/c6c073ed5c2992ab1f2fc8444e085a573383ade9) feat(frontend): add storybook to factory
+* [`89e1a03`](https://github.com/siderolabs/image-factory/commit/89e1a03493b702985433c766c192ddd6797c06d9) feat(frontend): migrate auth0 pages to vue
+* [`d0e80c5`](https://github.com/siderolabs/image-factory/commit/d0e80c56268a18cc2b63fa10a445849c55ff490b) test(frontend): add tests for enterprise auth0 flow
+* [`f522066`](https://github.com/siderolabs/image-factory/commit/f522066741da57dbddf4b71550c85026ca940f3d) chore(frontend): add license headers for frontend to conform
+* [`2878068`](https://github.com/siderolabs/image-factory/commit/28780681693e4d5a625558bd0aa2c9606e726087) feat(frontend): make spa the default and delete old ui
+* [`c6868bd`](https://github.com/siderolabs/image-factory/commit/c6868bd530fcd27901f6f30c97a6dd19ba17beab) test(frontend): add e2e suite for factory frontend
+* [`81515cf`](https://github.com/siderolabs/image-factory/commit/81515cf7f428d34e5e414d89f7a0a67152130764) feat(frontend): re-implement the wizard frontend in Vue
+* [`45d147a`](https://github.com/siderolabs/image-factory/commit/45d147aba6b28d66d83a6229f21104d28ddb44a8) feat: add /api routes for vue frontend requirements
+* [`10cf83e`](https://github.com/siderolabs/image-factory/commit/10cf83e0f7fa1737ef9d174e280bee00568d5ead) chore(frontend): add codeowners and vscode settings
+* [`4058260`](https://github.com/siderolabs/image-factory/commit/40582602f47efdce9429a8d4ba697fb9442c19df) feat: proxy talos-vex-data image for Enterprise
+* [`b2bde76`](https://github.com/siderolabs/image-factory/commit/b2bde764745ba0116fc09bbeed10d212369c3f4d) feat(frontend): scaffold a vue spa frontend into factory
+* [`b9edbb1`](https://github.com/siderolabs/image-factory/commit/b9edbb1662244dcfb535f8e5846c3727c891ffd5) feat: annotate scan results with VEX comments
+* [`2216580`](https://github.com/siderolabs/image-factory/commit/221658015dec2061c4639abb4a3c6aa1f847c32d) feat: support WITH_DEBUG flag
+* [`bb9aaf5`](https://github.com/siderolabs/image-factory/commit/bb9aaf5218926d993b4229773b72f209aa56d19c) feat: add docker-compose override support
+* [`d8cc9ec`](https://github.com/siderolabs/image-factory/commit/d8cc9ec324d3373768834aff930680f6c9727f62) feat: add crane to docker-compose
+* [`7cdbae2`](https://github.com/siderolabs/image-factory/commit/7cdbae2c908055d81f0412170397fcc9eb0e9cde) refactor: skip image pushing for local docker compose builds
+* [`6857d8f`](https://github.com/siderolabs/image-factory/commit/6857d8f7dab768e81255190da5491bca588a7cdf) fix: return correct HTTP statuses on several error paths
+* [`bc9b7ca`](https://github.com/siderolabs/image-factory/commit/bc9b7ca755a4cb5f0a558e8cb3301891d848159a) chore: rework IF UI
+* [`7f64858`](https://github.com/siderolabs/image-factory/commit/7f648582e3f67d9e5efbe1b6e8dd123c76f44afe) chore: update dependencies
+* [`7402544`](https://github.com/siderolabs/image-factory/commit/74025441874f4af8f9a711c51e1b7746af35cd97) feat: provide landing page for link parsing, robots.txt
+* [`2dd2e55`](https://github.com/siderolabs/image-factory/commit/2dd2e55d11647cbfec501a2f3029a82908955e0b) fix: perform correct validation of legacy signature bundles
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>62 commits</summary>
+<p>
+
+* [`3ba3d6a5e`](https://github.com/siderolabs/talos/commit/3ba3d6a5e7848cff1b4dd824ee9100ce096eb68c) feat: add an option to configure the COSI state of the client
+* [`e15f89386`](https://github.com/siderolabs/talos/commit/e15f8938617592faa551206d5cbe8af4f620971d) test: new NVIDIA chart and drivers
+* [`78fccf087`](https://github.com/siderolabs/talos/commit/78fccf087a947eed4899e201b4dd8398ae27740f) fix: use the established BGP source for numbered-peer BFD
+* [`949c92131`](https://github.com/siderolabs/talos/commit/949c9213133664d1a865e1ca37f345d124fdbb92) chore: update Go dependencies
+* [`3ea190bfa`](https://github.com/siderolabs/talos/commit/3ea190bfa84c496b08e55456ba0380b0109627e1) test: update CSI helm chart versions
+* [`15a824b2f`](https://github.com/siderolabs/talos/commit/15a824b2f7acfd17b02e797c23102fcf1f98d2b7) feat: update Flannel to 0.28.10
+* [`d8dcbf9e0`](https://github.com/siderolabs/talos/commit/d8dcbf9e03ad4eb73e4a47abe60a57d518e1bb4e) feat: introduce resource redaction into resource read API
+* [`4ed3443a4`](https://github.com/siderolabs/talos/commit/4ed3443a4a81231343a1b0e8bb59fd193777c0e9) release(v1.15.0-alpha.2): prepare release
+* [`1d22b2d81`](https://github.com/siderolabs/talos/commit/1d22b2d81a075221c14ce346067ea81f8a8e0b8e) feat: include applesmc module
+* [`edbfe0775`](https://github.com/siderolabs/talos/commit/edbfe07754a3dc6008cc8caa7b78782e99a81be2) feat: allow overriding k8s endpoint in the talosctl upgrade command
+* [`5bb33952a`](https://github.com/siderolabs/talos/commit/5bb33952abfb63878904656583d50d8675ad9278) feat: add reboot API for virtual machines
+* [`0f41f9c9a`](https://github.com/siderolabs/talos/commit/0f41f9c9a4e10655bf3c7a23b75eeafd88882e2d) feat: add start/stop API for virtual machines
+* [`f0a2553b9`](https://github.com/siderolabs/talos/commit/f0a2553b90b0e9484de031f6f554c26bb7ebf1f7) refactor: adjust the redactable.Spec for future changes
+* [`0770c5f38`](https://github.com/siderolabs/talos/commit/0770c5f386bb120a13c495f8a7d92d8d0da0ffdd) feat: add ethernet flow control
+* [`ae83d9560`](https://github.com/siderolabs/talos/commit/ae83d95606b40170e07736b03624904344d6b14f) test: verify on-demand kernel module loading end-to-end
+* [`0a913b95c`](https://github.com/siderolabs/talos/commit/0a913b95cb51bbe08fbc20bfda214f5a8818d775) feat: load kernel modules on demand via the modprobe usermode helper
+* [`38e5d8be0`](https://github.com/siderolabs/talos/commit/38e5d8be01fb2d19ceece7b4fbecefd3b1a2311a) fix: resolve link aliases in EthernetConfig and RoutingRuleConfig
+* [`369e95ebe`](https://github.com/siderolabs/talos/commit/369e95ebec9f6a7d7638d9ce8494e032642aadf3) feat: add EDAC_10NM kernel module
+* [`3a3656bdf`](https://github.com/siderolabs/talos/commit/3a3656bdfc97008951f8c9081237db517b3064c6) refactor: move all resource list to pkg/machinery
+* [`499ff580c`](https://github.com/siderolabs/talos/commit/499ff580cac0eb7c1d12d91254e2220056c927a5) test: skip VM projection tests on non-amd64 nodes
+* [`1f576d448`](https://github.com/siderolabs/talos/commit/1f576d448f01ea2d1e3017d71f4a09a4b8dcab9e) fix: race with platform accessing metadata volumes
+* [`870ebb604`](https://github.com/siderolabs/talos/commit/870ebb604ca8332f4c20b17fe803eaf168cea163) feat: update etcd to 3.7.3
+* [`e04d192b6`](https://github.com/siderolabs/talos/commit/e04d192b6ac44a8c192f8de2d90ff13d1b047a51) feat: implement RAID1 (md-raid) support in BIOS mode
+* [`fc6681a72`](https://github.com/siderolabs/talos/commit/fc6681a7274b977b0570d6c128a27404eb6b407f) fix: correctly pass hostname to the proxy in gRPC dial
+* [`7e5e8729e`](https://github.com/siderolabs/talos/commit/7e5e8729ec56271978475ce2644bc4484e5f9414) fix: ignore netlink recoverable errors in watchers
+* [`90a0ecde6`](https://github.com/siderolabs/talos/commit/90a0ecde6d8fa387b9e982b7f7c248643ddd0964) fix: pull images over HTTP/1.1
+* [`7c40a4523`](https://github.com/siderolabs/talos/commit/7c40a45235d8d37882e776c3c05334dfbe2eb5c9) fix: preserve project quotas on temporary growfs mounts
+* [`13a70e7fb`](https://github.com/siderolabs/talos/commit/13a70e7fb95f500286c26acaa6a6d39efb069df2) fix: enable memfd_class SELinux policy capability
+* [`b80589fad`](https://github.com/siderolabs/talos/commit/b80589fadf048c14bfbd2dbb6f8834f6a6a5169a) fix: preserve rejected edits in talosctl edit
+* [`53ec328dc`](https://github.com/siderolabs/talos/commit/53ec328dc4650da44bc3940c0badcd435fb38026) chore: mount git common dir into dockerized commands
+* [`868fbc0e1`](https://github.com/siderolabs/talos/commit/868fbc0e18bc8c632fba04ed1aae1723ce2806f3) test: set the swap limit for the container OOM test
+* [`7abeacc3a`](https://github.com/siderolabs/talos/commit/7abeacc3a7a5e8d7afc2f88deac9fb5d38ea4623) feat: implement swap resource limits for containers
+* [`d3cfc1809`](https://github.com/siderolabs/talos/commit/d3cfc1809e0e7a8be818ca3fb2e768827b18775f) fix: skip kexec when the kernel finds no free memory region
+* [`4f5fb57e2`](https://github.com/siderolabs/talos/commit/4f5fb57e21f48d51937b996ea30b1c75ced0960d) fix: provide proper concurrency for health checks
+* [`e40fcea78`](https://github.com/siderolabs/talos/commit/e40fcea78ba3824cd3a4ea189c474b1a8269e7cf) feat: bring in kTLS changes
+* [`2a6618b1b`](https://github.com/siderolabs/talos/commit/2a6618b1bf489f3b3d8ca32b4268a142e1548018) test: pin Cilium version explicitly
+* [`fe3aeb011`](https://github.com/siderolabs/talos/commit/fe3aeb0110ba700a501e86ddbce5263f8a2223b2) test: boot Alpine with builtin virtual machine profiles
+* [`58d177dce`](https://github.com/siderolabs/talos/commit/58d177dce33ae867b9101d37bcae0ff3594f2f29) test: add virtual machine profile XML fixtures
+* [`835a11cec`](https://github.com/siderolabs/talos/commit/835a11cecf62685b4381952e552c6624a02adeff) feat: add virtual machine hardware profiles
+* [`d7637cc31`](https://github.com/siderolabs/talos/commit/d7637cc31a765aaadba0b065704d72ab55292681) test: add a test matrix for NVIDIA 'new feature' flavor
+* [`81afbe314`](https://github.com/siderolabs/talos/commit/81afbe314abf615ed826e8ff604c5c23cb36bb3e) fix: update SELinux policy for Linux 7.3
+* [`614cd70be`](https://github.com/siderolabs/talos/commit/614cd70be37fd65e67eac5a3a512e798294bcec4) feat: update Linux to 7.3
+* [`43d061499`](https://github.com/siderolabs/talos/commit/43d061499074293a3881faf97f4d9110eced9090) fix: allow faster KubePrism recovery
+* [`943cbcdd1`](https://github.com/siderolabs/talos/commit/943cbcdd1ff6ee6a45940f1ab32af0a71fd0e17a) fix: preserve omitted CEL expressions when patching configs
+* [`0ae6963d5`](https://github.com/siderolabs/talos/commit/0ae6963d5ff31e98d4e2cc0e6ad7996a147454fc) fix: skip EFI boot entries that cannot be decoded
+* [`85c237bc5`](https://github.com/siderolabs/talos/commit/85c237bc59db94d890cacd38d6669f727a56dc36) fix: enable ACPI for BIOS virtual machines
+* [`c49fdd29c`](https://github.com/siderolabs/talos/commit/c49fdd29c17bd05765ada6891448f1834199cd04) fix: wait for inactive MD arrays before volume discovery
+* [`b064f4eb9`](https://github.com/siderolabs/talos/commit/b064f4eb91fc8cec2aafdaf462c2f306d8482bfe) test: reproduce degraded md boot array reboot
+* [`b1ba5d4d3`](https://github.com/siderolabs/talos/commit/b1ba5d4d34d01cb731b52dc4ddf38865d839931e) feat: update Linux to 6.18.57
+* [`b2dc95955`](https://github.com/siderolabs/talos/commit/b2dc959555a92411df47c177889c8a94ba7a30bd) fix: route pod CIDRs matching the KubeSpan ULA purpose byte
+* [`6788af40c`](https://github.com/siderolabs/talos/commit/6788af40ca6df6675c5b9694f8d9047f7556f25a) fix: read VMware guestinfo with SecureBoot enabled
+* [`715cfccf9`](https://github.com/siderolabs/talos/commit/715cfccf921943981d1633f31ba6b9b4e311af1c) fix: parse EFI load options with an empty description
+* [`001801dcc`](https://github.com/siderolabs/talos/commit/001801dcce5f72c741efc9d1fea25861d847dcf4) fix: high cpu usage by the bridge keepalive dummy qemu vm
+* [`10e98faa0`](https://github.com/siderolabs/talos/commit/10e98faa00ff75a91569f9decf46a34a47c07a59) chore: make vulncheck happy
+* [`d21101a99`](https://github.com/siderolabs/talos/commit/d21101a9970b41f3beeffe5a7f6957351192f233) chore: add qemu-ip-family integration suite
+* [`5d83a5690`](https://github.com/siderolabs/talos/commit/5d83a5690a80d6e036ca244f6afa038be012a8aa) fix: disable GSO offload on QEMU 10.2+
+* [`e61db1b44`](https://github.com/siderolabs/talos/commit/e61db1b448cb9f25a18334e41631c94338bbcb62) feat: update containerd to 2.3.7, Linux to 6.18.56
+* [`614c28f30`](https://github.com/siderolabs/talos/commit/614c28f306d414bcdee6e6bc9aa2a90d5145529f) fix: restrict raw disk helper to linux
+* [`da29d8b59`](https://github.com/siderolabs/talos/commit/da29d8b5943e8b9e96e80c9cf71ed2547ae85ea2) refactor: storagepool -> storagepoolconfig res naming
+* [`f806b93bf`](https://github.com/siderolabs/talos/commit/f806b93bf749da22176f245718ea51a112a8f1ad) fix: make the imager installer reproducible with system extensions
+* [`1f5a61911`](https://github.com/siderolabs/talos/commit/1f5a619118aaf51a49412d43aaecc99384698f7c) fix: ctr mount ctrl reports u-<volume id>
+* [`3e56592fc`](https://github.com/siderolabs/talos/commit/3e56592fc83a60496ade92e4f9c5732cf23ae5fb) fix: improve KubePrism load balancer recovery
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/cosi-project/runtime**            v1.16.3 -> v1.17.0
+* **github.com/siderolabs/crypto**               v0.6.5 -> v0.6.6
+* **github.com/siderolabs/image-factory**        v1.7.2 -> v1.8.0
+* **github.com/siderolabs/omni/client**          v1.12.4 -> v1.13.2
+* **github.com/siderolabs/talos**                v1.15.0-alpha.1 -> 3ba3d6a5e784
+* **github.com/siderolabs/talos/pkg/machinery**  v1.15.0-alpha.1 -> 3ba3d6a5e784
+* **golang.org/x/sync**                          v0.24.0 -> v0.25.0
+
+Previous release can be found at [v0.14.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.14.1)
+
 ## [Omni Infra Provider Bare Metal 0.14.1](https://github.com/siderolabs/omni-infra-provider-bare-metal/releases/tag/v0.14.1) (2026-10-27)
 
 Welcome to the v0.14.1 release of Omni Infra Provider Bare Metal!

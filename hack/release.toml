@@ -5,5 +5,14 @@ project_name = "Omni Infra Provider Bare Metal"
 github_repo = "siderolabs/omni-infra-provider-bare-metal"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.14.0"
+previous = "v0.14.1"
 pre_release = false
+
+[notes.embedded-machine-config]
+title = "Embedded Machine Config"
+description = """\
+Machines booting Talos 1.12 or later now get the provider's machine config (the SideroLink join config, the provider CA with `--tls-enabled` and the documents from `--extra-machine-config-path`) as the `embeddedMachineConfiguration` of their schematic, instead of the `talos.config` kernel argument.
+Older Talos versions and the local boot assets mode keep fetching it from the provider using `talos.config`.
+
+The `talos.config.inline` kernel argument added with `--tls-enabled` is removed, since a custom CA could push it past the 2048 byte limit of the kernel command line.
+"""
