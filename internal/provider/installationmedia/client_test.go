@@ -10,7 +10,6 @@ import (
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/cosi-project/runtime/pkg/state/impl/inmem"
-	"github.com/cosi-project/runtime/pkg/state/impl/namespaced"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 	omniconstants "github.com/siderolabs/omni/client/pkg/constants"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/omni"
@@ -24,7 +23,7 @@ func TestAgentModeTalosVersion(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	st := state.WrapCore(namespaced.NewState(inmem.Build))
+	st := state.WrapCore(inmem.NewState())
 
 	for _, version := range []string{"1.13.10", "1.14.0", "1.14.1"} {
 		talosVersion := omni.NewTalosVersion(version)

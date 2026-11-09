@@ -16,7 +16,6 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/cosi-project/runtime/pkg/state/impl/inmem"
-	"github.com/cosi-project/runtime/pkg/state/impl/namespaced"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
@@ -44,7 +43,7 @@ func serveBoot(ctx context.Context, h *ipxe.Handler, uuid string) *httptest.Resp
 // Content-Length and hands the PXE boot event to the channel.
 func TestBootScriptServesScriptAndReportsBootEvent(t *testing.T) {
 	ch := make(chan controllers.PXEBootEvent, 1)
-	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
+	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(inmem.NewState()), ch, zaptest.NewLogger(t))
 
 	rec := serveBoot(t.Context(), h, "machine-0")
 
@@ -70,7 +69,7 @@ func TestBootScriptDoesNotBlockUnderHerd(t *testing.T) {
 	const herd = 300
 
 	ch := make(chan controllers.PXEBootEvent) // unbuffered and undrained: sends can never succeed
-	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(namespaced.NewState(inmem.Build)), ch, zaptest.NewLogger(t))
+	h := ipxe.NewTestHandler(stubInstallationMedia{}, state.WrapCore(inmem.NewState()), ch, zaptest.NewLogger(t))
 
 	var wg sync.WaitGroup
 

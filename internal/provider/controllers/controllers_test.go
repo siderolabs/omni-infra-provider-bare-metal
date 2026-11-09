@@ -13,7 +13,6 @@ import (
 	"github.com/cosi-project/runtime/pkg/controller/runtime"
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/cosi-project/runtime/pkg/state/impl/inmem"
-	"github.com/cosi-project/runtime/pkg/state/impl/namespaced"
 	"github.com/siderolabs/gen/containers"
 	"github.com/siderolabs/gen/pair"
 	agentpb "github.com/siderolabs/talos-metal-agent/api/agent"
@@ -42,7 +41,7 @@ func withRuntime(t *testing.T, beforeStart, afterStart testFunc) {
 	t.Cleanup(cancel)
 
 	logger := zaptest.NewLogger(t)
-	st := state.WrapCore(namespaced.NewState(inmem.Build))
+	st := state.WrapCore(inmem.NewState())
 
 	cosiRuntime, err := provider.BuildCOSIRuntime(st, false, logger)
 	require.NoError(t, err)
