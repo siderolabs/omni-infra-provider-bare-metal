@@ -200,8 +200,18 @@ export AUTH0_DOMAIN="${AUTH0_DOMAIN}"
 sqlite_path="${TEST_OUTPUTS_DIR}/sqlite.db"
 
 # Omni reads the image factory token from a file, placed in the mounted directory that is not uploaded as an artifact.
-mkdir -p "${ARTIFACTS}/omni"
+mkdir -p "${ARTIFACTS}/omni/certs"
 printf '%s' "${IMAGE_FACTORY_TOKEN}" >"${ARTIFACTS}/omni/factory-token"
+
+# Generate a fresh self-signed ECDSA TLS certificate for localhost on each run.
+openssl req -x509 \
+  -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+  -nodes \
+  -days 1 \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1,IP:::1" \
+  -keyout "${ARTIFACTS}/omni/localhost-key.pem" \
+  -out "${ARTIFACTS}/omni/certs/localhost.pem"
 
 docker run -d --network host \
   --name omni \
@@ -229,8 +239,8 @@ docker run -d --network host \
   --public-key-files="/certs/key.public" \
   --bind-addr="0.0.0.0:$OMNI_PORT" \
   --enable-talos-pre-release-versions \
-  --key=/certs/localhost-key.pem \
-  --cert=/certs/localhost.pem \
+  --key=/artifacts/localhost-key.pem \
+  --cert=/artifacts/certs/localhost.pem \
   --etcd-embedded-unsafe-fsync=true \
   --embedded-discovery-service-snapshots-enabled=false \
   --create-initial-service-account \
@@ -300,7 +310,7 @@ echo "Run integration tests..."
 
 docker run --rm --network host \
   --name omni-integration-test \
-  -v "$(pwd)/hack/certs:/etc/ssl/certs" \
+  -v "$(pwd)/${ARTIFACTS}/omni/certs:/etc/ssl/certs:ro" \
   -v "$(pwd)/hack/test:/var/test" \
   -v "$TEST_OUTPUTS_DIR:/tmp/integration-test/" \
   -e SSL_CERT_DIR=/etc/ssl/certs \
